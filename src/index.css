@@ -1,0 +1,69 @@
+@import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+@theme {
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+  
+  --radius-xl: 1rem;
+  --radius-2xl: 1.5rem;
+  --radius-3xl: 2rem;
+  --radius-4xl: 3rem;
+  
+  --color-brand-50: #f0f9ff;
+  --color-brand-100: #e0f2fe;
+  --color-brand-200: #bae6fd;
+  --color-brand-300: #7dd3fc;
+  --color-brand-400: #38bdf8;
+  --color-brand-500: #0ea5e9;
+  --color-brand-600: #0284c7;
+  --color-brand-700: #0369a1;
+  --color-brand-800: #075985;
+  --color-brand-900: #0c4a6e;
+
+  --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 4px 10px -5px rgba(0, 0, 0, 0.02);
+  --shadow-premium-hover: 0 20px 40px -5px rgba(0, 0, 0, 0.08), 0 8px 16px -5px rgba(0, 0, 0, 0.04);
+}
+
+@layer base {
+  body {
+    @apply bg-[#F8FAFC] text-slate-900 antialiased;
+  }
+}
+
+@layer components {
+  .saas-card {
+    @apply bg-white border border-slate-100/80 shadow-premium hover:shadow-premium-hover transition-all duration-300 rounded-3xl;
+  }
+  
+  .saas-input {
+    @apply w-full bg-slate-50/50 border border-slate-200 rounded-2xl px-5 py-3 text-sm font-medium text-slate-700 outline-none focus:bg-white focus:border-brand-400 focus:ring-4 focus:ring-brand-500/5 transition-all;
+  }
+
+  .saas-label {
+    @apply block text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1;
+  }
+}
+
+.glass-card {
+  @apply bg-white/80 backdrop-blur-md border border-white/20 shadow-sm;
+}
+
+.gradient-primary {
+  @apply bg-gradient-to-br from-brand-500 to-indigo-600;
+}
+
+.gradient-surface {
+  @apply bg-gradient-to-tr from-slate-50 to-white;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-slate-200 rounded-full hover:bg-slate-300 transition-colors;
+}
