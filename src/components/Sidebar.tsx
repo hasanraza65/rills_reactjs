@@ -78,8 +78,8 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: MessageSquare, label: 'Teacher Chat', id: 'chat' },
   ],
   GATE_KEEPER: [
-    { icon: LayoutDashboard, label: 'Entry Log', id: 'overview' },
     { icon: ShieldCheck, label: 'Visitor Pass', id: 'visitors' },
+    { icon: LayoutDashboard, label: 'Entry Log', id: 'overview' },
     { icon: Users, label: 'Staff Check-in', id: 'staff' },
   ],
   LIBRARIAN: [

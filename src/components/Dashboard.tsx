@@ -1110,6 +1110,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
     <div className="space-y-8">
       <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
         <button 
+          onClick={() => onTabChange('visitors')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            activeTab === 'visitors' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <ShieldCheck size={18} />
+          Visitor Pass
+        </button>
+        <button 
           onClick={() => onTabChange('overview')}
           className={cn(
             "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
@@ -1120,14 +1130,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           Overview
         </button>
         <button 
-          onClick={() => onTabChange('visitors')}
+          onClick={() => onTabChange('staff')}
           className={cn(
             "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
-            activeTab === 'visitors' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+            activeTab === 'staff' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <ShieldCheck size={18} />
-          Visitor Pass
+          <Users size={18} />
+          Staff Check-in
         </button>
       </div>
       <AnimatePresence mode="wait">
@@ -1195,8 +1205,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             <VisitorManagement />
           </motion.div>
         )}
+        
+        {activeTab === 'staff' && (
+          <motion.div
+            key="staff"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <StaffManagement role={role} />
+          </motion.div>
+        )}
 
-        {activeTab !== 'overview' && activeTab !== 'visitors' && (
+        {activeTab !== 'overview' && activeTab !== 'visitors' && activeTab !== 'staff' && (
           <motion.div
             key="placeholder"
             initial={{ opacity: 0 }}

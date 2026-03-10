@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { 
   Mail, 
   Lock, 
@@ -11,12 +13,16 @@ import {
   Timer,
   RefreshCw,
   ChevronLeft,
-  School
+  School,
+  Loader2
 } from 'lucide-react';
-import { cn, User, UserRole } from '../../types';
+import { cn } from '../../types';
+import { loginSchema, LoginFormData } from '../../lib/validations/auth';
+import { useLogin } from '../../hooks/use-auth';
+import { User } from '../../types/models/user';
 
 interface LoginProps {
-  onLogin: (user: User) => void;
+  onLogin: (user: any) => void;
 }
 
 type LoginMode = 'ADMIN' | 'CNIC';
@@ -25,16 +31,24 @@ type LoginStep = 'INPUT' | 'OTP' | 'ROLE_SELECTION';
 export const Login: React.FC<LoginProps> = ({ onLogin }) => {
   const [mode, setMode] = useState<LoginMode>('ADMIN');
   const [step, setStep] = useState<LoginStep>('INPUT');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [cnic, setCnic] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
   const [timer, setTimer] = useState(60);
   const [isResending, setIsResending] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [apiError, setApiError] = useState<string | null>(null);
 
-  // Mock multi-role user
-  const multiRoleUser: User = {
+  const loginMutation = useLogin();
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<LoginFormData>({
+    resolver: zodResolver(loginSchema),
+  });
+
+  // Mock multi-role user for demonstration if needed
+  const multiRoleUser: any = {
     id: 'u2',
     name: 'Sarah Khan',
     cnic: '42101-1234567-1',
@@ -51,58 +65,17 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     return () => clearInterval(interval);
   }, [step, timer]);
 
-  const handleAdminLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (password !== 'password') {
-      setError('Invalid password');
-      return;
-    }
-
-    if (email === 'superadmin@mail.com') {
-      onLogin({
-        id: 'sa1',
-        name: 'Super Admin',
-        email: 'superadmin@mail.com',
-        role: 'SUPER_ADMIN',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=SuperAdmin',
-      });
-    } else if (email === 'admin@mail.com') {
-      onLogin({
-        id: 'a1',
-        name: 'School Admin',
-        email: 'admin@mail.com',
-        role: 'SCHOOL_ADMIN',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Admin',
-      });
-    } else if (email === 'branchadmin@mail.com') {
-      onLogin({
-        id: 'ba1',
-        name: 'Branch Admin',
-        email: 'branchadmin@mail.com',
-        role: 'BRANCH_ADMIN',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=BranchAdmin',
-      });
-    } else if (email === 'gatekeeper@mail.com') {
-      onLogin({
-        id: 'gk1',
-        name: 'Gate Keeper',
-        email: 'gatekeeper@mail.com',
-        role: 'GATE_KEEPER',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=GateKeeper',
-      });
-    } else if (email === 'librarian@mail.com') {
-      onLogin({
-        id: 'lb1',
-        name: 'Librarian',
-        email: 'librarian@mail.com',
-        role: 'LIBRARIAN',
-        avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Librarian',
-      });
-    } else {
-      setError('Invalid email address');
-    }
+  const onAdminSubmit = (data: LoginFormData) => {
+    setApiError(null);
+    loginMutation.mutate(data, {
+      onSuccess: (user: User) => {
+        // Map back to the expected type in App.tsx if necessary
+        onLogin(user);
+      },
+      onError: (error: any) => {
+        setApiError(error.response?.data?.message || 'Invalid email or password');
+      },
+    });
   };
 
   const handleCnicSubmit = (e: React.FormEvent) => {
@@ -150,7 +123,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <motion.form 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      onSubmit={handleAdminLogin} 
+      onSubmit={handleSubmit(onAdminSubmit)} 
       className="space-y-6"
     >
       <div className="space-y-2">
@@ -159,13 +132,15 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
           <input 
             type="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
+            {...register('email')}
             placeholder="superadmin@mail.com"
-            className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-slate-700 outline-none focus:border-brand-300 focus:ring-4 focus:ring-brand-500/5 transition-all text-lg"
+            className={cn(
+              "w-full bg-slate-50 border rounded-2xl py-4 pl-12 pr-4 text-slate-700 outline-none transition-all text-lg",
+              errors.email ? "border-rose-300 focus:ring-rose-500/5" : "border-slate-100 focus:border-brand-300 focus:ring-4 focus:ring-brand-500/5"
+            )}
           />
         </div>
+        {errors.email && <p className="text-rose-500 text-xs font-bold ml-1">{errors.email.message}</p>}
       </div>
       <div className="space-y-2">
         <label className="text-xs font-bold text-slate-400 uppercase tracking-widest ml-1">Password</label>
@@ -173,29 +148,40 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={20} />
           <input 
             type="password"
-            required
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            {...register('password')}
             placeholder="••••••••"
-            className="w-full bg-slate-50 border border-slate-100 rounded-2xl py-4 pl-12 pr-4 text-slate-700 outline-none focus:border-brand-300 focus:ring-4 focus:ring-brand-500/5 transition-all text-lg"
+            className={cn(
+              "w-full bg-slate-50 border rounded-2xl py-4 pl-12 pr-4 text-slate-700 outline-none transition-all text-lg",
+              errors.password ? "border-rose-300 focus:ring-rose-500/5" : "border-slate-100 focus:border-brand-300 focus:ring-4 focus:ring-brand-500/5"
+            )}
           />
         </div>
+        {errors.password && <p className="text-rose-500 text-xs font-bold ml-1">{errors.password.message}</p>}
       </div>
-      {error && (
+      
+      {(apiError) && (
         <motion.div 
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           className="p-4 bg-rose-50 border border-rose-100 rounded-2xl text-rose-600 text-sm font-bold text-center"
         >
-          {error}
+          {apiError}
         </motion.div>
       )}
+
       <button 
         type="submit"
-        className="w-full bg-brand-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-brand-600 transition-all shadow-xl shadow-brand-100 flex items-center justify-center gap-2 group"
+        disabled={loginMutation.isPending}
+        className="w-full bg-brand-500 text-white py-4 rounded-2xl font-bold text-lg hover:bg-brand-600 transition-all shadow-xl shadow-brand-100 flex items-center justify-center gap-2 group disabled:opacity-70"
       >
-        Sign In
-        <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+        {loginMutation.isPending ? (
+          <Loader2 className="animate-spin" size={20} />
+        ) : (
+          <>
+            Sign In
+            <ArrowRight className="group-hover:translate-x-1 transition-transform" size={20} />
+          </>
+        )}
       </button>
     </motion.form>
   );
@@ -315,7 +301,7 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
       </div>
 
       <div className="space-y-4">
-        {multiRoleUser.roles?.map((role) => (
+        {multiRoleUser.roles?.map((role: any) => (
           <button
             key={role}
             onClick={() => onLogin({ ...multiRoleUser, role })}

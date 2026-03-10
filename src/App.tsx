@@ -3,27 +3,36 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Auth/Login';
-import { User, Branch, BRANCHES, UserRole } from './types';
+import { Branch, BRANCHES } from './types';
 import { motion, AnimatePresence } from 'motion/react';
+import { useAuthStore } from './store/use-auth-store';
+import { UserRole } from './types/models/user';
 
 export default function App() {
-  const [user, setUser] = useState<User | null>(null);
+  const { user, isAuthenticated, logout, setAuth } = useAuthStore();
   const [currentBranch, setCurrentBranch] = useState<Branch>(BRANCHES[0]);
   const [activeTab, setActiveTab] = useState<string>('overview');
 
-  const handleLogin = (userData: User) => {
-    setUser(userData);
-    setActiveTab('overview');
+  React.useEffect(() => {
+    if (isAuthenticated && user && activeTab === 'overview') {
+      if (user.role === 'GATE_KEEPER') {
+        setActiveTab('visitors');
+      }
+    }
+  }, [isAuthenticated, user]);
+
+  const handleLogin = (userData: any) => {
+    setActiveTab(userData.role === 'GATE_KEEPER' ? 'visitors' : 'overview');
   };
 
   const handleLogout = () => {
-    setUser(null);
+    logout();
   };
 
   const handleRoleChange = (newRole: UserRole) => {
     if (user) {
-      setUser({ ...user, role: newRole });
-      setActiveTab('overview');
+      setAuth({ ...user, role: newRole }, user.token || '');
+      setActiveTab(newRole === 'GATE_KEEPER' ? 'visitors' : 'overview');
     }
   };
 
@@ -31,11 +40,11 @@ export default function App() {
     setCurrentBranch(newBranch);
   };
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return <Login onLogin={handleLogin} />;
   }
 
-  const role = user.role;
+  const role: any = user.role;
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -44,13 +53,13 @@ export default function App() {
         activeTab={activeTab}
         onTabChange={setActiveTab}
         onRoleChange={handleRoleChange} 
-        availableRoles={user.roles}
+        availableRoles={user.roles as any}
         onLogout={handleLogout}
       />
       
       <main className="flex-1 ml-72 pt-20">
         <Header 
-          user={user} 
+          user={user as any} 
           currentBranch={currentBranch} 
           onBranchChange={handleBranchChange} 
         />

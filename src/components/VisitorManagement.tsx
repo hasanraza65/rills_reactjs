@@ -95,8 +95,8 @@ export const VisitorManagement: React.FC = () => {
         </div>
       </Card>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-        {/* Left Side: New Entry Form */}
+      <div className="grid grid-cols-1 gap-10">
+        {/* New Entry Form */}
         <section className="space-y-6">
           <Card className="p-10">
             <h2 className="text-3xl font-black text-slate-800 mb-10 flex items-center gap-4">
@@ -107,7 +107,7 @@ export const VisitorManagement: React.FC = () => {
             </h2>
 
             {!selectedType ? (
-              <div className="grid grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-6">
                 {VISITOR_TYPES.map((item) => (
                   <motion.button
                     key={item.type}
@@ -192,7 +192,7 @@ export const VisitorManagement: React.FC = () => {
           </Card>
         </section>
 
-        {/* Right Side: Today's List */}
+        {/* Today's List - Commented Out
         <section className="space-y-6">
           <Card className="p-10 flex flex-col h-full">
             <div className="flex items-center justify-between mb-10">
@@ -283,6 +283,7 @@ export const VisitorManagement: React.FC = () => {
             </div>
           </Card>
         </section>
+        */}
       </div>
     </div>
   );
