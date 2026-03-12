@@ -19,6 +19,8 @@ import { Visitor, VisitorType, cn } from '../types';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
+import { visitorService } from '../lib/services/visitor-service';
+import { useAuthStore } from '../store/use-auth-store';
 
 const VISITOR_TYPES: { type: VisitorType; label: string; icon: any; color: string }[] = [
   { type: 'NEW_ADMISSION', label: 'New Admission', icon: UserPlus, color: 'bg-blue-500' },
@@ -52,25 +54,59 @@ export const VisitorManagement: React.FC = () => {
   const [formData, setFormData] = useState({
     name: '',
     cnic: '',
+    phone: '',
     purpose: ''
   });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const { user } = useAuthStore();
 
-  const handleEntry = () => {
+  const handleEntry = async () => {
     if (!formData.name || !selectedType) return;
 
-    const newVisitor: Visitor = {
-      id: Math.random().toString(36).substr(2, 9),
-      name: formData.name,
-      cnic: formData.cnic,
-      type: selectedType,
-      purpose: formData.purpose || selectedType.replace('_', ' '),
-      entryTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      date: new Date().toISOString().split('T')[0],
-    };
+    setIsSubmitting(true);
+    try {
+      // Map VisitorType to API type
+      const typeMap: Record<VisitorType, string> = {
+        'NEW_ADMISSION': 'admission',
+        'MEETING': 'meeting',
+        'DELIVERY': 'delivery',
+        'OTHER': 'other'
+      };
 
-    setVisitors([newVisitor, ...visitors]);
-    setSelectedType(null);
-    setFormData({ name: '', cnic: '', purpose: '' });
+      const payload = {
+        branch_id: 1, // Defaulting to 1 as per user request example
+        name: formData.name,
+        phone: formData.phone,
+        cnic: formData.cnic,
+        reason: formData.purpose || selectedType.replace('_', ' '),
+        type: typeMap[selectedType]
+      };
+
+      await visitorService.addVisitor(payload);
+
+      const newVisitor: Visitor = {
+        id: Math.random().toString(36).substr(2, 9),
+        name: formData.name,
+        cnic: formData.cnic,
+        type: selectedType,
+        purpose: formData.purpose || selectedType.replace('_', ' '),
+        entryTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        date: new Date().toISOString().split('T')[0],
+      };
+
+      setVisitors([newVisitor, ...visitors]);
+      setSelectedType(null);
+      setFormData({ name: '', cnic: '', phone: '', purpose: '' });
+      
+      setShowSuccess(true);
+      setTimeout(() => setShowSuccess(false), 3000);
+    } catch (error) {
+      console.error('Failed to record visitor:', error);
+      // Removed alert per user request: "hm ny error window sy nai dna"
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleExit = (id: string) => {
@@ -83,6 +119,26 @@ export const VisitorManagement: React.FC = () => {
 
   return (
     <div className="max-w-6xl mx-auto p-4 space-y-8">
+      {/* Success Notification */}
+      <AnimatePresence>
+        {showSuccess && (
+          <motion.div
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-50 flex items-center gap-4 px-8 py-5 bg-emerald-500 text-white rounded-3xl shadow-2xl shadow-emerald-200 border-2 border-emerald-400/50 backdrop-blur-md"
+          >
+            <div className="w-10 h-10 rounded-2xl bg-white/20 flex items-center justify-center">
+              <CheckCircle2 size={24} className="text-white" />
+            </div>
+            <div>
+              <p className="text-lg font-black tracking-tight leading-none mb-1">Entry Recorded!</p>
+              <p className="text-white/80 text-xs font-bold uppercase tracking-widest">Visitor added successfully</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <Card className="p-10 flex flex-col md:flex-row items-center justify-between gap-8 bg-white border-slate-100 shadow-premium">
         <div>
@@ -169,6 +225,17 @@ export const VisitorManagement: React.FC = () => {
                   </div>
 
                   <div className="relative">
+                    <Clock className="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400" size={28} />
+                    <input 
+                      type="text"
+                      placeholder="Phone Number"
+                      value={formData.phone}
+                      onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                      className="w-full pl-16 pr-8 py-7 bg-slate-50 rounded-[2rem] border-2 border-transparent focus:border-brand-500 focus:bg-white text-2xl font-black transition-all outline-none shadow-sm"
+                    />
+                  </div>
+
+                  <div className="relative">
                     <MessageSquare className="absolute left-6 top-8 text-slate-400" size={28} />
                     <textarea 
                       placeholder="Purpose of Visit"
@@ -181,11 +248,11 @@ export const VisitorManagement: React.FC = () => {
 
                 <Button
                   onClick={handleEntry}
-                  disabled={!formData.name}
+                  disabled={!formData.name || !formData.phone || isSubmitting}
                   size="lg"
                   className="w-full py-10 text-3xl font-black shadow-2xl shadow-brand-100 rounded-[2rem]"
                 >
-                  Record Entry
+                  {isSubmitting ? 'Recording...' : 'Record Entry'}
                 </Button>
               </motion.div>
             )}
