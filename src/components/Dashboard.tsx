@@ -37,6 +37,7 @@ import { StudentDiary } from './Academic/StudentDiary';
 import { StaffManagement } from './StaffManagement';
 import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
+import { ClassManagement } from './ClassManagement';
 import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -575,6 +576,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
               // Pre-select parent in form (logic can be expanded)
               setIsAddStudentOpen(true);
             }} />
+          </motion.div>
+        )}
+
+        {activeTab === 'classes' && (
+          <motion.div
+            key="classes"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassManagement />
           </motion.div>
         )}
 
