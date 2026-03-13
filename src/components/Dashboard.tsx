@@ -56,6 +56,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserRole, cn, SCHOOLS, STUDENTS, CLASSES } from '../types';
+import { useAuthStore } from '../store/use-auth-store';
 
 const data = [
   { name: 'Mon', students: 400, revenue: 2400 },
@@ -82,6 +83,7 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChange }) => {
+  const { user } = useAuthStore();
   const [isAddStudentOpen, setIsAddStudentOpen] = React.useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
@@ -1371,11 +1373,11 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             </Button>
             <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
               <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-tight">Hasan Raza</p>
+                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name || 'User'}</p>
                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{role.replace('_', ' ')}</p>
               </div>
               <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold shadow-inner border border-brand-100">
-                HR
+                {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
               </div>
             </div>
           </div>
