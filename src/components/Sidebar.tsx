@@ -126,43 +126,47 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
       </nav>
 
       <div className="p-4 mt-auto">
-        {availableRoles && availableRoles.length > 1 && (
-          <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Switch View</p>
-            <div className="flex p-1 bg-white rounded-xl border border-slate-100 relative">
-              {availableRoles.map((r) => (
-                <button
-                  key={r}
-                  onClick={() => onRoleChange(r)}
-                  className={cn(
-                    "flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all relative z-10",
-                    role === r ? "text-brand-600" : "text-slate-400 hover:text-slate-600"
-                  )}
-                >
-                  {r}
-                </button>
-              ))}
-              <motion.div 
-                className="absolute top-1 bottom-1 bg-brand-50 rounded-lg border border-brand-100"
-                initial={false}
-                animate={{
-                  left: availableRoles.indexOf(role) === 0 ? '4px' : '50%',
-                  right: availableRoles.indexOf(role) === 0 ? '50%' : '4px',
-                }}
-                transition={{ type: "spring", stiffness: 300, damping: 30 }}
-              />
-            </div>
-          </div>
-        )}
+        {role !== 'GATE_KEEPER' && (
+          <>
+            {availableRoles && availableRoles.length > 1 && (
+              <div className="bg-slate-50 rounded-2xl p-4 mb-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Switch View</p>
+                <div className="flex p-1 bg-white rounded-xl border border-slate-100 relative">
+                  {availableRoles.map((r) => (
+                    <button
+                      key={r}
+                      onClick={() => onRoleChange(r)}
+                      className={cn(
+                        "flex-1 py-2 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all relative z-10",
+                        role === r ? "text-brand-600" : "text-slate-400 hover:text-slate-600"
+                      )}
+                    >
+                      {r}
+                    </button>
+                  ))}
+                  <motion.div 
+                    className="absolute top-1 bottom-1 bg-brand-50 rounded-lg border border-brand-100"
+                    initial={false}
+                    animate={{
+                      left: availableRoles.indexOf(role) === 0 ? '4px' : '50%',
+                      right: availableRoles.indexOf(role) === 0 ? '50%' : '4px',
+                    }}
+                    transition={{ type: "spring", stiffness: 300, damping: 30 }}
+                  />
+                </div>
+              </div>
+            )}
 
-        {(!availableRoles || availableRoles.length <= 1) && (
-          <div className="bg-slate-50 rounded-2xl p-4 mb-4">
-            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Current Role</p>
-            <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-slate-100">
-              <ShieldCheck size={14} className="text-brand-500" />
-              <span className="text-xs font-bold text-slate-700">{role.replace('_', ' ')}</span>
-            </div>
-          </div>
+            {(!availableRoles || availableRoles.length <= 1) && (
+              <div className="bg-slate-50 rounded-2xl p-4 mb-4">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Current Role</p>
+                <div className="flex items-center gap-2 px-3 py-2 bg-white rounded-xl border border-slate-100">
+                  <ShieldCheck size={14} className="text-brand-500" />
+                  <span className="text-xs font-bold text-slate-700">{role.replace('_', ' ')}</span>
+                </div>
+              </div>
+            )}
+          </>
         )}
 
         <button 

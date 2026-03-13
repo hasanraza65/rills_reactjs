@@ -1108,6 +1108,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   const renderGateKeeper = () => (
     <div className="space-y-8">
+      {/* 
       <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
         <button 
           onClick={() => onTabChange('visitors')}
@@ -1140,6 +1141,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           Staff Check-in
         </button>
       </div>
+      */}
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <motion.div
@@ -1345,35 +1347,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </h1>
-          <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={() => setIsNotificationOpen(true)}
-            className="relative"
-          >
-            <Bell size={20} />
-            <div className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
-          </Button>
-          <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-800 leading-tight">Hasan Raza</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{role.replace('_', ' ')}</p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold shadow-inner border border-brand-100">
-              HR
+    <div className={cn(
+      "p-8 mx-auto",
+      role !== 'GATE_KEEPER' ? "max-w-[1600px]" : "max-w-none"
+    )}>
+      {role !== 'GATE_KEEPER' && (
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+              {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setIsNotificationOpen(true)}
+              className="relative"
+            >
+              <Bell size={20} />
+              <div className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+            </Button>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-slate-800 leading-tight">Hasan Raza</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{role.replace('_', ' ')}</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold shadow-inner border border-brand-100">
+                HR
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {renderContent()}
 
