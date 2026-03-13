@@ -17,6 +17,7 @@ import {
   Building2,
   UserCircle,
   FileText,
+  Layers,
   Library as LibraryIcon
 } from 'lucide-react';
 import { cn, UserRole } from '../types';
@@ -56,7 +57,15 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: Users, label: 'Families', id: 'families' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
     { icon: CreditCard, label: 'Fees', id: 'fees' },
-    { icon: BookOpen, label: 'Classes', id: 'classes' },
+    { 
+      icon: BookOpen, 
+      label: 'Classes', 
+      id: 'classes',
+      subItems: [
+        { label: 'Management', id: 'classes' },
+        { label: 'Sections', id: 'sections' },
+      ]
+    },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
@@ -104,25 +113,55 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
         <div className="mb-4 px-4 py-2">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Main Menu</p>
         </div>
-        {menuItems[role].map((item, idx) => (
-          <motion.button
-            key={item.id}
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            transition={{ delay: idx * 0.05 }}
-            onClick={() => onTabChange(item.id)}
-            className={cn(
-              "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group",
-              activeTab === item.id 
-                ? "bg-brand-50 text-brand-600 font-semibold shadow-sm" 
-                : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
-            )}
-          >
-            <item.icon size={20} className={cn(activeTab === item.id ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600")} />
-            <span className="flex-1 text-left text-sm">{item.label}</span>
-            {activeTab === item.id && <div className="w-1.5 h-1.5 rounded-full bg-brand-600" />}
-          </motion.button>
-        ))}
+        {menuItems[role].map((item, idx) => {
+          const hasSubItems = item.subItems && item.subItems.length > 0;
+          const isSubItemActive = hasSubItems && item.subItems.some((sub: any) => activeTab === sub.id);
+          const isMainActive = activeTab === item.id || isSubItemActive;
+
+          return (
+            <div key={item.id} className="space-y-1">
+              <motion.button
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: idx * 0.05 }}
+                onClick={() => onTabChange(item.id)}
+                className={cn(
+                  "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group",
+                  isMainActive && !isSubItemActive
+                    ? "bg-brand-50 text-brand-600 font-semibold shadow-sm" 
+                    : "text-slate-500 hover:bg-slate-50 hover:text-slate-900"
+                )}
+              >
+                <item.icon size={20} className={cn(isMainActive ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600")} />
+                <span className="flex-1 text-left text-sm">{item.label}</span>
+                {hasSubItems && (
+                  <ChevronRight size={14} className={cn("transition-transform", isMainActive ? "rotate-90 text-brand-600" : "text-slate-300")} />
+                )}
+                {isMainActive && !hasSubItems && <div className="w-1.5 h-1.5 rounded-full bg-brand-600" />}
+              </motion.button>
+
+              {hasSubItems && (isMainActive || activeTab === item.id) && (
+                <div className="ml-10 space-y-1 relative before:absolute before:left-[-1.5rem] before:top-0 before:bottom-2 before:w-[1px] before:bg-slate-100">
+                  {item.subItems.map((sub: any) => (
+                    <button
+                      key={sub.id}
+                      onClick={() => onTabChange(sub.id)}
+                      className={cn(
+                        "w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-medium transition-all",
+                        activeTab === sub.id
+                          ? "text-brand-600 bg-brand-50/50"
+                          : "text-slate-400 hover:text-slate-600 hover:bg-slate-50"
+                      )}
+                    >
+                      <span>{sub.label}</span>
+                      {activeTab === sub.id && <div className="w-1 h-1 rounded-full bg-brand-600" />}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
       </nav>
 
       <div className="p-4 mt-auto">

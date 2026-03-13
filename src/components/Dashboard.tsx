@@ -38,6 +38,7 @@ import { StaffManagement } from './StaffManagement';
 import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
 import { ClassManagement } from './ClassManagement';
+import { SectionManagement } from './SectionManagement';
 import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -587,6 +588,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <ClassManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'sections' && (
+          <motion.div
+            key="sections"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SectionManagement />
           </motion.div>
         )}
 
