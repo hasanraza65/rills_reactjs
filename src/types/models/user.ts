@@ -33,13 +33,13 @@ export interface User {
  * @todo Confirm complete mapping from backend documentation.
  */
 export const ROLE_MAP: Record<number, UserRole> = {
-  1: 'GATE_KEEPER',
-  2: 'TEACHER',
-  3: 'PARENT',
-  4: 'LIBRARIAN',
-  5: 'BRANCH_ADMIN',
-  6: 'GATE_KEEPER', // Updated from SCHOOL_ADMIN based on user feedback
-  7: 'SUPER_ADMIN',
+  1: 'SUPER_ADMIN',
+  2: 'SCHOOL_ADMIN',
+  3: 'BRANCH_ADMIN',
+  4: 'TEACHER',
+  5: 'PARENT',
+  6: 'GATE_KEEPER',
+  7: 'LIBRARIAN',
 };
 
 /**

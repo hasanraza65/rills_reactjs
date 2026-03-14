@@ -7,7 +7,6 @@ import {
   Calendar, 
   Clock,
   ArrowUpRight,
-  MoreHorizontal,
   CheckCircle2,
   AlertCircle,
   School,
@@ -23,7 +22,12 @@ import {
   FileText,
   Library as LibraryIcon,
   Bell,
-  Book as BookIcon
+  Book as BookIcon,
+  Loader2,
+  Trash2,
+  Eye,
+  Edit2,
+  MoreHorizontal
 } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { SchoolCard } from './SuperAdmin/SchoolCard';
@@ -37,6 +41,10 @@ import { StudentDiary } from './Academic/StudentDiary';
 import { StaffManagement } from './StaffManagement';
 import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
+import { ClassManagement } from './ClassManagement';
+import { SectionManagement } from './SectionManagement';
+import { useStudents, useDeleteStudent } from '../hooks/use-student';
+import { StudentDetailsModal } from './StudentDetailsModal';
 import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -55,7 +63,9 @@ import {
   Cell
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserRole, cn, SCHOOLS, STUDENTS, CLASSES } from '../types';
+import { UserRole, cn, SCHOOLS, CLASSES } from '../types';
+import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
+import { useAuthStore } from '../store/use-auth-store';
 
 const data = [
   { name: 'Mon', students: 400, revenue: 2400 },
@@ -82,9 +92,19 @@ interface DashboardProps {
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChange }) => {
+  const { user } = useAuthStore();
   const [isAddStudentOpen, setIsAddStudentOpen] = React.useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
+  const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
+  
+  // Student CRUD State
+  const [viewingStudent, setViewingStudent] = React.useState<any | null>(null);
+  const [editingStudent, setEditingStudent] = React.useState<any | null>(null);
+  const [deletingStudentId, setDeletingStudentId] = React.useState<number | null>(null);
+
+  const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(1);
+  const deleteStudentMutation = useDeleteStudent();
 
   React.useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
@@ -319,7 +339,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
     </div>
   );
 
-  const renderBranchAdmin = () => (
+  const renderBranchAdmin = () => {
+    const filteredStudents = students?.filter(s => 
+      s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
+      s.admission_no.toLowerCase().includes(studentSearchQuery.toLowerCase())
+    ) || [];
+
+    return (
     <div className="space-y-8">
       <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
         <button 
@@ -447,7 +473,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Recent Admissions</h3>
                 <div className="space-y-4">
-                  {STUDENTS.slice(0, 4).map(s => (
+                  {students?.slice(0, 4).map(s => (
                     <div key={s.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
                       <div className="flex items-center gap-3">
                         <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
@@ -455,7 +481,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                         </div>
                         <div>
                           <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                          <p className="text-xs text-slate-500">{CLASSES.find(c => c.id === s.classId)?.name}</p>
+                          <p className="text-xs text-slate-500">{s.class?.name || 'No Class'}</p>
                         </div>
                       </div>
                       <span className="text-xs font-bold text-slate-400">2h ago</span>
@@ -494,7 +520,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                   <input 
-                    placeholder="Search students by name, roll number..."
+                    placeholder="Search students by name, admission no..."
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
                     className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none"
                   />
                 </div>
@@ -503,7 +531,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                     <BookOpen size={16} className="text-slate-400" />
                     <select className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none">
                       <option>All Classes</option>
-                      {CLASSES.map(c => <option key={c.id}>{c.name}</option>)}
+                      {/* We could fetch classes here if needed, but keeping it simple for now */}
                     </select>
                   </div>
                   <button className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all">
@@ -516,45 +544,104 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                   <thead>
                     <tr className="bg-slate-50/50">
                       <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Student</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Roll No</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Class</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admission No</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Class / Section</th>
                       <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
                       <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {STUDENTS.map(s => (
-                      <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
-                              {s.name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                              <p className="text-xs text-slate-400">{s.gender}</p>
-                            </div>
+                    {isLoadingStudents ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-10 text-center">
+                          <div className="flex flex-col items-center gap-2 text-slate-400">
+                             <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+                             <p className="text-sm font-bold uppercase tracking-widest">Loading Students...</p>
                           </div>
-                        </td>
-                        <td className="px-8 py-5 text-sm font-medium text-slate-600">#{s.rollNumber}</td>
-                        <td className="px-8 py-5">
-                          <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
-                            {CLASSES.find(c => c.id === s.classId)?.name}
-                          </span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <div className="flex items-center gap-1.5 text-emerald-500 text-xs font-bold">
-                            <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                            Active
-                          </div>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <button className="p-2 text-slate-300 hover:text-brand-500 transition-colors">
-                            <MoreHorizontal size={20} />
-                          </button>
                         </td>
                       </tr>
-                    ))}
+                    ) : studentsError ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-10 text-center text-rose-500 font-bold">
+                          Failed to load students. Please try again.
+                        </td>
+                      </tr>
+                    ) : filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-20 text-center">
+                          <EmptyState 
+                            icon={GraduationCap}
+                            title="No Students Found"
+                            description={studentSearchQuery ? `No records match "${studentSearchQuery}"` : "Begin by registering your first student."}
+                            actionLabel={studentSearchQuery ? "Clear Search" : "New Admission"}
+                            onAction={studentSearchQuery ? () => setStudentSearchQuery('') : () => setIsAddStudentOpen(true)}
+                          />
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStudents.map(s => (
+                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
+                                {s.name?.charAt(0) || '?'}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-800">{s.name}</p>
+                                <p className="text-xs text-slate-400 capitalize">{s.gender}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-sm font-bold text-slate-600 truncate max-w-[150px]">{s.admission_no}</td>
+                          <td className="px-8 py-5">
+                            <div className="flex flex-col gap-1">
+                              <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase w-fit">
+                                {s.class?.name || 'No Class'}
+                              </span>
+                              {s.section && (
+                                <span className="text-[10px] text-slate-400 font-bold px-1 uppercase tracking-tighter">
+                                  Section {s.section.name}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-1.5 text-emerald-500 text-xs font-bold">
+                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                              Active
+                            </div>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button 
+                                onClick={() => setViewingStudent(s)}
+                                className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                                title="View Details"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              <button 
+                                onClick={() => {
+                                  setEditingStudent(s);
+                                  setIsAddStudentOpen(true);
+                                }}
+                                className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                                title="Edit Student"
+                              >
+                                <Edit2 size={18} />
+                              </button>
+                              <button 
+                                onClick={() => setDeletingStudentId(s.id)}
+                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Delete Student"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -573,6 +660,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
               // Pre-select parent in form (logic can be expanded)
               setIsAddStudentOpen(true);
             }} />
+          </motion.div>
+        )}
+
+        {activeTab === 'classes' && (
+          <motion.div
+            key="classes"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'sections' && (
+          <motion.div
+            key="sections"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SectionManagement />
           </motion.div>
         )}
 
@@ -645,15 +754,43 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
       {isAddStudentOpen && (
         <AddStudentForm 
-          onClose={() => setIsAddStudentOpen(false)}
-          onSave={(data) => {
-            console.log('New Student Data:', data);
+          onClose={() => {
             setIsAddStudentOpen(false);
+            setEditingStudent(null);
           }}
+          onSave={(data) => {
+            console.log('Student Action:', data);
+            setIsAddStudentOpen(false);
+            setEditingStudent(null);
+          }}
+          editingStudent={editingStudent}
         />
       )}
+
+      {/* Student Details Modal */}
+      <StudentDetailsModal
+        isOpen={!!viewingStudent}
+        onClose={() => setViewingStudent(null)}
+        student={viewingStudent}
+      />
+
+      {/* Student Delete Confirmation */}
+      <DeleteConfirmationModal
+        isOpen={!!deletingStudentId}
+        onClose={() => setDeletingStudentId(null)}
+        onConfirm={async () => {
+          if (deletingStudentId) {
+            await deleteStudentMutation.mutateAsync(deletingStudentId);
+            setDeletingStudentId(null);
+          }
+        }}
+        title="Delete Student Record"
+        message="Are you sure you want to delete this student? This action cannot be undone and will remove all associated academic records."
+        isLoading={deleteStudentMutation.isPending}
+      />
     </div>
-  );
+    );
+  };
 
   const renderTeacher = () => (
     <div className="space-y-8">
@@ -1108,6 +1245,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   const renderGateKeeper = () => (
     <div className="space-y-8">
+      {/* 
       <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
         <button 
           onClick={() => onTabChange('visitors')}
@@ -1140,6 +1278,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           Staff Check-in
         </button>
       </div>
+      */}
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <motion.div
@@ -1345,35 +1484,40 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   };
 
   return (
-    <div className="p-8 max-w-[1600px] mx-auto">
-      <div className="flex items-center justify-between mb-10">
-        <div>
-          <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
-            {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-          </h1>
-          <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <Button 
-            variant="outline" 
-            size="icon"
-            onClick={() => setIsNotificationOpen(true)}
-            className="relative"
-          >
-            <Bell size={20} />
-            <div className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
-          </Button>
-          <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-            <div className="text-right hidden sm:block">
-              <p className="text-sm font-bold text-slate-800 leading-tight">Hasan Raza</p>
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{role.replace('_', ' ')}</p>
-            </div>
-            <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold shadow-inner border border-brand-100">
-              HR
+    <div className={cn(
+      "p-8 mx-auto",
+      role !== 'GATE_KEEPER' ? "max-w-[1600px]" : "max-w-none"
+    )}>
+      {role !== 'GATE_KEEPER' && (
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+              {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
+            </h1>
+            <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
+          </div>
+          <div className="flex items-center gap-4">
+            <Button 
+              variant="outline" 
+              size="icon"
+              onClick={() => setIsNotificationOpen(true)}
+              className="relative"
+            >
+              <Bell size={20} />
+              <div className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
+            </Button>
+            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
+              <div className="text-right hidden sm:block">
+                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name || 'User'}</p>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{role.replace('_', ' ')}</p>
+              </div>
+              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold shadow-inner border border-brand-100">
+                {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
       {renderContent()}
 

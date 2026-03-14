@@ -3,7 +3,7 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Auth/Login';
-import { Branch, BRANCHES } from './types';
+import { Branch, BRANCHES, cn } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from './store/use-auth-store';
 import { UserRole } from './types/models/user';
@@ -48,20 +48,23 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
-      <Sidebar 
-        role={role} 
-        activeTab={activeTab}
-        onTabChange={setActiveTab}
-        onRoleChange={handleRoleChange} 
-        availableRoles={user.roles as any}
-        onLogout={handleLogout}
-      />
+      {role !== 'GATE_KEEPER' && (
+        <Sidebar 
+          role={role} 
+          activeTab={activeTab}
+          onTabChange={setActiveTab}
+          onRoleChange={handleRoleChange} 
+          availableRoles={user.roles as any}
+          onLogout={handleLogout}
+        />
+      )}
       
-      <main className="flex-1 ml-72 pt-20">
+      <main className={cn("flex-1 pt-20", role !== 'GATE_KEEPER' && "ml-72")}>
         <Header 
           user={user as any} 
           currentBranch={currentBranch} 
           onBranchChange={handleBranchChange} 
+          onLogout={handleLogout}
         />
         
         <AnimatePresence mode="wait">
