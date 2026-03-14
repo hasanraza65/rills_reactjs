@@ -17,14 +17,21 @@ import {
   Shield,
   FileText,
   DollarSign,
-  X
+  X,
+  Loader2
 } from 'lucide-react';
-import { cn, CLASSES, PARENTS, BRANCHES, FeeHead, Parent, Class } from '../types';
+import { cn, FeeHead } from '../types';
 import { AddClassModal } from './AddClassModal';
+import { useClasses } from '../hooks/use-class';
+import { useParents } from '../hooks/use-parent';
+import { useSections } from '../hooks/use-section';
+import { useCreateStudent, useUpdateStudent } from '../hooks/use-student';
+import { StudentData } from '../types/api/student';
 
 interface AddStudentFormProps {
   onClose: () => void;
   onSave: (student: any) => void;
+  editingStudent?: StudentData | null;
 }
 
 const STEPS = [
@@ -34,20 +41,32 @@ const STEPS = [
   { id: 4, title: 'Fees', icon: CreditCard },
 ];
 
-export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave }) => {
+export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave, editingStudent }) => {
   const [currentStep, setCurrentStep] = useState(1);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
-  const [classes, setClasses] = useState<Class[]>(CLASSES);
+  
+  // API Hooks
+  const { data: classesList } = useClasses();
+  const { data: parentsList } = useParents(1); // Branch ID 1
+  const { data: sectionsList } = useSections();
+  const createStudent = useCreateStudent();
+  const updateStudent = useUpdateStudent();
   
   // Form State
   const [formData, setFormData] = useState({
-    name: '',
-    dob: '',
-    gender: 'MALE',
-    branchId: BRANCHES[0].id,
-    classId: '',
+    name: editingStudent?.name || '',
+    dob: editingStudent?.dob ? editingStudent.dob.split('T')[0] : '',
+    gender: (editingStudent?.gender?.toLowerCase() === 'male' ? 'MALE' : 'FEMALE') as 'MALE' | 'FEMALE',
+    branchId: editingStudent?.branch_id || 1,
+    classId: editingStudent?.class_id?.toString() || '',
+    sectionId: editingStudent?.section_id?.toString() || '',
+    nationality: editingStudent?.nationality || 'Pakistani',
+    address: editingStudent?.address || '',
+    home_contact: editingStudent?.home_contact || '',
+    currently_studying: editingStudent?.currently_studying || '',
+    health_details: editingStudent?.health_details || '',
     parentOption: 'EXISTING' as 'EXISTING' | 'NEW',
-    selectedParentId: '',
+    selectedParentId: editingStudent?.parent_id?.toString() || '',
     newParent: {
       name: '',
       cnic: '',
@@ -55,6 +74,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
       email: '',
       address: '',
     },
+    // Keep fees for UI consistency but API might not use them yet
     feeHeads: [
       { id: 'fh1', name: 'Tuition Fee', amount: 8000, isEnabled: true },
       { id: 'fh2', name: 'Transport', amount: 3000, isEnabled: true },
@@ -66,12 +86,12 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
   const [parentSearch, setParentSearch] = useState('');
 
   const filteredParents = useMemo(() => {
-    if (!parentSearch) return [];
-    return PARENTS.filter(p => 
-      p.name.toLowerCase().includes(parentSearch.toLowerCase()) || 
-      p.cnic.includes(parentSearch)
+    if (!parentSearch || !parentsList) return [];
+    return parentsList.filter(p => 
+      p.father_name.toLowerCase().includes(parentSearch.toLowerCase()) || 
+      p.father_cnic?.includes(parentSearch)
     );
-  }, [parentSearch]);
+  }, [parentSearch, parentsList]);
 
   const totalMonthlyFee = useMemo(() => {
     return formData.feeHeads
@@ -141,6 +161,28 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
           ))}
         </div>
       </div>
+      <div className="grid grid-cols-2 gap-6">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Nationality</label>
+          <input 
+            value={formData.nationality}
+            onChange={e => setFormData({...formData, nationality: e.target.value})}
+            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+          />
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Home Contact</label>
+          <div className="relative">
+            <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+            <input 
+              value={formData.home_contact}
+              onChange={e => setFormData({...formData, home_contact: e.target.value})}
+              placeholder="e.g. 03001234567"
+              className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+            />
+          </div>
+        </div>
+      </div>
     </motion.div>
   );
 
@@ -154,10 +196,10 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Branch</label>
         <select 
           value={formData.branchId}
-          onChange={e => setFormData({...formData, branchId: e.target.value})}
+          onChange={e => setFormData({...formData, branchId: parseInt(e.target.value)})}
           className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
         >
-          {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+          <option value={1}>Main Branch</option>
         </select>
       </div>
       <div className="space-y-2">
@@ -177,8 +219,21 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
           className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
         >
           <option value="">Select a class...</option>
-          {classes.filter(c => c.branchId === formData.branchId).map(c => (
-            <option key={c.id} value={c.id}>{c.name} - Section {c.section}</option>
+          {classesList?.filter(c => c.branch_id === formData.branchId).map(c => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+      </div>
+      <div className="space-y-2">
+        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Section</label>
+        <select 
+          value={formData.sectionId}
+          onChange={e => setFormData({...formData, sectionId: e.target.value})}
+          className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+        >
+          <option value="">Select a section...</option>
+          {sectionsList?.filter(s => s.school_class_id === parseInt(formData.classId)).map(s => (
+            <option key={s.id} value={s.id}>{s.name}</option>
           ))}
         </select>
       </div>
@@ -392,6 +447,35 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
     </motion.div>
   );
 
+  const handleSave = async (data: any) => {
+    const payload = {
+      name: data.name,
+      dob: data.dob,
+      gender: data.gender.toLowerCase(),
+      branch_id: data.branchId,
+      class_id: parseInt(data.classId),
+      section_id: parseInt(data.sectionId),
+      nationality: data.nationality,
+      address: data.address || 'N/A',
+      home_contact: data.home_contact,
+      currently_studying: data.currently_studying,
+      health_details: data.health_details,
+      parent_id: parseInt(data.selectedParentId),
+      source: 'Direct',
+      photo: '',
+      previous_schools: [],
+      health_issues: [],
+      attachments: []
+    };
+
+    if (editingStudent) {
+      await updateStudent.mutateAsync({ id: editingStudent.id, data: payload });
+    } else {
+      await createStudent.mutateAsync(payload);
+    }
+    onClose();
+  };
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
       <motion.div
@@ -475,19 +559,32 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
               Cancel
             </button>
             {currentStep < 4 ? (
-              <button
-                onClick={handleNext}
-                className="px-10 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2"
-              >
-                Next Step
-                <ChevronRight size={20} />
-              </button>
+              <div className="flex gap-4">
+                {editingStudent && (
+                  <button
+                    onClick={() => handleSave(formData)}
+                    disabled={updateStudent.isPending}
+                    className="px-8 py-4 rounded-2xl bg-amber-500 text-white text-sm font-bold hover:bg-amber-600 transition-all shadow-lg shadow-amber-100 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    {updateStudent.isPending ? <Loader2 className="animate-spin" /> : 'Update Now'}
+                    <CheckCircle2 size={20} />
+                  </button>
+                )}
+                <button
+                  onClick={handleNext}
+                  className="px-10 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2"
+                >
+                  Next Step
+                  <ChevronRight size={20} />
+                </button>
+              </div>
             ) : (
               <button
-                onClick={() => onSave(formData)}
-                className="px-10 py-4 rounded-2xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2"
+                onClick={() => handleSave(formData)}
+                disabled={createStudent.isPending || updateStudent.isPending}
+                className="px-10 py-4 rounded-2xl bg-emerald-500 text-white text-sm font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center gap-2 disabled:opacity-50"
               >
-                Complete Admission
+                {createStudent.isPending || updateStudent.isPending ? <Loader2 className="animate-spin" /> : editingStudent ? 'Update Admission' : 'Complete Admission'}
                 <CheckCircle2 size={20} />
               </button>
             )}
@@ -499,8 +596,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave 
           onClose={() => setIsClassModalOpen(false)}
           branchId={formData.branchId}
           onSave={(newClass) => {
-            setClasses([...classes, newClass]);
-            setFormData({...formData, classId: newClass.id});
+            setFormData({...formData, classId: newClass.id.toString()});
           }}
         />
       </motion.div>
