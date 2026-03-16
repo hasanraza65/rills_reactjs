@@ -29,7 +29,7 @@ export const useStudent = (id: number | null) => {
 export const useCreateStudent = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (data: CreateStudentInput) => studentService.createStudent(data),
+    mutationFn: (data: CreateStudentInput | FormData) => studentService.createStudent(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students', 'list'] });
     },
@@ -42,7 +42,7 @@ export const useCreateStudent = () => {
 export const useUpdateStudent = () => {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, data }: { id: number; data: UpdateStudentInput }) => 
+    mutationFn: ({ id, data }: { id: number; data: UpdateStudentInput | FormData }) => 
       studentService.updateStudent(id, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['students'] });

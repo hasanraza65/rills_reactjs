@@ -5,8 +5,10 @@ import {
   ChevronDown, 
   Globe,
   LayoutGrid,
-  LogOut
+  LogOut,
+  Menu
 } from 'lucide-react';
+
 import { BRANCHES, Branch, User, ROLES } from '../types';
 import { cn } from '../types';
 
@@ -15,16 +17,30 @@ interface HeaderProps {
   currentBranch: Branch;
   onBranchChange: (branch: Branch) => void;
   onLogout: () => void;
+  onMenuClick: () => void;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchChange, onLogout }) => {
+
+export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchChange, onLogout, onMenuClick }) => {
+
   return (
     <header className={cn(
-      "h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 fixed top-0 right-0 z-40 flex items-center justify-between px-8",
-      user.role !== 'GATE_KEEPER' ? "left-72" : "left-0"
+      "h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 fixed top-0 right-0 z-40 flex items-center justify-between px-4 sm:px-8 transition-all duration-300",
+      user.role !== 'GATE_KEEPER' ? "lg:left-72 left-0" : "left-0"
     )}>
-      <div className="flex items-center gap-6 flex-1">
-        <div className="relative w-96 group">
+
+      <div className="flex items-center gap-3 sm:gap-6 flex-1">
+        {user.role !== 'GATE_KEEPER' && (
+          <button 
+            onClick={onMenuClick}
+            className="p-2 -ml-2 text-slate-500 hover:bg-slate-50 rounded-xl lg:hidden"
+          >
+            <Menu size={24} />
+          </button>
+        )}
+
+        <div className="relative w-full max-w-96 group hidden sm:block">
+
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" size={18} />
           <input 
             type="text" 

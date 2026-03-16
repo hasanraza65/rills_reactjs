@@ -47,41 +47,45 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="relative w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-[3rem] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[90vh]"
+          className="relative w-full max-w-4xl bg-white/90 backdrop-blur-xl rounded-2xl sm:rounded-[3rem] shadow-2xl border border-white/20 overflow-hidden flex flex-col max-h-[90vh]"
+
         >
           {/* Header Section */}
           <div className="relative p-8 pb-12 overflow-hidden">
             <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-brand-500/10 to-transparent -z-10" />
-            <div className="absolute top-0 right-0 p-8">
+            <div className="absolute top-0 right-0 p-4 sm:p-8">
               <button 
                 onClick={onClose}
-                className="p-3 bg-white/50 backdrop-blur-md hover:bg-white rounded-2xl transition-all shadow-sm group"
+                className="p-2 sm:p-3 bg-white/50 backdrop-blur-md hover:bg-white rounded-xl sm:rounded-2xl transition-all shadow-sm group"
               >
-                <X size={20} className="text-slate-400 group-hover:text-slate-600" />
+                <X size={18} className="text-slate-400 group-hover:text-slate-600" />
               </button>
             </div>
 
-            <div className="flex flex-col md:flex-row items-center gap-8">
+
+            <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8">
               <div className="relative">
-                <div className="w-32 h-32 rounded-[2.5rem] bg-brand-500 flex items-center justify-center text-white text-4xl font-black shadow-2xl shadow-brand-500/20">
+                <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-2xl sm:rounded-[2.5rem] bg-brand-500 flex items-center justify-center text-white text-3xl sm:text-4xl font-black shadow-2xl shadow-brand-500/20">
                   {student?.photo ? (
-                    <img src={student.photo} alt={student.name} className="w-full h-full object-cover rounded-[2.5rem]" />
+                    <img src={student.photo} alt={student.name} className="w-full h-full object-cover rounded-2xl sm:rounded-[2.5rem]" />
                   ) : (
                     student?.name?.charAt(0) || 'S'
                   )}
                 </div>
-                <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-2xl bg-white shadow-xl flex items-center justify-center text-brand-500 border border-slate-50">
-                  <GraduationCap size={20} />
+                <div className="absolute -bottom-1 -right-1 sm:-bottom-2 sm:-right-2 w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-white shadow-xl flex items-center justify-center text-brand-500 border border-slate-50">
+                  <GraduationCap size={16} />
                 </div>
               </div>
+
               
               <div className="text-center md:text-left">
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-3 mb-2">
-                  <h2 className="text-3xl font-black text-slate-800 tracking-tight">{student?.name || 'Loading...'}</h2>
-                  <span className="px-3 py-1 rounded-full bg-brand-500 text-white text-[10px] font-black uppercase tracking-widest">
+                <div className="flex flex-wrap items-center justify-center md:justify-start gap-2 sm:gap-3 mb-2">
+                  <h2 className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">{student?.name || 'Loading...'}</h2>
+                  <span className="px-2 sm:px-3 py-1 rounded-full bg-brand-500 text-white text-[9px] sm:text-[10px] font-black uppercase tracking-widest">
                     {student?.admission_no || 'Pending'}
                   </span>
                 </div>
+
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 text-slate-500 font-bold text-sm">
                   <span className="flex items-center gap-1.5 capitalize">
                     <User size={16} /> {student?.gender}
@@ -99,7 +103,8 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 overflow-y-auto p-8 pt-0 custom-scrollbar">
+          <div className="flex-1 overflow-y-auto p-6 sm:p-8 pt-0 custom-scrollbar">
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               {/* Personal & Academic */}
               <div className="space-y-8">
@@ -214,20 +219,21 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
           </div>
 
           {/* Footer Action */}
-          <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-between items-center sm:hidden md:flex">
+          <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-between items-center gap-4">
              <div className="flex items-center gap-3">
                <History size={16} className="text-slate-400" />
-               <p className="text-xs text-slate-400 font-bold uppercase tracking-widest">
+               <p className="text-[10px] sm:text-xs text-slate-400 font-bold uppercase tracking-widest">
                  Registered on: {new Date(student?.created_at || '').toLocaleDateString()}
                </p>
              </div>
              <button 
                onClick={onClose}
-               className="px-8 py-3 bg-slate-800 text-white rounded-2xl text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-slate-200"
+               className="w-full sm:w-auto px-8 py-3 bg-slate-800 text-white rounded-xl sm:rounded-2xl text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-slate-900 transition-all shadow-lg shadow-slate-200"
              >
                Close Profile
              </button>
           </div>
+
         </motion.div>
       </div>
     </AnimatePresence>

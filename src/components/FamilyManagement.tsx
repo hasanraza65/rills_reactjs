@@ -183,11 +183,12 @@ export const FamilyManagement: React.FC = () => {
             <table className="w-full text-left table-fixed">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Father Name</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Mother Name</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[15%]">Guardian</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[15%]">Contact</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[10%]">Actions</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Father Name</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Mother Name</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[100px] sm:w-[15%]">Guardian</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-[15%]">Contact</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[100px] sm:w-[10%]">Actions</th>
+
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50 font-medium">
@@ -228,31 +229,32 @@ export const FamilyManagement: React.FC = () => {
                         {p.father_contact_no}
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-4 sm:px-8 py-5 text-right">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleViewDetails(p.id)}
-                          className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
                           title="View Details"
                         >
                           <Eye size={16} />
                         </button>
                         <button 
                           onClick={() => handleOpenEditForm(p)}
-                          className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
                           title="Edit Family"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => setParentToDelete(p)}
-                          className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
+                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
                           title="Delete Family"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -289,7 +291,8 @@ export const FamilyManagement: React.FC = () => {
               </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="p-8 space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+
                   {/* Father Details */}
                   <div className="space-y-6">
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
@@ -460,22 +463,24 @@ export const FamilyManagement: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <div className="p-4 sm:p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                   <Button 
                     type="button" 
                     variant="ghost" 
                     onClick={() => setIsFormOpen(false)}
+                    className="w-full sm:w-auto"
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit" 
-                    className="shadow-xl shadow-brand-200 px-8"
+                    className="w-full sm:w-auto shadow-xl shadow-brand-200 px-8"
                     isLoading={createMutation.isPending || updateMutation.isPending}
                   >
                     {editingParent ? 'Update Family' : 'Create Family'}
                   </Button>
                 </div>
+
               </form>
             </motion.div>
           </div>
@@ -491,27 +496,28 @@ export const FamilyManagement: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white w-full max-w-2xl rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-slate-100 my-8"
+              className="bg-white w-full max-w-2xl rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-slate-100 my-8"
             >
+
               {/* Header */}
-              <div className="p-8 flex items-start justify-between relative bg-gradient-to-br from-brand-50/50 to-white">
-                <div className="flex items-center gap-6">
+              <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start justify-between relative bg-gradient-to-br from-brand-50/50 to-white gap-4">
+                <div className="flex items-center gap-4 sm:gap-6">
                   {parentDetails ? (
-                    <div className="w-20 h-20 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-bold text-4xl shadow-lg shadow-brand-500/20 ring-4 ring-white">
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-bold text-2xl sm:text-4xl shadow-lg shadow-brand-500/20 ring-4 ring-white shrink-0">
                       {parentDetails.father_name?.charAt(0) || 'P'}
                     </div>
                   ) : (
-                    <div className="w-20 h-20 rounded-2xl bg-slate-100 animate-pulse ring-4 ring-white" />
+                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 animate-pulse ring-4 ring-white shrink-0" />
                   )}
                   <div className="pt-1">
                     {parentDetails ? (
                       <>
-                        <h3 className="text-3xl font-black text-slate-900 tracking-tight">{parentDetails.father_name} & {parentDetails.mother_name}</h3>
-                        <div className="flex items-center gap-3 mt-2">
-                          <span className="px-2.5 py-1 rounded-full bg-white/80 backdrop-blur shadow-sm text-[10px] font-bold text-slate-500 uppercase tracking-widest border border-slate-100">
-                            Family ID: FAM-{parentDetails.id}
+                        <h3 className="text-xl sm:text-3xl font-black text-slate-900 tracking-tight">{parentDetails.father_name} & {parentDetails.mother_name}</h3>
+                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2">
+                          <span className="px-2 py-0.5 rounded-full bg-white/80 backdrop-blur shadow-sm text-[8px] sm:text-[10px] font-bold text-slate-500 uppercase tracking-widest border border-slate-100">
+                            ID: FAM-{parentDetails.id}
                           </span>
-                          <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest shadow-sm border ${
+                          <span className={`px-2 py-0.5 rounded-full text-[8px] sm:text-[10px] font-bold uppercase tracking-widest shadow-sm border ${
                             parentDetails.guardian_type === 'father' ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-rose-50 border-rose-100 text-rose-600'
                           }`}>
                             Guardian: {parentDetails.guardian_type}
@@ -520,19 +526,20 @@ export const FamilyManagement: React.FC = () => {
                       </>
                     ) : (
                       <div className="space-y-2">
-                        <div className="h-8 w-48 bg-slate-100 rounded-lg animate-pulse" />
-                        <div className="h-5 w-24 bg-slate-100 rounded-lg animate-pulse" />
+                        <div className="h-6 sm:h-8 w-32 sm:w-48 bg-slate-100 rounded-lg animate-pulse" />
+                        <div className="h-4 sm:h-5 w-20 sm:w-24 bg-slate-100 rounded-lg animate-pulse" />
                       </div>
                     )}
                   </div>
                 </div>
                 <button 
                   onClick={() => setIsDetailsOpen(false)} 
-                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent absolute top-8 right-8"
+                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent sm:absolute sm:top-8 sm:right-8 self-end sm:self-auto"
                 >
-                  <Plus className="w-6 h-6 rotate-45" />
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 rotate-45" />
                 </button>
               </div>
+
 
               {/* Body */}
               <div className="p-8 space-y-8 overflow-y-auto max-h-[60vh] custom-scrollbar">

@@ -40,7 +40,7 @@ export interface CreateStudentInput {
   class_id: number;
   section_id: number;
   parent_id: number;
-  gender: 'male' | 'female';
+  gender: 'male' | 'female' | 'MALE' | 'FEMALE';
   dob: string;
   nationality?: string;
   address?: string;
@@ -50,6 +50,8 @@ export interface CreateStudentInput {
   health_issues?: string[];
   health_details?: string;
   source?: string;
+  photo?: string | File;
+  attachments?: (string | File)[];
 }
 
 export interface UpdateStudentInput extends Partial<CreateStudentInput> {}
