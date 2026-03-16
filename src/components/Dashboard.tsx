@@ -93,7 +93,6 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChange }) => {
   const { user } = useAuthStore();
-  const [isAddStudentOpen, setIsAddStudentOpen] = React.useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
@@ -519,7 +518,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 <p className="text-slate-500 text-sm font-medium">Manage student records and admissions</p>
               </div>
               <button 
-                onClick={() => setIsAddStudentOpen(true)}
+                onClick={() => {
+                  setEditingStudent(null);
+                  onTabChange('add-student');
+                }}
                 className="w-full sm:w-auto px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
               >
                 <UserPlus size={18} className="sm:w-5 sm:h-5" />
@@ -589,7 +591,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                             title="No Students Found"
                             description={studentSearchQuery ? `No records match "${studentSearchQuery}"` : "Begin by registering your first student."}
                             actionLabel={studentSearchQuery ? "Clear Search" : "New Admission"}
-                            onAction={studentSearchQuery ? () => setStudentSearchQuery('') : () => setIsAddStudentOpen(true)}
+                            onAction={studentSearchQuery ? () => setStudentSearchQuery('') : () => {
+                              setEditingStudent(null);
+                              onTabChange('add-student');
+                            }}
                           />
                         </td>
                       </tr>
@@ -638,7 +643,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                               <button 
                                 onClick={() => {
                                   setEditingStudent(s);
-                                  setIsAddStudentOpen(true);
+                                  onTabChange('add-student');
                                 }}
                                 className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
                                 title="Edit Student"
@@ -720,7 +725,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                             <button 
                               onClick={() => {
                                 setEditingStudent(s);
-                                setIsAddStudentOpen(true);
+                                onTabChange('add-student');
                               }}
                               className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
                             >
@@ -758,8 +763,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <FamilyManagement onAddStudent={(parentId) => {
-              // Pre-select parent in form (logic can be expanded)
-              setIsAddStudentOpen(true);
+              setEditingStudent(null);
+              onTabChange('add-student');
             }} />
           </motion.div>
         )}
@@ -794,6 +799,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <FeeDashboard />
+          </motion.div>
+        )}
+
+        {activeTab === 'add-student' && (
+          <motion.div
+            key="add-student"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AddStudentForm 
+              isPage
+              onClose={() => {
+                setEditingStudent(null);
+                onTabChange('students');
+              }}
+              onSave={() => {
+                setEditingStudent(null);
+                onTabChange('students');
+              }}
+              editingStudent={editingStudent}
+            />
           </motion.div>
         )}
 
@@ -853,20 +880,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         )}
       </AnimatePresence>
 
-      {isAddStudentOpen && (
-        <AddStudentForm 
-          onClose={() => {
-            setIsAddStudentOpen(false);
-            setEditingStudent(null);
-          }}
-          onSave={(data) => {
-            console.log('Student Action:', data);
-            setIsAddStudentOpen(false);
-            setEditingStudent(null);
-          }}
-          editingStudent={editingStudent}
-        />
-      )}
+
 
       {/* Student Details Modal */}
       <StudentDetailsModal
