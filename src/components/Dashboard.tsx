@@ -113,7 +113,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   if (isLoading) {
     return (
-      <div className="p-8 max-w-[1600px] mx-auto space-y-8">
+      <div className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-8">
+
         <div className="flex justify-between items-center mb-10">
           <div className="space-y-2">
             <Skeleton className="h-10 w-48" />
@@ -138,58 +139,63 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   }
 
   const renderSuperAdmin = () => (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
+    <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
+
+      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
+
+
         <button 
           onClick={() => onTabChange('overview')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <LayoutDashboard size={18} />
-          Overview
+          <LayoutDashboard size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Overview</span>
         </button>
         <button 
           onClick={() => onTabChange('schools')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'schools' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <School size={18} />
-          Manage Schools
+          <School size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Manage Schools</span>
         </button>
         <button 
           onClick={() => onTabChange('pricing')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'pricing' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <Settings size={18} />
-          Pricing Config
+          <Settings size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Pricing Config</span>
         </button>
         <button 
           onClick={() => onTabChange('syllabus')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <BookOpen size={18} />
-          Syllabus
+          <BookOpen size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Syllabus</span>
         </button>
         <button 
           onClick={() => onTabChange('library')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <LibraryIcon size={18} />
-          Library
+          <LibraryIcon size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Library</span>
         </button>
+
       </div>
 
       <AnimatePresence mode="wait">
@@ -208,8 +214,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
               <StatCard title="System Health" value="99.9%" icon={TrendingUp} color="indigo" delay={0.4} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
+              <div className="lg:col-span-2 bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
+
                 <div className="flex items-center justify-between mb-8">
                   <div>
                     <h3 className="text-xl font-bold text-slate-800">Platform Growth</h3>
@@ -241,7 +248,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 </div>
               </div>
 
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
+
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Recent Schools</h3>
                 <div className="space-y-6">
                   {[1, 2, 3, 4].map((i) => (
@@ -346,98 +354,101 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
     ) || [];
 
     return (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
+    <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
+      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
+
+
         <button 
           onClick={() => onTabChange('overview')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <LayoutDashboard size={18} />
-          Overview
+          <LayoutDashboard size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Overview</span>
         </button>
         <button 
           onClick={() => onTabChange('students')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'students' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <GraduationCap size={18} />
-          Students
+          <GraduationCap size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Students</span>
         </button>
         <button 
           onClick={() => onTabChange('families')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'families' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <Users size={18} />
-          Families
+          <Users size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Families</span>
         </button>
         <button 
           onClick={() => onTabChange('fees')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'fees' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <CreditCard size={18} />
-          Fees
+          <CreditCard size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Fees</span>
         </button>
         <button 
           onClick={() => onTabChange('attendance')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'attendance' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <Calendar size={18} />
-          Attendance
+          <Calendar size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Attendance</span>
         </button>
         <button 
           onClick={() => onTabChange('syllabus')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <BookOpen size={18} />
-          Syllabus
+          <BookOpen size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Syllabus</span>
         </button>
         <button 
           onClick={() => onTabChange('diary')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <FileText size={18} />
-          Diary
+          <FileText size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Diary</span>
         </button>
         <button 
           onClick={() => onTabChange('staff')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'staff' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <Users size={18} />
-          Staff
+          <Users size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Staff</span>
         </button>
         <button 
           onClick={() => onTabChange('library')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
             activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
-          <LibraryIcon size={18} />
-          Library
+          <LibraryIcon size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Library</span>
         </button>
+
       </div>
 
       <AnimatePresence mode="wait">
@@ -449,14 +460,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
             className="space-y-8"
           >
-            <div className="grid grid-cols-1 md:grid-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+
               <StatCard title="Total Students" value="1,240" change="5%" isPositive icon={Users} color="blue" delay={0.1} />
               <StatCard title="Attendance Today" value="94%" change="2%" isPositive icon={Calendar} color="emerald" delay={0.2} />
               <StatCard title="Fee Collection" value="82%" icon={CreditCard} color="purple" delay={0.3} />
             </div>
             
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Attendance Trends</h3>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -470,7 +482,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                   </ResponsiveContainer>
                 </div>
               </div>
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Recent Admissions</h3>
                 <div className="space-y-4">
                   {students?.slice(0, 4).map(s => (
@@ -501,46 +513,49 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
             className="space-y-6"
           >
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Student Listing</h3>
-                <p className="text-slate-500 font-medium">Manage student records and admissions</p>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Student Listing</h3>
+                <p className="text-slate-500 text-sm font-medium">Manage student records and admissions</p>
               </div>
               <button 
                 onClick={() => setIsAddStudentOpen(true)}
-                className="px-6 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2"
+                className="w-full sm:w-auto px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
               >
-                <UserPlus size={20} />
+                <UserPlus size={18} className="sm:w-5 sm:h-5" />
                 New Admission
               </button>
             </div>
 
-            <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-6 border-b border-slate-50 flex items-center justify-between gap-4">
+
+            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-slate-50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
                   <input 
-                    placeholder="Search students by name, admission no..."
+                    placeholder="Search students..."
                     value={studentSearchQuery}
                     onChange={(e) => setStudentSearchQuery(e.target.value)}
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none"
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none font-medium"
                   />
                 </div>
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl">
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
                     <BookOpen size={16} className="text-slate-400" />
-                    <select className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none">
+                    <select className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none w-full lg:w-32">
                       <option>All Classes</option>
-                      {/* We could fetch classes here if needed, but keeping it simple for now */}
                     </select>
                   </div>
-                  <button className="p-2.5 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all">
-                    <Filter size={20} />
+                  <button className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all border border-transparent font-bold text-sm">
+                    <Filter size={18} />
+                    <span className="lg:hidden">Filter</span>
                   </button>
                 </div>
               </div>
-              <div className="overflow-x-auto">
-                <table className="w-full text-left">
+
+              <div className="overflow-x-auto lg:block">
+                <table className="w-full text-left hidden lg:table">
+
                   <thead>
                     <tr className="bg-slate-50/50">
                       <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Student</th>
@@ -644,6 +659,92 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                     )}
                   </tbody>
                 </table>
+
+                {/* Mobile Card List */}
+                <div className="lg:hidden divide-y divide-slate-50">
+                  {isLoadingStudents ? (
+                    <div className="p-8 text-center">
+                       <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-2" />
+                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Students...</p>
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="p-8">
+                      <EmptyState 
+                        icon={GraduationCap}
+                        title="No Students"
+                        description="Try a different search term."
+                        onAction={() => setStudentSearchQuery('')}
+                      />
+                    </div>
+                  ) : (
+                    filteredStudents.map(s => (
+                      <div key={s.id} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg">
+                              {s.name?.charAt(0) || '?'}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800">{s.name}</p>
+                              <p className="text-xs text-slate-400 uppercase font-medium">{s.admission_no}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-1.5 text-emerald-500 text-[10px] font-bold bg-emerald-50 px-2 py-1 rounded-full uppercase">
+                            <div className="w-1 h-1 rounded-full bg-emerald-500" />
+                            Active
+                          </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase">
+                            {s.class?.name || 'No Class'}
+                          </span>
+                          {s.section && (
+                            <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
+                              Section {s.section.name}
+                            </span>
+                          )}
+                          <span className="px-3 py-1 rounded-lg bg-slate-50 text-slate-400 text-[10px] font-bold uppercase">
+                            {s.gender}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-50/50">
+                          <div className="flex items-center gap-1">
+                            <button 
+                              onClick={() => setViewingStudent(s)}
+                              className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setEditingStudent(s);
+                                setIsAddStudentOpen(true);
+                              }}
+                              className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button 
+                              onClick={() => setDeletingStudentId(s.id)}
+                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                          <button 
+                            onClick={() => setViewingStudent(s)}
+                            className="text-[10px] font-bold text-brand-500 uppercase tracking-widest px-3 py-1 hover:bg-brand-50 rounded-lg transition-all"
+                          >
+                            Full Profile
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
               </div>
             </div>
           </motion.div>
@@ -793,12 +894,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   };
 
   const renderTeacher = () => (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
+    <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
+      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
+
         <button 
           onClick={() => onTabChange('overview')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -808,7 +911,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('attendance')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'attendance' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -818,7 +922,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('diary')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -828,7 +933,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('syllabus')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -838,7 +944,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('library')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -862,7 +969,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Today's Schedule</h3>
                 <div className="space-y-4">
                   {[
@@ -889,7 +996,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 </div>
               </div>
 
-              <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Class Attendance</h3>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%">
@@ -970,12 +1077,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   );
 
   const renderParent = () => (
-    <div className="space-y-8">
-      <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
+    <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
+      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
+
         <button 
           onClick={() => onTabChange('overview')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -985,7 +1094,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('fees')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'fees' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -995,7 +1105,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('attendance')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'attendance' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1005,7 +1116,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('diary')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1015,7 +1127,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('syllabus')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1025,7 +1138,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('library')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1244,13 +1358,15 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   );
 
   const renderGateKeeper = () => (
-    <div className="space-y-8">
+    <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
+
       {/* 
       <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
         <button 
           onClick={() => onTabChange('visitors')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'visitors' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1260,7 +1376,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('overview')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1270,7 +1387,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('staff')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'staff' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1380,7 +1498,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('overview')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1390,7 +1509,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         <button 
           onClick={() => onTabChange('library')}
           className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+
             activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
           )}
         >
@@ -1485,15 +1605,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   return (
     <div className={cn(
-      "p-8 mx-auto",
+      "p-4 sm:p-8 mx-auto overflow-x-hidden",
       role !== 'GATE_KEEPER' ? "max-w-[1600px]" : "max-w-none"
     )}>
+
       {role !== 'GATE_KEEPER' && (
         <div className="flex items-center justify-between mb-10">
           <div>
-            <h1 className="text-4xl font-extrabold text-slate-900 tracking-tight">
+            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
               {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             </h1>
+
             <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
           </div>
           <div className="flex items-center gap-4">

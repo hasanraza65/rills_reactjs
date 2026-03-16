@@ -82,18 +82,19 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
             transition={{ type: 'spring', damping: 25, stiffness: 200 }}
             className="fixed right-0 top-0 h-screen w-full max-w-md bg-white shadow-2xl z-[70] flex flex-col"
           >
-            <div className="p-8 border-b border-slate-100 flex items-center justify-between">
+            <div className="p-6 sm:p-8 border-b border-slate-100 flex items-center justify-between">
               <div>
-                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Notifications</h3>
-                <p className="text-slate-500 text-sm font-bold mt-1">Stay updated with school activities</p>
+                <h3 className="text-xl sm:text-2xl font-black text-slate-800 tracking-tight">Notifications</h3>
+                <p className="text-slate-500 text-xs sm:text-sm font-bold mt-1">Stay updated with school activities</p>
               </div>
               <button 
                 onClick={onClose}
-                className="p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-600"
+                className="p-2 sm:p-3 hover:bg-slate-100 rounded-2xl transition-all text-slate-400 hover:text-slate-600"
               >
-                <X size={24} />
+                <X size={20} className="sm:w-6 sm:h-6" />
               </button>
             </div>
+
 
             <div className="flex-1 overflow-y-auto p-6 space-y-4 custom-scrollbar">
               {NOTIFICATIONS.map((notif, i) => (
@@ -132,11 +133,12 @@ export const NotificationPanel: React.FC<NotificationPanelProps> = ({ isOpen, on
               ))}
             </div>
 
-            <div className="p-8 bg-slate-50 border-t border-slate-100">
+            <div className="p-6 sm:p-8 bg-slate-50 border-t border-slate-100">
               <Button variant="outline" className="w-full bg-white">
                 Mark all as read
               </Button>
             </div>
+
           </motion.div>
         </>
       )}

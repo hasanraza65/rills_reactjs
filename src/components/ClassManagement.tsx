@@ -140,10 +140,11 @@ export const ClassManagement: React.FC = () => {
             <table className="w-full text-left table-fixed">
               <thead>
                 <tr className="bg-slate-50/50">
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[40%]">Class Name</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Sections</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[20%]">Created At</th>
-                  <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[10%]">Actions</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[180px] sm:w-[40%]">Class Name</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Sections</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-[20%]">Created At</th>
+                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[100px] sm:w-[10%]">Actions</th>
+
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -182,31 +183,32 @@ export const ClassManagement: React.FC = () => {
                         {new Date(c.created_at).toLocaleDateString()}
                       </div>
                     </td>
-                    <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <td className="px-4 sm:px-8 py-5 text-right">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                         <button 
                           onClick={() => handleViewDetails(c.id)}
-                          className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
                           title="View Details"
                         >
                           <Eye size={16} />
                         </button>
                         <button 
                           onClick={() => handleOpenEditForm(c)}
-                          className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
                           title="Edit Class"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => handleDeleteClick(c)}
-                          className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
+                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
                           title="Delete Class"
                         >
                           <Trash2 size={16} />
                         </button>
                       </div>
                     </td>
+
                   </tr>
                 ))}
               </tbody>
@@ -224,15 +226,16 @@ export const ClassManagement: React.FC = () => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              className="bg-white w-full max-w-lg rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-slate-100"
+              className="bg-white w-full max-w-lg rounded-2xl sm:rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-slate-100"
             >
               {/* Header */}
-              <div className="p-6 md:p-8 flex items-start justify-between relative bg-gradient-to-br from-indigo-50/50 to-white">
-                <div className="flex items-center gap-5">
+              <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start justify-between relative bg-gradient-to-br from-indigo-50/50 to-white gap-4">
+                <div className="flex items-center gap-4 sm:gap-5">
                   {classDetails ? (
-                    <div className="w-16 h-16 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-bold text-3xl shadow-lg shadow-indigo-500/20 ring-4 ring-white">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-indigo-500 text-white flex items-center justify-center font-bold text-2xl sm:text-3xl shadow-lg shadow-indigo-500/20 ring-4 ring-white shrink-0">
                       {classDetails.name.charAt(0)}
                     </div>
+
                   ) : (
                     <div className="w-16 h-16 rounded-2xl bg-slate-100 animate-pulse ring-4 ring-white" />
                   )}
@@ -256,10 +259,11 @@ export const ClassManagement: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setIsDetailsOpen(false)} 
-                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent absolute top-6 right-6"
+                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent sm:absolute sm:top-6 sm:right-6 self-end sm:self-auto"
                 >
                   <Plus className="w-5 h-5 rotate-45" />
                 </button>
+
               </div>
 
               {/* Body */}
@@ -412,22 +416,24 @@ export const ClassManagement: React.FC = () => {
                     />
                   </div>
                 </div>
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
                   <Button 
                     type="button"
                     variant="ghost"
                     onClick={() => setIsFormOpen(false)}
+                    className="w-full sm:w-auto"
                   >
                     Cancel
                   </Button>
                   <Button 
                     type="submit"
-                    className="shadow-xl shadow-brand-200"
+                    className="w-full sm:w-auto shadow-xl shadow-brand-200"
                     disabled={createClassMutation.isPending || updateClassMutation.isPending}
                   >
                     {createClassMutation.isPending || updateClassMutation.isPending ? 'Saving...' : 'Save Class'}
                   </Button>
                 </div>
+
               </form>
             </motion.div>
           </div>

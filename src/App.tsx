@@ -12,6 +12,8 @@ export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
   const [currentBranch, setCurrentBranch] = useState<Branch>(BRANCHES[0]);
   const [activeTab, setActiveTab] = useState<string>('overview');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
 
   React.useEffect(() => {
     if (isAuthenticated && user && activeTab === 'overview') {
@@ -52,20 +54,28 @@ export default function App() {
         <Sidebar 
           role={role} 
           activeTab={activeTab}
-          onTabChange={setActiveTab}
+          onTabChange={(tab) => {
+            setActiveTab(tab);
+            setIsSidebarOpen(false);
+          }}
           onRoleChange={handleRoleChange} 
           availableRoles={user.roles as any}
           onLogout={handleLogout}
+          isOpen={isSidebarOpen}
+          onClose={() => setIsSidebarOpen(false)}
         />
       )}
+
       
-      <main className={cn("flex-1 pt-20", role !== 'GATE_KEEPER' && "ml-72")}>
+      <main className={cn("flex-1 pt-20 transition-all duration-300 overflow-x-hidden", role !== 'GATE_KEEPER' && "lg:ml-72")}>
         <Header 
           user={user as any} 
           currentBranch={currentBranch} 
           onBranchChange={handleBranchChange} 
           onLogout={handleLogout}
+          onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
         />
+
         
         <AnimatePresence mode="wait">
           <motion.div

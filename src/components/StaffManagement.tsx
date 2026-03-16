@@ -17,9 +17,12 @@ import {
   Mail,
   Phone,
   Calendar,
+  X,
   ChevronRight,
   User
 } from 'lucide-react';
+
+
 import { 
   Staff, 
   STAFF_DATA, 
@@ -76,7 +79,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-[1.25rem] w-fit">
+      <div className="flex items-center gap-1.5 p-1.5 bg-slate-100 rounded-[1.25rem] w-full sm:w-fit overflow-x-auto no-scrollbar whitespace-nowrap">
         {[
           { id: 'dashboard', label: 'Dashboard', icon: TrendingUp },
           { id: 'directory', label: 'Staff Directory', icon: User },
@@ -86,7 +89,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
             key={tab.id}
             onClick={() => setActiveTab(tab.id as any)}
             className={cn(
-              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all",
+              "flex items-center gap-2 px-6 py-2.5 rounded-xl text-sm font-bold transition-all shrink-0",
               activeTab === tab.id 
                 ? "bg-white text-brand-600 shadow-sm" 
                 : "text-slate-500 hover:text-slate-700 hover:bg-slate-200/50"
@@ -97,6 +100,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
           </button>
         ))}
       </div>
+
 
       {/* Content */}
       <AnimatePresence mode="wait">
@@ -244,9 +248,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                     onClick={() => setSelectedStaff(staff)}
                     className="p-6 cursor-pointer group relative overflow-hidden"
                   >
-                    <div className="absolute top-0 right-0 p-4 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="absolute top-0 right-0 p-4 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                       <MoreVertical className="w-5 h-5 text-slate-400" />
                     </div>
+
                     
                     <div className="flex flex-col items-center text-center space-y-4">
                       <div className="relative">
@@ -300,22 +305,25 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                   <h3 className="text-xl font-bold text-slate-900">Salary Disbursements</h3>
                   <p className="text-sm text-slate-500 font-medium">February 2024 Payroll Cycle</p>
                 </div>
-                <Button variant="outline" size="sm" leftIcon={<Download size={16} />}>
-                  Export Report
+                <Button variant="outline" size="sm" leftIcon={<Download size={16} />} className="shrink-0">
+                  <span className="hidden sm:inline">Export Report</span>
+                  <span className="sm:hidden">Export</span>
                 </Button>
+
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-left">
                   <thead>
                     <tr className="bg-slate-50/50">
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Staff Member</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Basic Salary</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Allowances</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Deductions</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Net Salary</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Actions</th>
+                      <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-auto">Staff Member</th>
+                      <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-auto">Basic Salary</th>
+                      <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[100px] sm:w-auto">Allowances</th>
+                      <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[100px] sm:w-auto">Deductions</th>
+                      <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-auto">Net Salary</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest hidden lg:table-cell">Status</th>
+                      <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[100px] sm:w-auto">Actions</th>
                     </tr>
+
                   </thead>
                   <tbody className="divide-y divide-slate-50">
                     {PAYSLIPS.map((payslip) => {
@@ -335,7 +343,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                           <td className="px-8 py-5 text-sm font-bold text-emerald-600">+{payslip.totalAllowances.toLocaleString()}</td>
                           <td className="px-8 py-5 text-sm font-bold text-rose-600">-{payslip.totalDeductions.toLocaleString()}</td>
                           <td className="px-8 py-5 text-sm font-extrabold text-slate-900">Rs. {payslip.netSalary.toLocaleString()}</td>
-                          <td className="px-8 py-5">
+                          <td className="px-8 py-5 hidden lg:table-cell">
                             <span className={cn(
                               "px-3 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider",
                               payslip.status === 'PAID' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
@@ -343,19 +351,21 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                               {payslip.status}
                             </span>
                           </td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
+
+                          <td className="px-4 sm:px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-1 sm:gap-2">
                               <button 
                                 onClick={() => setShowPayslipModal(true)}
-                                className="p-2 text-slate-300 hover:text-brand-500 transition-colors"
+                                className="p-2 text-slate-400 sm:text-slate-300 hover:text-brand-500 transition-colors"
                               >
                                 <Eye size={18} />
                               </button>
-                              <button className="p-2 text-slate-300 hover:text-brand-500 transition-colors">
+                              <button className="p-2 text-slate-400 sm:text-slate-300 hover:text-brand-500 transition-colors">
                                 <Settings size={18} />
                               </button>
                             </div>
                           </td>
+
                         </tr>
                       );
                     })}
@@ -400,8 +410,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                     <h3 className="text-2xl font-extrabold text-slate-900">{selectedStaff.name}</h3>
                     <p className="text-brand-600 font-bold uppercase tracking-wider">{selectedStaff.designation}</p>
                   </div>
-                  <div className="flex gap-3">
-                    <Button size="sm">
+                  <div className="flex flex-wrap gap-2 sm:gap-3">
+                    <Button size="sm" className="sm:inline-flex">
                       Edit Profile
                     </Button>
                     <Button 
@@ -409,9 +419,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                       size="sm"
                       onClick={() => setShowSalaryModal(true)}
                     >
-                      Salary Structure
+                      Salary
                     </Button>
                   </div>
+
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -668,10 +679,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
               <div className="p-6 border-b border-gray-100 flex items-center justify-between">
                 <h3 className="font-bold text-gray-900">Add New Staff Member</h3>
                 <button onClick={() => setShowStaffForm(false)} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-                  <Plus className="w-5 h-5 rotate-45 text-gray-400" />
+                  <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
-              <div className="p-8 grid grid-cols-2 gap-6">
+              <div className="p-6 sm:p-8 grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6 overflow-y-auto max-h-[60vh]">
+
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">Full Name</label>
                   <input type="text" placeholder="e.g. John Doe" className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none" />
