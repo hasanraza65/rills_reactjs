@@ -58,7 +58,7 @@ const menuItems: Record<UserRole, any[]> = {
   BRANCH_ADMIN: [
     { icon: LayoutDashboard, label: 'Branch Overview', id: 'overview' },
     { icon: GraduationCap, label: 'Students', id: 'students' },
-    { icon: Users, label: 'Families', id: 'families' },
+    { icon: Users, label: 'Parents', id: 'families' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
     { icon: CreditCard, label: 'Fees', id: 'fees' },
     { 

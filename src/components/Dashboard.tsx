@@ -348,8 +348,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   const renderBranchAdmin = () => {
     const filteredStudents = students?.filter(s => 
-      s.name.toLowerCase().includes(studentSearchQuery.toLowerCase()) ||
-      s.admission_no.toLowerCase().includes(studentSearchQuery.toLowerCase())
+      s.name?.toLowerCase()?.includes(studentSearchQuery.toLowerCase()) ||
+      s.admission_no?.toLowerCase()?.includes(studentSearchQuery.toLowerCase())
     ) || [];
 
     return (
@@ -385,7 +385,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           )}
         >
           <Users size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Families</span>
+          <span className="whitespace-nowrap">Parents</span>
         </button>
         <button 
           onClick={() => onTabChange('fees')}

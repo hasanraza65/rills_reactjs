@@ -55,12 +55,24 @@ export const FamilyManagement: React.FC = () => {
   const updateMutation = useUpdateParent();
   const deleteMutation = useDeleteParent();
 
-  const filteredParents = parents?.filter(p => 
-    p.father_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.mother_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.father_cnic.includes(searchQuery) ||
-    p.mother_cnic.includes(searchQuery)
-  ) || [];
+  const filteredParents = React.useMemo(() => {
+    let list: ParentData[] = [];
+    if (Array.isArray(parents)) {
+      list = parents;
+    } else if (parents && typeof parents === 'object') {
+      const pList = parents as any;
+      list = pList.data || pList.parents || pList.items || [];
+    }
+    
+    if (!Array.isArray(list)) list = [];
+
+    return list.filter(p => 
+      p.father_name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+      p.mother_name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+      p.father_cnic?.includes(searchQuery) ||
+      p.mother_cnic?.includes(searchQuery)
+    );
+  }, [parents, searchQuery]);
 
   const handleOpenAddForm = () => {
     setEditingParent(null);
@@ -133,12 +145,12 @@ export const FamilyManagement: React.FC = () => {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Family Directory</h2>
+          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Parent Directory</h2>
           <p className="text-slate-500 font-medium mt-1">Manage parent information and family records</p>
         </div>
         <div className="flex items-center gap-3">
           <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />}>
-            Add Family
+            Add Parent
           </Button>
         </div>
       </div>
@@ -163,7 +175,7 @@ export const FamilyManagement: React.FC = () => {
         {isLoading ? (
           <div className="p-12 flex flex-col items-center justify-center text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-brand-500" />
-            <p className="text-sm font-medium">Loading families...</p>
+            <p className="text-sm font-medium">Loading parents...</p>
           </div>
         ) : error ? (
           <div className="p-12 flex flex-col items-center justify-center text-rose-500 bg-rose-50/30">
@@ -173,9 +185,9 @@ export const FamilyManagement: React.FC = () => {
         ) : filteredParents.length === 0 ? (
           <EmptyState 
             icon={Users}
-            title="No Families Found"
-            description={searchQuery ? `No records match "${searchQuery}"` : "Start by adding your first family record."}
-            actionLabel={searchQuery ? "Clear Search" : "Add Family"}
+            title="No Parents Found"
+            description={searchQuery ? `No records match "${searchQuery}"` : "Start by adding your first parent record."}
+            actionLabel={searchQuery ? "Clear Search" : "Add Parent"}
             onAction={searchQuery ? () => setSearchQuery('') : handleOpenAddForm}
           />
         ) : (
@@ -241,14 +253,14 @@ export const FamilyManagement: React.FC = () => {
                         <button 
                           onClick={() => handleOpenEditForm(p)}
                           className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
-                          title="Edit Family"
+                          title="Edit Parent"
                         >
                           <Edit2 size={16} />
                         </button>
                         <button 
                           onClick={() => setParentToDelete(p)}
                           className="p-2 text-slate-400 sm:text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
-                          title="Delete Family"
+                          title="Delete Parent"
                         >
                           <Trash2 size={16} />
                         </button>
@@ -276,10 +288,10 @@ export const FamilyManagement: React.FC = () => {
               <div className="p-6 border-b border-slate-100 flex items-center justify-between">
                 <div>
                   <h3 className="font-bold text-slate-900">
-                    {editingParent ? 'Edit Family' : 'Add New Family'}
+                    {editingParent ? 'Edit Parent' : 'Add New Parent'}
                   </h3>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    {editingParent ? 'Update family information' : 'Register a new family in the directory'}
+                    {editingParent ? 'Update parent information' : 'Register a new parent in the directory'}
                   </p>
                 </div>
                 <button 
@@ -477,7 +489,7 @@ export const FamilyManagement: React.FC = () => {
                     className="w-full sm:w-auto shadow-xl shadow-brand-200 px-8"
                     isLoading={createMutation.isPending || updateMutation.isPending}
                   >
-                    {editingParent ? 'Update Family' : 'Create Family'}
+                    {editingParent ? 'Update Parent' : 'Create Parent'}
                   </Button>
                 </div>
 
@@ -664,9 +676,9 @@ export const FamilyManagement: React.FC = () => {
                 <Trash2 size={32} />
               </div>
               
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Family record?</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Parent record?</h3>
               <p className="text-slate-500 text-sm mb-6">
-                Are you sure you want to delete <strong className="text-slate-700">{parentToDelete.father_name}</strong>'s family record? This action cannot be undone.
+                Are you sure you want to delete <strong className="text-slate-700">{parentToDelete.father_name}</strong>'s parent record? This action cannot be undone.
               </p>
               
               <div className="flex gap-3 w-full">

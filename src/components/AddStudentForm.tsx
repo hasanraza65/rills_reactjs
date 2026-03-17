@@ -42,7 +42,7 @@ interface AddStudentFormProps {
 const STEPS = [
   { id: 1, title: 'Personal', icon: User },
   { id: 2, title: 'Academic', icon: GraduationCap },
-  { id: 3, title: 'Family', icon: Users },
+  { id: 3, title: 'Parent', icon: Users },
   { id: 4, title: 'Documents', icon: FileText },
   { id: 5, title: 'Fees', icon: CreditCard },
 ];
@@ -99,10 +99,26 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const [parentSearch, setParentSearch] = useState('');
 
   const filteredParents = useMemo(() => {
-    if (!parentSearch || !parentsList) return [];
-    return parentsList.filter(p => 
-      p.father_name.toLowerCase().includes(parentSearch.toLowerCase()) || 
-      p.father_cnic?.includes(parentSearch)
+    if (!parentsList) return [];
+    
+    // Extract array from various common API response structures
+    let list: any[] = [];
+    if (Array.isArray(parentsList)) {
+      list = parentsList;
+    } else if (parentsList && typeof parentsList === 'object') {
+      const pList = parentsList as any;
+      list = pList.data || pList.parents || pList.items || [];
+    }
+      
+    if (!Array.isArray(list)) list = [];
+
+    if (!parentSearch) return list;
+    
+    return list.filter(p => 
+      p.father_name?.toLowerCase().includes(parentSearch.toLowerCase()) || 
+      p.father_cnic?.includes(parentSearch) ||
+      p.mother_name?.toLowerCase().includes(parentSearch.toLowerCase()) ||
+      p.mother_cnic?.includes(parentSearch)
     );
   }, [parentSearch, parentsList]);
 
@@ -571,7 +587,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
             formData.parentOption === 'NEW' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"
           )}
         >
-          Create New Family
+          Create New Parent
         </button>
       </div>
 
@@ -598,17 +614,17 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setFormData({...formData, selectedParentId: p.id})}
+                  onClick={() => setFormData({...formData, selectedParentId: p.id.toString()})}
                   className={cn(
                     "w-full p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between",
-                    formData.selectedParentId === p.id ? "border-brand-500 bg-brand-50" : "border-slate-50 hover:border-slate-100"
+                    formData.selectedParentId === p.id.toString() ? "border-brand-500 bg-brand-50" : "border-slate-50 hover:border-slate-100"
                   )}
                 >
                   <div>
-                    <p className="text-sm font-bold text-slate-800">{p.name}</p>
-                    <p className="text-xs text-slate-500">{p.cnic}</p>
+                    <p className="text-sm font-bold text-slate-800">{p.father_name}</p>
+                    <p className="text-xs text-slate-500">{p.father_cnic}</p>
                   </div>
-                  {formData.selectedParentId === p.id && <CheckCircle2 className="text-brand-500" size={20} />}
+                  {formData.selectedParentId === p.id.toString() && <CheckCircle2 className="text-brand-500" size={20} />}
                 </button>
               ))}
               {parentSearch && filteredParents.length === 0 && (
