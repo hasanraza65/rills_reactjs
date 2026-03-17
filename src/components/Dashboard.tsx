@@ -666,7 +666,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 </table>
 
                 {/* Mobile Card List */}
-                <div className="lg:hidden divide-y divide-slate-50">
+                <div className="lg:hidden divide-y divide-slate-100">
                   {isLoadingStudents ? (
                     <div className="p-8 text-center">
                        <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-2" />
@@ -683,7 +683,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                     </div>
                   ) : (
                     filteredStudents.map(s => (
-                      <div key={s.id} className="p-4 space-y-4 hover:bg-slate-50/50 transition-colors">
+                      <div key={s.id} className="p-5 sm:p-6 space-y-5 hover:bg-slate-50/50 transition-colors">
                         <div className="flex items-start justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg">
@@ -714,7 +714,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                           </span>
                         </div>
 
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-50/50">
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
                           <div className="flex items-center gap-1">
                             <button 
                               onClick={() => setViewingStudent(s)}
