@@ -55,12 +55,24 @@ export const FamilyManagement: React.FC = () => {
   const updateMutation = useUpdateParent();
   const deleteMutation = useDeleteParent();
 
-  const filteredParents = parents?.filter(p => 
-    p.father_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.mother_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    p.father_cnic.includes(searchQuery) ||
-    p.mother_cnic.includes(searchQuery)
-  ) || [];
+  const filteredParents = React.useMemo(() => {
+    let list: ParentData[] = [];
+    if (Array.isArray(parents)) {
+      list = parents;
+    } else if (parents && typeof parents === 'object') {
+      const pList = parents as any;
+      list = pList.data || pList.parents || pList.items || [];
+    }
+    
+    if (!Array.isArray(list)) list = [];
+
+    return list.filter(p => 
+      p.father_name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+      p.mother_name?.toLowerCase()?.includes(searchQuery.toLowerCase()) ||
+      p.father_cnic?.includes(searchQuery) ||
+      p.mother_cnic?.includes(searchQuery)
+    );
+  }, [parents, searchQuery]);
 
   const handleOpenAddForm = () => {
     setEditingParent(null);
@@ -131,31 +143,31 @@ export const FamilyManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Family Directory</h2>
-          <p className="text-slate-500 font-medium mt-1">Manage parent information and family records</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Parent Directory</h2>
+          <p className="text-slate-500 text-sm sm:text-base font-medium mt-1">Manage parent details and records</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />}>
-            Add Family
+          <Button onClick={handleOpenAddForm} className="w-full sm:w-auto" leftIcon={<Plus size={18} />}>
+            Add Parent
           </Button>
         </div>
       </div>
 
       <Card padding="none" className="overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md group">
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative flex-1 group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={18} />
             <input 
               type="text" 
               placeholder="Search by name or CNIC..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-50 border-none rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 transition-all font-medium"
+              className="w-full bg-slate-50 border-none rounded-xl py-2.5 sm:py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 transition-all font-medium"
             />
           </div>
-          <Button variant="outline" leftIcon={<Filter size={18} />}>
+          <Button variant="outline" className="w-full sm:w-auto" leftIcon={<Filter size={18} />}>
             Filters
           </Button>
         </div>
@@ -163,7 +175,7 @@ export const FamilyManagement: React.FC = () => {
         {isLoading ? (
           <div className="p-12 flex flex-col items-center justify-center text-slate-400">
             <Loader2 className="w-8 h-8 animate-spin mb-4 text-brand-500" />
-            <p className="text-sm font-medium">Loading families...</p>
+            <p className="text-sm font-medium">Loading parents...</p>
           </div>
         ) : error ? (
           <div className="p-12 flex flex-col items-center justify-center text-rose-500 bg-rose-50/30">
@@ -173,92 +185,154 @@ export const FamilyManagement: React.FC = () => {
         ) : filteredParents.length === 0 ? (
           <EmptyState 
             icon={Users}
-            title="No Families Found"
-            description={searchQuery ? `No records match "${searchQuery}"` : "Start by adding your first family record."}
-            actionLabel={searchQuery ? "Clear Search" : "Add Family"}
+            title="No Parents Found"
+            description={searchQuery ? `No records match "${searchQuery}"` : "Start by adding your first parent record."}
+            actionLabel={searchQuery ? "Clear Search" : "Add Parent"}
             onAction={searchQuery ? () => setSearchQuery('') : handleOpenAddForm}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left table-fixed">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Father Name</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Mother Name</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[100px] sm:w-[15%]">Guardian</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-[15%]">Contact</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[100px] sm:w-[10%]">Actions</th>
+          <div>
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left table-fixed">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Father Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Mother Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[15%]">Guardian</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[15%]">Contact</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[10%]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50 font-medium">
+                  {filteredParents.map((p) => (
+                    <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                            {p.father_name?.charAt(0) || 'P'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{p.father_name || 'Father Name'}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{p.father_cnic || 'CNIC'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                            {p.mother_name?.charAt(0) || 'M'}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{p.mother_name || 'Mother Name'}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{p.mother_cnic || 'CNIC'}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
+                          p.guardian_type === 'father' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'
+                        }`}>
+                          {p.guardian_type}
+                        </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-600 font-bold">
+                          <Phone size={14} className="text-slate-400" />
+                          {p.father_contact_no}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handleViewDetails(p.id)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenEditForm(p)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                            title="Edit Parent"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => setParentToDelete(p)}
+                            className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
+                            title="Delete Parent"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50 font-medium">
-                {filteredParents.map((p) => (
-                  <tr key={p.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5">
+            {/* Mobile Card View */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {filteredParents.map((p) => (
+                <div key={p.id} className="p-5 flex flex-col gap-4 hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="space-y-3">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                        <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-xs shrink-0">
                           {p.father_name?.charAt(0) || 'P'}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">{p.father_name || 'Father Name'}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{p.father_cnic || 'CNIC'}</p>
+                          <p className="text-sm font-bold text-slate-800 leading-none">{p.father_name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">{p.father_cnic}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-8 py-5">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold">
+                        <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-xs shrink-0">
                           {p.mother_name?.charAt(0) || 'M'}
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">{p.mother_name || 'Mother Name'}</p>
-                          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{p.mother_cnic || 'CNIC'}</p>
+                          <p className="text-sm font-bold text-slate-800 leading-none">{p.mother_name}</p>
+                          <p className="text-[10px] text-slate-400 font-bold uppercase mt-1 tracking-wider">{p.mother_cnic}</p>
                         </div>
                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <span className={`px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase tracking-wider ${
-                        p.guardian_type === 'father' ? 'bg-indigo-50 text-indigo-600' : 'bg-rose-50 text-rose-600'
-                      }`}>
-                        {p.guardian_type}
-                      </span>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2 text-sm text-slate-600 font-bold">
-                        <Phone size={14} className="text-slate-400" />
-                        {p.father_contact_no}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-1 sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleViewDetails(p.id)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleOpenEditForm(p)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
-                          title="Edit Family"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => setParentToDelete(p)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
-                          title="Delete Family"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                    </div>
+                    <span className={`px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-widest border shrink-0 ${
+                      p.guardian_type === 'father' ? 'bg-indigo-50 border-indigo-100 text-indigo-600' : 'bg-rose-50 border-rose-100 text-rose-600'
+                    }`}>
+                      {p.guardian_type}
+                    </span>
+                  </div>
 
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-50">
+                    <div className="flex items-center gap-2 text-xs text-slate-600 font-bold">
+                      <Phone size={14} className="text-slate-400" />
+                      {p.father_contact_no}
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleViewDetails(p.id)}
+                        className="p-2 text-slate-400 hover:bg-slate-100 hover:text-brand-500 rounded-lg transition-all"
+                      >
+                        <Eye size={16} />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenEditForm(p)}
+                        className="p-2 text-slate-400 hover:bg-slate-100 hover:text-brand-500 rounded-lg transition-all"
+                      >
+                        <Edit2 size={16} />
+                      </button>
+                      <button 
+                        onClick={() => setParentToDelete(p)}
+                        className="p-2 text-slate-400 hover:bg-rose-50 hover:text-rose-500 rounded-lg transition-all"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </Card>
@@ -273,85 +347,85 @@ export const FamilyManagement: React.FC = () => {
               exit={{ opacity: 0, scale: 0.95 }}
               className="bg-white w-full max-w-2xl rounded-3xl overflow-hidden shadow-2xl my-8"
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <div>
-                  <h3 className="font-bold text-slate-900">
-                    {editingParent ? 'Edit Family' : 'Add New Family'}
-                  </h3>
-                  <p className="text-xs text-slate-500 font-medium mt-0.5">
-                    {editingParent ? 'Update family information' : 'Register a new family in the directory'}
-                  </p>
+                <div className="p-5 sm:p-6 border-b border-slate-100 flex items-center justify-between">
+                  <div>
+                    <h3 className="text-lg sm:text-xl font-black text-slate-800 tracking-tight">
+                      {editingParent ? 'Edit Parent' : 'Add New Parent'}
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-widest mt-0.5">
+                      {editingParent ? 'Update parent record' : 'Register new parent'}
+                    </p>
+                  </div>
+                  <button 
+                    onClick={() => setIsFormOpen(false)}
+                    className="p-2 hover:bg-slate-50 rounded-xl transition-colors text-slate-400"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
                 </div>
-                <button 
-                  onClick={() => setIsFormOpen(false)}
-                  className="p-2 hover:bg-slate-100 rounded-full transition-colors"
-                >
-                  <X className="w-5 h-5 text-slate-400" />
-                </button>
-              </div>
 
               <form onSubmit={handleSubmit}>
-                <div className="p-4 sm:p-8 space-y-6 sm:space-y-8 overflow-y-auto max-h-[70vh] custom-scrollbar">
+                <div className="p-5 sm:p-8 space-y-8 sm:space-y-10 overflow-y-auto max-h-[70vh] custom-scrollbar">
 
                   {/* Father Details */}
-                  <div className="space-y-6">
+                  <div className="space-y-5 sm:space-y-6">
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
                         <User size={18} />
                       </div>
-                      <h4 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Father Details</h4>
+                      <h4 className="font-bold text-slate-800 uppercase text-[10px] sm:text-xs tracking-widest">Father Details</h4>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Father Name</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Father Name</label>
                         <input
                           type="text"
                           value={formData.father_name}
                           onChange={(e) => setFormData({...formData, father_name: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Father CNIC</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Father CNIC</label>
                         <input
                           type="text"
                           placeholder="35201-XXXXXXX-X"
                           value={formData.father_cnic}
                           onChange={(e) => setFormData({...formData, father_cnic: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Education</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Education</label>
                         <input
                           type="text"
                           value={formData.father_education}
                           onChange={(e) => setFormData({...formData, father_education: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Occupation</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Occupation</label>
                         <input
                           type="text"
                           value={formData.father_occupation}
                           onChange={(e) => setFormData({...formData, father_occupation: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-bold text-slate-700">Contact Number</label>
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                           <input
                             type="text"
                             value={formData.father_contact_no}
                             onChange={(e) => setFormData({...formData, father_contact_no: e.target.value})}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                             required
                           />
                         </div>
@@ -360,64 +434,64 @@ export const FamilyManagement: React.FC = () => {
                   </div>
 
                   {/* Mother Details */}
-                  <div className="space-y-6">
+                  <div className="space-y-5 sm:space-y-6">
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
                         <User size={18} />
                       </div>
-                      <h4 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Mother Details</h4>
+                      <h4 className="font-bold text-slate-800 uppercase text-[10px] sm:text-xs tracking-widest">Mother Details</h4>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Mother Name</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mother Name</label>
                         <input
                           type="text"
                           value={formData.mother_name}
                           onChange={(e) => setFormData({...formData, mother_name: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Mother CNIC</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mother CNIC</label>
                         <input
                           type="text"
                           placeholder="35201-XXXXXXX-X"
                           value={formData.mother_cnic}
                           onChange={(e) => setFormData({...formData, mother_cnic: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Education</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Education</label>
                         <input
                           type="text"
                           value={formData.mother_education}
                           onChange={(e) => setFormData({...formData, mother_education: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Occupation</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Occupation</label>
                         <input
                           type="text"
                           value={formData.mother_occupation}
                           onChange={(e) => setFormData({...formData, mother_occupation: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                           required
                         />
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-bold text-slate-700">Contact Number</label>
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                           <input
                             type="text"
                             value={formData.mother_contact_no}
                             onChange={(e) => setFormData({...formData, mother_contact_no: e.target.value})}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                             required
                           />
                         </div>
@@ -426,35 +500,35 @@ export const FamilyManagement: React.FC = () => {
                   </div>
 
                   {/* General Info */}
-                  <div className="space-y-6">
+                  <div className="space-y-5 sm:space-y-6">
                     <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
-                      <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center">
+                      <div className="w-8 h-8 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center shrink-0">
                         <Shield size={18} />
                       </div>
-                      <h4 className="font-bold text-slate-800 uppercase text-xs tracking-widest">Preferences & Location</h4>
+                      <h4 className="font-bold text-slate-800 uppercase text-[10px] sm:text-xs tracking-widest">Preferences & Location</h4>
                     </div>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Guardian Type</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Guardian Type</label>
                         <select
                           value={formData.guardian_type}
                           onChange={(e) => setFormData({...formData, guardian_type: e.target.value as 'father' | 'mother'})}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium appearance-none"
+                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm appearance-none"
                           required
                         >
                           <option value="father">Father</option>
                           <option value="mother">Mother</option>
                         </select>
                       </div>
-                      <div className="space-y-2 md:col-span-2">
-                        <label className="text-sm font-bold text-slate-700">Residential Address</label>
+                      <div className="space-y-2 sm:col-span-2">
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Residential Address</label>
                         <div className="relative">
                           <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                           <input
                             type="text"
                             value={formData.address}
                             onChange={(e) => setFormData({...formData, address: e.target.value})}
-                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
                             required
                           />
                         </div>
@@ -477,7 +551,7 @@ export const FamilyManagement: React.FC = () => {
                     className="w-full sm:w-auto shadow-xl shadow-brand-200 px-8"
                     isLoading={createMutation.isPending || updateMutation.isPending}
                   >
-                    {editingParent ? 'Update Family' : 'Create Family'}
+                    {editingParent ? 'Update Parent' : 'Create Parent'}
                   </Button>
                 </div>
 
@@ -503,11 +577,11 @@ export const FamilyManagement: React.FC = () => {
               <div className="p-6 sm:p-8 flex flex-col sm:flex-row items-start justify-between relative bg-gradient-to-br from-brand-50/50 to-white gap-4">
                 <div className="flex items-center gap-4 sm:gap-6">
                   {parentDetails ? (
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-brand-500 text-white flex items-center justify-center font-bold text-2xl sm:text-4xl shadow-lg shadow-brand-500/20 ring-4 ring-white shrink-0">
+                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl sm:rounded-[2rem] bg-brand-500 text-white flex items-center justify-center font-bold text-xl sm:text-4xl shadow-lg shadow-brand-500/20 ring-4 ring-white shrink-0">
                       {parentDetails.father_name?.charAt(0) || 'P'}
                     </div>
                   ) : (
-                    <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 animate-pulse ring-4 ring-white shrink-0" />
+                    <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-2xl bg-slate-100 animate-pulse ring-4 ring-white shrink-0" />
                   )}
                   <div className="pt-1">
                     {parentDetails ? (
@@ -534,7 +608,7 @@ export const FamilyManagement: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setIsDetailsOpen(false)} 
-                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent sm:absolute sm:top-8 sm:right-8 self-end sm:self-auto"
+                  className="p-2 sm:p-2.5 hover:bg-white rounded-xl sm:rounded-2xl transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-white/50 sm:bg-transparent absolute top-6 right-6 sm:top-8 sm:right-8"
                 >
                   <Plus className="w-5 h-5 sm:w-6 sm:h-6 rotate-45" />
                 </button>
@@ -550,30 +624,30 @@ export const FamilyManagement: React.FC = () => {
                   </div>
                 ) : parentDetails && (
                   <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 sm:gap-8">
                       {/* Father Card */}
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 text-indigo-600">
                           <User size={18} />
-                          <h4 className="font-bold text-sm uppercase tracking-wider">Father Details</h4>
+                          <h4 className="font-bold text-[10px] sm:text-xs uppercase tracking-widest">Father Details</h4>
                         </div>
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                        <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100 space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">CNIC</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.father_cnic}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">CNIC</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.father_cnic}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Education</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.father_education}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Education</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.father_education}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Occupation</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.father_occupation}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Occupation</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.father_occupation}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.father_contact_no}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.father_contact_no}</p>
                             </div>
                           </div>
                         </div>
@@ -583,25 +657,25 @@ export const FamilyManagement: React.FC = () => {
                       <div className="space-y-4">
                         <div className="flex items-center gap-2 text-rose-600">
                           <User size={18} />
-                          <h4 className="font-bold text-sm uppercase tracking-wider">Mother Details</h4>
+                          <h4 className="font-bold text-[10px] sm:text-xs uppercase tracking-widest">Mother Details</h4>
                         </div>
-                        <div className="p-6 rounded-2xl bg-slate-50 border border-slate-100 space-y-4">
+                        <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-50 border border-slate-100 space-y-4">
                           <div className="grid grid-cols-2 gap-4">
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">CNIC</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.mother_cnic}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-nowrap">CNIC</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.mother_cnic}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Education</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.mother_education}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-nowrap">Education</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.mother_education}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Occupation</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.mother_occupation}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-nowrap">Occupation</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.mother_occupation}</p>
                             </div>
                             <div>
-                              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Contact</p>
-                              <p className="text-sm font-bold text-slate-800">{parentDetails.mother_contact_no}</p>
+                              <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 text-nowrap">Contact</p>
+                              <p className="text-[11px] sm:text-sm font-bold text-slate-800 break-all leading-tight">{parentDetails.mother_contact_no}</p>
                             </div>
                           </div>
                         </div>
@@ -609,10 +683,10 @@ export const FamilyManagement: React.FC = () => {
                     </div>
 
                     {/* Address Box */}
-                    <div className="p-6 rounded-2xl bg-slate-900 text-white space-y-2 relative overflow-hidden group">
-                      <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-20 h-20 text-white/5 -rotate-12 transition-transform group-hover:scale-110" />
-                      <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">Permanent Address</p>
-                      <p className="font-bold relative z-10">{parentDetails.address}</p>
+                    <div className="p-5 sm:p-6 rounded-2xl sm:rounded-3xl bg-slate-900 text-white space-y-2 relative overflow-hidden group">
+                      <MapPin className="absolute right-4 top-1/2 -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 text-white/5 -rotate-12 transition-transform group-hover:scale-110" />
+                      <p className="text-[9px] sm:text-[10px] font-bold text-white/40 uppercase tracking-widest">Permanent Address</p>
+                      <p className="text-sm sm:text-base font-bold relative z-10">{parentDetails.address}</p>
                     </div>
                   </>
                 )}
@@ -664,9 +738,9 @@ export const FamilyManagement: React.FC = () => {
                 <Trash2 size={32} />
               </div>
               
-              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Family record?</h3>
+              <h3 className="text-xl font-bold text-slate-900 mb-2">Delete Parent record?</h3>
               <p className="text-slate-500 text-sm mb-6">
-                Are you sure you want to delete <strong className="text-slate-700">{parentToDelete.father_name}</strong>'s family record? This action cannot be undone.
+                Are you sure you want to delete <strong className="text-slate-700">{parentToDelete.father_name}</strong>'s parent record? This action cannot be undone.
               </p>
               
               <div className="flex gap-3 w-full">

@@ -26,7 +26,7 @@ import {
 import { cn, FeeHead } from '../types';
 import { AddClassModal } from './AddClassModal';
 import { useClasses } from '../hooks/use-class';
-import { useParents } from '../hooks/use-parent';
+import { useParents, useCreateParent } from '../hooks/use-parent';
 import { useSections } from '../hooks/use-section';
 import { useCreateStudent, useUpdateStudent } from '../hooks/use-student';
 import { StudentData } from '../types/api/student';
@@ -42,7 +42,7 @@ interface AddStudentFormProps {
 const STEPS = [
   { id: 1, title: 'Personal', icon: User },
   { id: 2, title: 'Academic', icon: GraduationCap },
-  { id: 3, title: 'Family', icon: Users },
+  { id: 3, title: 'Parent', icon: Users },
   { id: 4, title: 'Documents', icon: FileText },
   { id: 5, title: 'Fees', icon: CreditCard },
 ];
@@ -60,6 +60,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const { data: sectionsList } = useSections();
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
+  const createParent = useCreateParent();
   
   // Form State
   const [formData, setFormData] = useState({
@@ -82,11 +83,18 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     parentOption: 'EXISTING' as 'EXISTING' | 'NEW',
     selectedParentId: editingStudent?.parent_id?.toString() || '',
     newParent: {
-      name: '',
-      cnic: '',
-      phone: '',
-      email: '',
+      father_name: '',
+      father_cnic: '',
+      father_education: '',
+      father_occupation: '',
+      father_contact_no: '',
+      mother_name: '',
+      mother_cnic: '',
+      mother_education: '',
+      mother_occupation: '',
+      mother_contact_no: '',
       address: '',
+      guardian_type: 'father' as 'father' | 'mother',
     },
     feeHeads: [
       { id: 'fh1', name: 'Tuition Fee', amount: 8000, isEnabled: true },
@@ -99,10 +107,26 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const [parentSearch, setParentSearch] = useState('');
 
   const filteredParents = useMemo(() => {
-    if (!parentSearch || !parentsList) return [];
-    return parentsList.filter(p => 
-      p.father_name.toLowerCase().includes(parentSearch.toLowerCase()) || 
-      p.father_cnic?.includes(parentSearch)
+    if (!parentsList) return [];
+    
+    // Extract array from various common API response structures
+    let list: any[] = [];
+    if (Array.isArray(parentsList)) {
+      list = parentsList;
+    } else if (parentsList && typeof parentsList === 'object') {
+      const pList = parentsList as any;
+      list = pList.data || pList.parents || pList.items || [];
+    }
+      
+    if (!Array.isArray(list)) list = [];
+
+    if (!parentSearch) return list;
+    
+    return list.filter(p => 
+      p.father_name?.toLowerCase().includes(parentSearch.toLowerCase()) || 
+      p.father_cnic?.includes(parentSearch) ||
+      p.mother_name?.toLowerCase().includes(parentSearch.toLowerCase()) ||
+      p.mother_cnic?.includes(parentSearch)
     );
   }, [parentSearch, parentsList]);
 
@@ -135,12 +159,21 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     const file = e.target.files?.[0];
     if (file && activeDocKey) {
       const current = formData.attachments;
-      // Filter out existing ones with same name if any, or just add
-      // Usually we want to associate the file with the specific doc key (birth_cert, etc.)
-      // but the user's payload has an "attachments" array.
-      // I'll keep the current logic but store the File object.
-      setFormData({ ...formData, attachments: [...current, file] });
+      // We store attachments as { key: string, file: File | string } to track them reliably
+      const newAttachment = { key: activeDocKey, file };
+      
+      // Filter out any existing attachment for this specific document key
+      const filtered = current.filter((a: any) => 
+        !(a.key === activeDocKey || a === activeDocKey || (a instanceof File && a.name === activeDocKey))
+      );
+      
+      setFormData({ 
+        ...formData, 
+        attachments: [...filtered, newAttachment] 
+      });
       setActiveDocKey(null);
+      // Reset input value so the same file can be selected again if needed
+      e.target.value = '';
     }
   };
 
@@ -150,8 +183,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       animate={{ opacity: 1, x: 0 }}
       className="space-y-6"
     >
-      <div className="flex flex-col sm:flex-row gap-6">
-        <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start text-center sm:text-left">
+        <div className="space-y-4 flex flex-col items-center sm:items-start">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Photograph</label>
           <input 
             type="file"
@@ -188,7 +221,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           </div>
         </div>
 
-        <div className="flex-1 space-y-6">
+        <div className="w-full sm:flex-1 space-y-6 text-left">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
@@ -275,7 +308,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
       <div className="space-y-4">
         <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Health Information</label>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-3 gap-3">
           {['Eyesight', 'Asthma', 'Allergies', 'Physical', 'Other'].map(issue => (
             <button
               key={issue}
@@ -347,64 +380,69 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       animate={{ opacity: 1, x: 0 }}
       className="space-y-6"
     >
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Branch</label>
-        <select 
-          value={formData.branchId}
-          onChange={e => setFormData({...formData, branchId: parseInt(e.target.value)})}
-          className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-        >
-          <option value={1}>Main Branch</option>
-        </select>
-      </div>
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Class</label>
-          <button 
-            type="button"
-            onClick={() => setIsClassModalOpen(true)}
-            className="text-xs font-bold text-brand-600 flex items-center gap-1 hover:underline"
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Branch</label>
+          <select 
+            value={formData.branchId}
+            onChange={e => setFormData({...formData, branchId: parseInt(e.target.value)})}
+            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
           >
-            <Plus size={14} /> Add New Class
-          </button>
+            <option value={1}>Main Branch</option>
+          </select>
         </div>
-        <select 
-          value={formData.classId}
-          onChange={e => setFormData({...formData, classId: e.target.value})}
-          className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-        >
-          <option value="">Select a class...</option>
-          {classesList?.filter(c => c.branch_id === formData.branchId).map(c => (
-            <option key={c.id} value={c.id}>{c.name}</option>
-          ))}
-        </select>
+        <div className="space-y-2">
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Class</label>
+            <button 
+              type="button"
+              onClick={() => setIsClassModalOpen(true)}
+              className="text-[10px] font-bold text-brand-600 flex items-center gap-1 hover:underline"
+            >
+              <Plus size={12} /> Add New
+            </button>
+          </div>
+          <select 
+            value={formData.classId}
+            onChange={e => setFormData({...formData, classId: e.target.value})}
+            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
+          >
+            <option value="">Select a class...</option>
+            {classesList?.filter(c => c.branch_id === formData.branchId).map(c => (
+              <option key={c.id} value={c.id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
       </div>
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Section</label>
-        <select 
-          value={formData.sectionId}
-          onChange={e => setFormData({...formData, sectionId: e.target.value})}
-          className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-        >
-          <option value="">Select a section...</option>
-          {sectionsList?.filter(s => s.school_class_id === parseInt(formData.classId)).map(s => (
-            <option key={s.id} value={s.id}>{s.name}</option>
-          ))}
-        </select>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Section</label>
+          <select 
+            value={formData.sectionId}
+            onChange={e => setFormData({...formData, sectionId: e.target.value})}
+            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
+          >
+            <option value="">Select a section...</option>
+            {sectionsList?.filter(s => s.school_class_id === parseInt(formData.classId)).map(s => (
+              <option key={s.id} value={s.id}>{s.name}</option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Currently Studying (Level)</label>
+          <div className="relative">
+            <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+            <input 
+              value={formData.currently_studying}
+              onChange={e => setFormData({...formData, currently_studying: e.target.value})}
+              placeholder="e.g. Grade 1"
+              className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+            />
+          </div>
+        </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Currently Studying (Level)</label>
-        <div className="relative">
-          <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-          <input 
-            value={formData.currently_studying}
-            onChange={e => setFormData({...formData, currently_studying: e.target.value})}
-            placeholder="e.g. Grade 1"
-            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-          />
-        </div>
-      </div>
+
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -456,12 +494,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       animate={{ opacity: 1, x: 0 }}
       className="space-y-8"
     >
-      <input 
-        type="file"
-        ref={docInputRef}
-        onChange={handleDocumentChange}
-        className="hidden"
-      />
+      {/* Document input has been moved to renderForm for better stability */}
       <div className="bg-brand-50/50 p-6 rounded-[2rem] border border-brand-100/50">
         <h4 className="text-sm font-bold text-brand-800 flex items-center gap-2 mb-2">
           <FileText size={18} /> Required Documentation
@@ -469,7 +502,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
         <p className="text-xs text-brand-600 font-medium">Please ensure you have dummy names for the following required documents:</p>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
         {[
           { label: 'Birth Certificate', key: 'birth_certificate.pdf' },
           { label: 'Last School Report', key: 'last_report.pdf' },
@@ -479,51 +512,52 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           <div 
             key={doc.label}
             onClick={() => {
-              const isIncluded = formData.attachments.some(a => 
-                (a instanceof File && a.name === doc.key) || a === doc.key
+              const attachment = formData.attachments.find((a: any) => 
+                a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)
               );
-              if (isIncluded) {
+              
+              if (attachment) {
                 setFormData({
                   ...formData,
-                  attachments: formData.attachments.filter(a => 
-                    !((a instanceof File && a.name === doc.key) || a === doc.key)
-                  )
+                  attachments: formData.attachments.filter((a: any) => a !== attachment)
                 });
               } else {
                 setActiveDocKey(doc.key);
-                docInputRef.current?.click();
+                // Use a small timeout to ensure state update has been scheduled
+                setTimeout(() => docInputRef.current?.click(), 0);
               }
             }}
             className={cn(
-              "p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group",
-              formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key)
+              "p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group",
+              formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key))
                 ? "border-brand-500 bg-brand-50/50"
                 : "border-slate-50 bg-slate-50/50 hover:border-slate-200"
             )}
           >
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 min-w-0">
               <div className={cn(
-                "p-2.5 rounded-xl transition-all",
-                formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key) ? "bg-brand-500 text-white" : "bg-white text-slate-300 group-hover:text-slate-400"
+                "p-2.5 rounded-xl transition-all shrink-0",
+                formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)) ? "bg-brand-500 text-white" : "bg-white text-slate-300 group-hover:text-slate-400"
               )}>
                 <Upload size={18} />
               </div>
-              <div>
-                <p className={cn("text-sm font-bold", formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key) ? "text-slate-900" : "text-slate-500")}>
+              <div className="min-w-0">
+                <p className={cn("text-xs sm:text-sm font-bold truncate", formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)) ? "text-slate-900" : "text-slate-500")}>
                   {doc.label}
                 </p>
-                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
+                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight truncate">
                   {(() => {
-                    const attachment = formData.attachments.find(a => 
-                      (a instanceof File && a.name === doc.key) || a === doc.key
+                    const attachment = formData.attachments.find((a: any) => 
+                      a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)
                     );
                     if (!attachment) return 'Not Uploaded';
+                    if (attachment.file) return attachment.file.name;
                     return attachment instanceof File ? attachment.name : attachment;
                   })()}
                 </p>
               </div>
             </div>
-            {formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key) && <CheckCircle2 size={20} className="text-brand-500" />}
+            {formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)) && <CheckCircle2 size={18} className="text-brand-500 shrink-0 ml-2" />}
           </div>
         ))}
       </div>
@@ -571,7 +605,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
             formData.parentOption === 'NEW' ? "bg-white text-slate-800 shadow-sm" : "text-slate-500"
           )}
         >
-          Create New Family
+          Create New Parent
         </button>
       </div>
 
@@ -589,30 +623,39 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
               <input 
                 value={parentSearch}
                 onChange={e => setParentSearch(e.target.value)}
-                placeholder="Search by Parent Name or CNIC..."
+                placeholder="Search by Parent..."
                 className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
               />
             </div>
-            <div className="max-h-48 overflow-y-auto space-y-2 pr-2">
+            <div className="max-h-60 overflow-y-auto space-y-2 pr-1 custom-scrollbar">
               {filteredParents.map(p => (
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setFormData({...formData, selectedParentId: p.id})}
+                  onClick={() => setFormData({...formData, selectedParentId: p.id.toString()})}
                   className={cn(
-                    "w-full p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between",
-                    formData.selectedParentId === p.id ? "border-brand-500 bg-brand-50" : "border-slate-50 hover:border-slate-100"
+                    "w-full p-3 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between",
+                    formData.selectedParentId === p.id.toString() ? "border-brand-500 bg-brand-50" : "border-slate-50 hover:border-slate-100"
                   )}
                 >
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{p.name}</p>
-                    <p className="text-xs text-slate-500">{p.cnic}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{p.father_name}</p>
+                    <p className="text-[10px] sm:text-xs text-slate-500">{p.father_cnic}</p>
                   </div>
-                  {formData.selectedParentId === p.id && <CheckCircle2 className="text-brand-500" size={20} />}
+                  {formData.selectedParentId === p.id.toString() && <CheckCircle2 className="text-brand-500 shrink-0 ml-2" size={20} />}
                 </button>
               ))}
               {parentSearch && filteredParents.length === 0 && (
-                <p className="text-center py-4 text-xs text-slate-400 italic">No parents found matching your search.</p>
+                <div className="text-center py-6 px-4 bg-slate-50/50 rounded-2xl border-2 border-dashed border-slate-100">
+                  <p className="text-xs text-slate-400 italic mb-3">No parents found matching "{parentSearch}"</p>
+                  <button
+                    type="button"
+                    onClick={() => setFormData({...formData, parentOption: 'NEW'})}
+                    className="px-4 py-2 bg-white border border-slate-200 rounded-xl text-[10px] font-black uppercase tracking-widest text-brand-600 hover:bg-brand-50 transition-all shadow-sm"
+                  >
+                    Create New Record
+                  </button>
+                </div>
               )}
             </div>
           </motion.div>
@@ -622,55 +665,161 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
-            className="space-y-4"
+            className="space-y-8 max-h-[50vh] overflow-y-auto pr-1 custom-scrollbar"
           >
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Father/Guardian Name</label>
-                <input 
-                  value={formData.newParent.name}
-                  onChange={e => setFormData({...formData, newParent: {...formData.newParent, name: e.target.value}})}
-                  className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none"
-                />
+            {/* Father Details */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-50 text-indigo-500 flex items-center justify-center shrink-0">
+                  <User size={14} />
+                </div>
+                <h4 className="font-bold text-slate-800 uppercase text-[9px] tracking-widest">Father Details</h4>
               </div>
-
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">CNIC Number</label>
-                <input 
-                  value={formData.newParent.cnic}
-                  onChange={e => setFormData({...formData, newParent: {...formData.newParent, cnic: e.target.value}})}
-                  placeholder="00000-0000000-0"
-                  className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none"
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father Name</label>
+                  <input 
+                    value={formData.newParent.father_name}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_name: e.target.value}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father CNIC</label>
+                  <input 
+                    value={formData.newParent.father_cnic}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_cnic: e.target.value}})}
+                    placeholder="35201-XXXXXXX-X"
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Education</label>
+                  <input 
+                    value={formData.newParent.father_education}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_education: e.target.value}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Occupation</label>
+                  <input 
+                    value={formData.newParent.father_occupation}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_occupation: e.target.value}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                    <input 
+                      value={formData.newParent.father_contact_no}
+                      onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_contact_no: e.target.value}})}
+                      className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Phone Number</label>
-                <input 
-                  value={formData.newParent.phone}
-                  onChange={e => setFormData({...formData, newParent: {...formData.newParent, phone: e.target.value}})}
-                  className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none"
-                />
-              </div>
 
-              <div className="space-y-1">
-                <label className="text-[10px] font-bold text-slate-400 uppercase">Email Address</label>
-                <input 
-                  value={formData.newParent.email}
-                  onChange={e => setFormData({...formData, newParent: {...formData.newParent, email: e.target.value}})}
-                  className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none"
-                />
+            {/* Mother Details */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <div className="w-7 h-7 rounded-lg bg-rose-50 text-rose-500 flex items-center justify-center shrink-0">
+                  <User size={14} />
+                </div>
+                <h4 className="font-bold text-slate-800 uppercase text-[9px] tracking-widest">Mother Details</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother Name</label>
+                  <input 
+                    value={formData.newParent.mother_name}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_name: e.target.value}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother CNIC</label>
+                  <input 
+                    value={formData.newParent.mother_cnic}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_cnic: e.target.value}})}
+                    placeholder="35201-XXXXXXX-X"
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                    required
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Education</label>
+                  <input 
+                    value={formData.newParent.mother_education}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_education: e.target.value}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Occupation</label>
+                  <input 
+                    value={formData.newParent.mother_occupation}
+                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_occupation: e.target.value}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                  />
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
+                  <div className="relative">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
+                    <input 
+                      value={formData.newParent.mother_contact_no}
+                      onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_contact_no: e.target.value}})}
+                      className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
+                      required
+                    />
+                  </div>
+                </div>
               </div>
             </div>
-            <div className="space-y-1">
-              <label className="text-[10px] font-bold text-slate-400 uppercase">Residential Address</label>
-              <textarea 
-                rows={2}
-                value={formData.newParent.address}
-                onChange={e => setFormData({...formData, newParent: {...formData.newParent, address: e.target.value}})}
-                className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none resize-none"
-              />
+
+            {/* Preferences */}
+            <div className="space-y-4">
+              <div className="flex items-center gap-2 border-b border-slate-100 pb-2">
+                <div className="w-7 h-7 rounded-lg bg-slate-50 text-slate-500 flex items-center justify-center shrink-0">
+                  <Shield size={14} />
+                </div>
+                <h4 className="font-bold text-slate-800 uppercase text-[9px] tracking-widest">Preferences</h4>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Guardian Type</label>
+                  <select
+                    value={formData.newParent.guardian_type}
+                    onChange={(e) => setFormData({...formData, newParent: {...formData.newParent, guardian_type: e.target.value as 'father' | 'mother'}})}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 appearance-none font-medium"
+                    required
+                  >
+                    <option value="father">Father</option>
+                    <option value="mother">Mother</option>
+                  </select>
+                </div>
+                <div className="space-y-1.5 sm:col-span-2">
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residential Address</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-4 top-3 text-slate-300" size={14} />
+                    <textarea 
+                      rows={2}
+                      value={formData.newParent.address}
+                      onChange={e => setFormData({...formData, newParent: {...formData.newParent, address: e.target.value}})}
+                      className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium resize-none shadow-sm"
+                      placeholder="Complete residential address..."
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </motion.div>
         )}
@@ -687,30 +836,30 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div className="space-y-4">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fee Heads Customization</label>
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
             {formData.feeHeads.map(fh => (
               <div 
                 key={fh.id}
                 onClick={() => toggleFeeHead(fh.id)}
                 className={cn(
-                  "p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between",
+                  "p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between",
                   fh.isEnabled ? "border-brand-100 bg-brand-50/30" : "border-slate-50 bg-slate-50/50 opacity-60"
                 )}
               >
                 <div className="flex items-center gap-3">
                   <div className={cn(
-                    "w-8 h-8 rounded-lg flex items-center justify-center",
+                    "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                     fh.isEnabled ? "bg-brand-100 text-brand-600" : "bg-slate-200 text-slate-400"
                   )}>
                     <DollarSign size={16} />
                   </div>
-                  <div>
-                    <p className="text-sm font-bold text-slate-800">{fh.name}</p>
-                    <p className="text-xs text-slate-500">PKR {fh.amount.toLocaleString()}</p>
+                  <div className="min-w-0">
+                    <p className="text-sm font-bold text-slate-800 truncate">{fh.name}</p>
+                    <p className="text-[10px] sm:text-xs text-slate-500">PKR {fh.amount.toLocaleString()}</p>
                   </div>
                 </div>
                 <div className={cn(
-                  "w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all",
+                  "w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ml-2",
                   fh.isEnabled ? "border-brand-500 bg-brand-500 text-white" : "border-slate-300"
                 )}>
                   {fh.isEnabled && <CheckCircle2 size={14} />}
@@ -770,7 +919,23 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     formDataObj.append('home_contact', data.home_contact);
     formDataObj.append('currently_studying', data.currently_studying);
     formDataObj.append('health_details', data.health_details);
-    formDataObj.append('parent_id', data.selectedParentId.toString());
+    let finalParentId = data.selectedParentId;
+
+    if (data.parentOption === 'NEW') {
+      try {
+        const parentResponse = await createParent.mutateAsync({
+          branch_id: data.branchId,
+          ...data.newParent
+        });
+        // Assuming parentResponse.id exists
+        finalParentId = parentResponse.id.toString();
+      } catch (err) {
+        console.error("Failed to create parent:", err);
+        return; // Stop if parent creation fails
+      }
+    }
+
+    formDataObj.append('parent_id', finalParentId.toString());
     formDataObj.append('source', data.source || 'Facebook');
 
     // Add Photograph
@@ -791,10 +956,11 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
     // Add Attachments
     data.attachments.forEach((attachment: any, index: number) => {
-      if (attachment instanceof File) {
-        formDataObj.append(`attachments[${index}]`, attachment);
-      } else if (typeof attachment === 'string' && attachment) {
-        formDataObj.append(`attachments[${index}]`, attachment);
+      const fileToAppend = attachment.file || attachment;
+      if (fileToAppend instanceof File) {
+        formDataObj.append(`attachments[${index}]`, fileToAppend);
+      } else if (typeof fileToAppend === 'string' && fileToAppend) {
+        formDataObj.append(`attachments[${index}]`, fileToAppend);
       }
     });
 
@@ -841,23 +1007,23 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
 
       {/* Progress Bar */}
-      <div className="px-6 sm:px-12 py-4 sm:py-6 bg-white border-b border-slate-50 overflow-x-auto no-scrollbar">
-        <div className="flex items-center justify-between relative min-w-[300px]">
-          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 z-0" />
+      <div className="px-4 sm:px-12 py-4 sm:py-6 bg-white border-b border-slate-50 overflow-x-auto no-scrollbar">
+        <div className="flex items-center justify-between relative min-w-[280px]">
+          <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-0.5 sm:h-1 bg-slate-100 z-0" />
           <div 
-            className="absolute left-0 top-1/2 -translate-y-1/2 h-1 bg-brand-500 z-0 transition-all duration-500" 
+            className="absolute left-0 top-1/2 -translate-y-1/2 h-0.5 sm:h-1 bg-brand-500 z-0 transition-all duration-500" 
             style={{ width: `${((currentStep - 1) / 4) * 100}%` }}
           />
           {STEPS.map(step => (
-            <div key={step.id} className="relative z-10 flex flex-col items-center gap-2">
+            <div key={step.id} className="relative z-10 flex flex-col items-center gap-1.5 sm:gap-2">
               <div className={cn(
-                "w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-500 text-sm sm:text-base",
+                "w-7 h-7 sm:w-10 sm:h-10 rounded-full flex items-center justify-center transition-all duration-500 text-xs sm:text-base",
                 currentStep >= step.id ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "bg-white border-2 border-slate-100 text-slate-300"
               )}>
-                <step.icon size={16} className="sm:w-[18px] sm:h-[18px]" />
+                <step.icon size={14} className="sm:w-[18px] sm:h-[18px]" />
               </div>
               <span className={cn(
-                "text-[8px] sm:text-[10px] font-bold uppercase tracking-wider",
+                "text-[7px] sm:text-[10px] font-bold uppercase tracking-wider hidden sm:block",
                 currentStep >= step.id ? "text-brand-600" : "text-slate-300"
               )}>
                 {step.title}
@@ -940,6 +1106,15 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
         onSave={(newClass) => {
           setFormData({...formData, classId: newClass.id.toString()});
         }}
+      />
+      
+      {/* Hidden inputs for file uploads */}
+      <input 
+        type="file"
+        ref={docInputRef}
+        onChange={handleDocumentChange}
+        className="hidden"
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
       />
     </motion.div>
   );

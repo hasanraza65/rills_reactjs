@@ -89,21 +89,21 @@ export const ClassManagement: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Classes</h2>
-          <p className="text-slate-500 font-medium mt-1">Manage academic classes and sections</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">Classes</h2>
+          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">Manage academic classes and sections</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />}>
+        <div className="flex items-center justify-center sm:justify-end gap-3">
+          <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />} className="w-full sm:w-auto">
             Add Class
           </Button>
         </div>
       </div>
 
       <Card padding="none" className="overflow-hidden">
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md">
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative flex-1 w-full sm:max-w-md">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
             <input 
               type="text"
@@ -113,7 +113,7 @@ export const ClassManagement: React.FC = () => {
               className="w-full bg-slate-50 border-none rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
             />
           </div>
-          <Button variant="outline" leftIcon={<Filter size={18} />}>
+          <Button variant="outline" leftIcon={<Filter size={18} />} className="w-full sm:w-auto justify-center">
             Filters
           </Button>
         </div>
@@ -136,84 +136,148 @@ export const ClassManagement: React.FC = () => {
             onAction={handleOpenAddForm}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left table-fixed">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[180px] sm:w-[40%]">Class Name</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Sections</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-[20%]">Created At</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[100px] sm:w-[10%]">Actions</th>
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left table-fixed">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[40%]">Class Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Sections</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[20%]">Created At</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[10%]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredClasses.map((c) => (
+                    <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
+                            {c.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{c.name}</p>
+                            <p className="text-xs text-slate-500 font-medium">ID: {c.id}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex flex-wrap gap-2">
+                          {c.sections && c.sections.length > 0 ? (
+                            c.sections.map(section => (
+                              <span 
+                                key={section.id} 
+                                className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider"
+                              >
+                                {section.name}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-xs text-slate-400 italic">No sections</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Calendar size={14} className="text-slate-400" />
+                          {new Date(c.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handleViewDetails(c.id)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenEditForm(c)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                            title="Edit Class"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleDeleteClick(c)}
+                            className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
+                            title="Delete Class"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredClasses.map((c) => (
-                  <tr key={c.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold">
-                          {c.name.charAt(0)}
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{c.name}</p>
-                          <p className="text-xs text-slate-500 font-medium">ID: {c.id}</p>
-                        </div>
+            {/* Mobile Card List View */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {filteredClasses.map((c) => (
+                <div key={c.id} className="p-5 space-y-4 hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-indigo-50 text-indigo-600 flex items-center justify-center font-bold text-lg">
+                        {c.name.charAt(0)}
                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex flex-wrap gap-2">
+                      <div>
+                        <p className="text-base font-bold text-slate-800">{c.name}</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: #{c.id}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleViewDetails(c.id)}
+                        className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:text-brand-500 transition-colors"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenEditForm(c)}
+                        className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:text-brand-500 transition-colors"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteClick(c)}
+                        className="p-2.5 text-rose-400 bg-rose-50/50 rounded-xl hover:text-rose-600 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Assigned Sections</p>
+                      <div className="flex flex-wrap gap-1.5">
                         {c.sections && c.sections.length > 0 ? (
                           c.sections.map(section => (
                             <span 
                               key={section.id} 
-                              className="px-2.5 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase tracking-wider"
+                              className="px-2.5 py-1 rounded-lg bg-indigo-50/50 text-indigo-600 text-[10px] font-bold border border-indigo-100/50"
                             >
                               {section.name}
                             </span>
                           ))
                         ) : (
-                          <span className="text-xs text-slate-400 italic">No sections</span>
+                          <span className="text-xs text-slate-400 italic">No sections created</span>
                         )}
                       </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <Calendar size={14} className="text-slate-400" />
-                        {new Date(c.created_at).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-1 sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleViewDetails(c.id)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleOpenEditForm(c)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
-                          title="Edit Class"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleDeleteClick(c)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
-                          title="Delete Class"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
-
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium pt-1">
+                      <Calendar size={14} className="text-slate-300" />
+                      Created on {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </Card>
 
@@ -259,9 +323,9 @@ export const ClassManagement: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setIsDetailsOpen(false)} 
-                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent sm:absolute sm:top-6 sm:right-6 self-end sm:self-auto"
+                  className="p-2 sm:p-2.5 hover:bg-white rounded-xl sm:rounded-2xl transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-white/50 sm:bg-transparent absolute top-6 right-6 sm:top-8 sm:right-8"
                 >
-                  <Plus className="w-5 h-5 rotate-45" />
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 rotate-45" />
                 </button>
 
               </div>
@@ -279,34 +343,34 @@ export const ClassManagement: React.FC = () => {
                     <p className="text-sm opacity-80 mt-1">Please try again later.</p>
                   </div>
                 ) : classDetails ? (
-                  <div className="space-y-8">
+                  <div className="space-y-6 sm:space-y-8">
                     {/* Meta Grid */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       {/* Branch Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Building2 size={14} className="text-brand-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-indigo-600">
+                          <Building2 size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-800">Branch #{classDetails.branch_id}</p>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">Branch #{classDetails.branch_id}</p>
                       </div>
 
                       {/* Author Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <BookOpen size={14} className="text-brand-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added By</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-indigo-600">
+                          <BookOpen size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added By</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-800">User #{classDetails.added_by}</p>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">User #{classDetails.added_by}</p>
                       </div>
 
                       {/* Created Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calendar size={14} className="text-brand-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created On</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-indigo-600">
+                          <Calendar size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">Created On</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-700">
+                        <p className="text-xs sm:text-sm font-bold text-slate-700 truncate">
                           {new Date(classDetails.created_at).toLocaleDateString(undefined, {
                             year: 'numeric',
                             month: 'short',
@@ -316,12 +380,12 @@ export const ClassManagement: React.FC = () => {
                       </div>
 
                       {/* Updated Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Clock size={14} className="text-brand-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last Update</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-indigo-600">
+                          <Clock size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">Last Update</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-700">
+                        <p className="text-xs sm:text-sm font-bold text-slate-700 truncate">
                            {new Date(classDetails.updated_at).toLocaleDateString(undefined, {
                             year: 'numeric',
                             month: 'short',
@@ -334,11 +398,11 @@ export const ClassManagement: React.FC = () => {
                     {/* Sections Lineup */}
                     <div>
                        <div className="flex items-center justify-between mb-4">
-                         <div className="flex items-center gap-2">
-                           <Layers size={16} className="text-slate-400" />
-                           <h4 className="text-sm font-bold text-slate-800">Assigned Sections</h4>
+                         <div className="flex items-center gap-2 text-indigo-600">
+                           <Layers size={16} />
+                           <h4 className="text-[10px] sm:text-xs font-bold text-slate-800 uppercase tracking-widest">Assigned Sections</h4>
                          </div>
-                         <span className="px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold">
+                         <span className="px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[10px] font-bold">
                            {classDetails.sections?.length || 0} Total
                          </span>
                        </div>
@@ -348,16 +412,15 @@ export const ClassManagement: React.FC = () => {
                             classDetails.sections.map(sec => (
                               <div 
                                 key={sec.id} 
-                                className="flex items-center justify-center min-w-[3rem] px-4 py-2.5 bg-white border-2 border-slate-100 shadow-sm rounded-xl text-sm font-bold text-slate-700 hover:border-brand-500 hover:text-brand-600 transition-all cursor-default"
-                                title={`Section ID: ${sec.id}`}
+                                className="px-4 py-2 bg-slate-50 border-2 border-slate-100 rounded-xl text-xs sm:text-sm font-bold text-slate-700 flex-1 sm:flex-none text-center sm:text-left min-w-[3rem]"
                               >
                                 {sec.name}
                               </div>
                             ))
                          ) : (
-                           <div className="w-full p-4 border-2 border-dashed border-slate-200 rounded-2xl flex items-center justify-center flex-col text-slate-400 gap-2">
+                           <div className="w-full p-6 border-2 border-dashed border-slate-100 rounded-2xl flex flex-col items-center justify-center text-slate-400 gap-2">
                              <Layers size={20} className="opacity-50" />
-                             <p className="text-sm font-medium">No sections configured yet.</p>
+                             <p className="text-xs font-medium uppercase tracking-widest">No sections configured</p>
                            </div>
                          )}
                        </div>

@@ -92,13 +92,13 @@ export const SectionManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h2 className="text-3xl font-extrabold text-slate-900 tracking-tight">Sections</h2>
-          <p className="text-slate-500 font-medium mt-1">Manage and organize class sections</p>
+          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">Sections</h2>
+          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">Manage and organize class sections</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />}>
+        <div className="flex items-center justify-center sm:justify-end gap-3">
+          <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />} className="w-full sm:w-auto">
             Add Section
           </Button>
         </div>
@@ -106,8 +106,8 @@ export const SectionManagement: React.FC = () => {
 
       <Card padding="none" className="overflow-hidden">
         {/* Search & Filters Inside Card Body Header */}
-        <div className="p-6 border-b border-slate-100 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div className="relative flex-1 max-w-md group">
+        <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="relative flex-1 w-full sm:max-w-md group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={18} />
             <input 
               type="text" 
@@ -117,7 +117,7 @@ export const SectionManagement: React.FC = () => {
               className="w-full bg-slate-50 border-none rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 transition-all font-medium"
             />
           </div>
-          <Button variant="outline" leftIcon={<Filter size={18} />}>
+          <Button variant="outline" leftIcon={<Filter size={18} />} className="w-full sm:w-auto justify-center">
             Filters
           </Button>
         </div>
@@ -141,75 +141,126 @@ export const SectionManagement: React.FC = () => {
             onAction={searchQuery ? () => setSearchQuery('') : handleOpenAddForm}
           />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left table-fixed">
-              <thead>
-                <tr className="bg-slate-50/50">
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[180px] sm:w-[40%]">Section Name</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[150px] sm:w-[30%]">Parent Class</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[120px] sm:w-[20%]">Created At</th>
-                  <th className="px-4 sm:px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[100px] sm:w-[10%]">Actions</th>
-
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-slate-50">
-                {filteredSections.map((s) => (
-                  <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
-                          {s.name.charAt(0)}
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden lg:block overflow-x-auto">
+              <table className="w-full text-left table-fixed">
+                <thead>
+                  <tr className="bg-slate-50/50">
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[40%]">Section Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Parent Class</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[20%]">Created At</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[10%]">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {filteredSections.map((s) => (
+                    <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
+                            {s.name.charAt(0)}
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{s.name}</p>
+                            <p className="text-xs text-slate-500 font-medium">ID: {s.id}</p>
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                          <p className="text-xs text-slate-500 font-medium">ID: {s.id}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2">
+                      </td>
+                      <td className="px-8 py-5">
                         <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-wider">
                           {s.school_class.name}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-8 py-5">
-                      <div className="flex items-center gap-2 text-sm text-slate-500">
-                        <Calendar size={14} className="text-slate-400" />
-                        {new Date(s.created_at).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-4 sm:px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-1 sm:gap-2 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                        <button 
-                          onClick={() => handleViewDetails(s.id)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" 
-                          title="View Details"
-                        >
-                          <Eye size={16} />
-                        </button>
-                        <button 
-                          onClick={() => handleOpenEditForm(s)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" 
-                          title="Edit Section"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        <button 
-                          onClick={() => setSectionToDelete(s)}
-                          className="p-2 text-slate-400 sm:text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all" 
-                          title="Delete Section"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </td>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Calendar size={14} className="text-slate-400" />
+                          {new Date(s.created_at).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-right">
+                        <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => handleViewDetails(s.id)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" 
+                            title="View Details"
+                          >
+                            <Eye size={16} />
+                          </button>
+                          <button 
+                            onClick={() => handleOpenEditForm(s)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" 
+                            title="Edit Section"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                          <button 
+                            onClick={() => setSectionToDelete(s)}
+                            className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all" 
+                            title="Delete Section"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
 
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+            {/* Mobile Card List View */}
+            <div className="lg:hidden divide-y divide-slate-100">
+              {filteredSections.map((s) => (
+                <div key={s.id} className="p-5 space-y-4 hover:bg-slate-50/50 transition-colors">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg">
+                        {s.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-base font-bold text-slate-800">{s.name}</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: #{s.id}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleViewDetails(s.id)}
+                        className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:text-brand-500 transition-colors"
+                      >
+                        <Eye size={18} />
+                      </button>
+                      <button 
+                        onClick={() => handleOpenEditForm(s)}
+                        className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:text-brand-500 transition-colors"
+                      >
+                        <Edit2 size={18} />
+                      </button>
+                      <button 
+                        onClick={() => setSectionToDelete(s)}
+                        className="p-2.5 text-rose-400 bg-rose-50/50 rounded-xl hover:text-rose-600 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parent Class</p>
+                      <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold border border-indigo-100/50 uppercase">
+                        {s.school_class.name}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-2 text-xs text-slate-500 font-medium pt-1">
+                      <Calendar size={14} className="text-slate-300" />
+                      Created on {new Date(s.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
         )}
       </Card>
 
@@ -338,9 +389,9 @@ export const SectionManagement: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => setIsDetailsOpen(false)} 
-                  className="p-2 hover:bg-white rounded-full transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-transparent sm:absolute sm:top-6 sm:right-6 self-end sm:self-auto"
+                  className="p-2 sm:p-2.5 hover:bg-white rounded-xl sm:rounded-2xl transition-all text-slate-400 hover:text-slate-600 shadow-sm hover:shadow-md bg-white/50 sm:bg-transparent absolute top-6 right-6 sm:top-8 sm:right-8"
                 >
-                  <Plus className="w-5 h-5 rotate-45" />
+                  <Plus className="w-5 h-5 sm:w-6 sm:h-6 rotate-45" />
                 </button>
 
               </div>
@@ -355,32 +406,32 @@ export const SectionManagement: React.FC = () => {
                 ) : sectionDetails && (
                   <div className="space-y-8">
                     {/* Meta Grid */}
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
                       {/* Class Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Building2 size={14} className="text-brand-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parent Class</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-brand-600">
+                          <Building2 size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Parent Class</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-800">{sectionDetails.school_class.name}</p>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">{sectionDetails.school_class.name}</p>
                       </div>
 
                       {/* Branch Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <BookOpen size={14} className="text-indigo-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch ID</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-indigo-600">
+                          <BookOpen size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch ID</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-800">Branch #{sectionDetails.branch_id}</p>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">Branch #{sectionDetails.branch_id}</p>
                       </div>
 
                       {/* Created Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Calendar size={14} className="text-emerald-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created On</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-emerald-600">
+                          <Calendar size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">Created On</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-700">
+                        <p className="text-xs sm:text-sm font-bold text-slate-700 truncate">
                           {new Date(sectionDetails.created_at).toLocaleDateString(undefined, {
                             year: 'numeric',
                             month: 'short',
@@ -390,12 +441,12 @@ export const SectionManagement: React.FC = () => {
                       </div>
 
                       {/* Updated Info */}
-                      <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100/50 hover:border-brand-500/20 transition-colors group">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Clock size={14} className="text-amber-500" />
-                          <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Last Update</p>
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-amber-600">
+                          <Clock size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest text-nowrap">Last Update</p>
                         </div>
-                        <p className="text-sm font-bold text-slate-700">
+                        <p className="text-xs sm:text-sm font-bold text-slate-700 truncate">
                            {new Date(sectionDetails.updated_at).toLocaleDateString(undefined, {
                             year: 'numeric',
                             month: 'short',
