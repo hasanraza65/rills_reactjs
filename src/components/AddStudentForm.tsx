@@ -159,12 +159,21 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     const file = e.target.files?.[0];
     if (file && activeDocKey) {
       const current = formData.attachments;
-      // Filter out existing ones with same name if any, or just add
-      // Usually we want to associate the file with the specific doc key (birth_cert, etc.)
-      // but the user's payload has an "attachments" array.
-      // I'll keep the current logic but store the File object.
-      setFormData({ ...formData, attachments: [...current, file] });
+      // We store attachments as { key: string, file: File | string } to track them reliably
+      const newAttachment = { key: activeDocKey, file };
+      
+      // Filter out any existing attachment for this specific document key
+      const filtered = current.filter((a: any) => 
+        !(a.key === activeDocKey || a === activeDocKey || (a instanceof File && a.name === activeDocKey))
+      );
+      
+      setFormData({ 
+        ...formData, 
+        attachments: [...filtered, newAttachment] 
+      });
       setActiveDocKey(null);
+      // Reset input value so the same file can be selected again if needed
+      e.target.value = '';
     }
   };
 
@@ -433,18 +442,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
         </div>
       </div>
 
-      <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Currently Studying (Level)</label>
-        <div className="relative">
-          <Layers className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-          <input 
-            value={formData.currently_studying}
-            onChange={e => setFormData({...formData, currently_studying: e.target.value})}
-            placeholder="e.g. Grade 1"
-            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-          />
-        </div>
-      </div>
+
 
       <div className="space-y-4">
         <div className="flex items-center justify-between">
@@ -496,12 +494,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       animate={{ opacity: 1, x: 0 }}
       className="space-y-8"
     >
-      <input 
-        type="file"
-        ref={docInputRef}
-        onChange={handleDocumentChange}
-        className="hidden"
-      />
+      {/* Document input has been moved to renderForm for better stability */}
       <div className="bg-brand-50/50 p-6 rounded-[2rem] border border-brand-100/50">
         <h4 className="text-sm font-bold text-brand-800 flex items-center gap-2 mb-2">
           <FileText size={18} /> Required Documentation
@@ -519,24 +512,24 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           <div 
             key={doc.label}
             onClick={() => {
-              const isIncluded = formData.attachments.some(a => 
-                (a instanceof File && a.name === doc.key) || a === doc.key
+              const attachment = formData.attachments.find((a: any) => 
+                a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)
               );
-              if (isIncluded) {
+              
+              if (attachment) {
                 setFormData({
                   ...formData,
-                  attachments: formData.attachments.filter(a => 
-                    !((a instanceof File && a.name === doc.key) || a === doc.key)
-                  )
+                  attachments: formData.attachments.filter((a: any) => a !== attachment)
                 });
               } else {
                 setActiveDocKey(doc.key);
-                docInputRef.current?.click();
+                // Use a small timeout to ensure state update has been scheduled
+                setTimeout(() => docInputRef.current?.click(), 0);
               }
             }}
             className={cn(
               "p-4 sm:p-5 rounded-2xl border-2 transition-all cursor-pointer flex items-center justify-between group",
-              formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key)
+              formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key))
                 ? "border-brand-500 bg-brand-50/50"
                 : "border-slate-50 bg-slate-50/50 hover:border-slate-200"
             )}
@@ -544,26 +537,27 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
             <div className="flex items-center gap-3 min-w-0">
               <div className={cn(
                 "p-2.5 rounded-xl transition-all shrink-0",
-                formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key) ? "bg-brand-500 text-white" : "bg-white text-slate-300 group-hover:text-slate-400"
+                formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)) ? "bg-brand-500 text-white" : "bg-white text-slate-300 group-hover:text-slate-400"
               )}>
                 <Upload size={18} />
               </div>
               <div className="min-w-0">
-                <p className={cn("text-xs sm:text-sm font-bold truncate", formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key) ? "text-slate-900" : "text-slate-500")}>
+                <p className={cn("text-xs sm:text-sm font-bold truncate", formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)) ? "text-slate-900" : "text-slate-500")}>
                   {doc.label}
                 </p>
                 <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight truncate">
                   {(() => {
-                    const attachment = formData.attachments.find(a => 
-                      (a instanceof File && a.name === doc.key) || a === doc.key
+                    const attachment = formData.attachments.find((a: any) => 
+                      a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)
                     );
                     if (!attachment) return 'Not Uploaded';
+                    if (attachment.file) return attachment.file.name;
                     return attachment instanceof File ? attachment.name : attachment;
                   })()}
                 </p>
               </div>
             </div>
-            {formData.attachments.some(a => (a instanceof File && a.name === doc.key) || a === doc.key) && <CheckCircle2 size={18} className="text-brand-500 shrink-0 ml-2" />}
+            {formData.attachments.some((a: any) => a.key === doc.key || a === doc.key || (a instanceof File && a.name === doc.key)) && <CheckCircle2 size={18} className="text-brand-500 shrink-0 ml-2" />}
           </div>
         ))}
       </div>
@@ -962,10 +956,11 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
     // Add Attachments
     data.attachments.forEach((attachment: any, index: number) => {
-      if (attachment instanceof File) {
-        formDataObj.append(`attachments[${index}]`, attachment);
-      } else if (typeof attachment === 'string' && attachment) {
-        formDataObj.append(`attachments[${index}]`, attachment);
+      const fileToAppend = attachment.file || attachment;
+      if (fileToAppend instanceof File) {
+        formDataObj.append(`attachments[${index}]`, fileToAppend);
+      } else if (typeof fileToAppend === 'string' && fileToAppend) {
+        formDataObj.append(`attachments[${index}]`, fileToAppend);
       }
     });
 
@@ -1111,6 +1106,15 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
         onSave={(newClass) => {
           setFormData({...formData, classId: newClass.id.toString()});
         }}
+      />
+      
+      {/* Hidden inputs for file uploads */}
+      <input 
+        type="file"
+        ref={docInputRef}
+        onChange={handleDocumentChange}
+        className="hidden"
+        accept=".pdf,.doc,.docx,.jpg,.jpeg,.png"
       />
     </motion.div>
   );
