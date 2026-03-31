@@ -430,9 +430,9 @@ export const PAYSLIPS: Payslip[] = [
 ];
 
 export const CLASSES: Class[] = [
-  { id: 'c1', name: 'Grade 1', section: 'A', branchId: 'b1' },
-  { id: 'c2', name: 'Grade 2', section: 'B', branchId: 'b1' },
-  { id: 'c3', name: 'Grade 3', section: 'A', branchId: 'b2' },
+  { id: '1', name: 'Grade 1', section: 'A', branchId: 'b1' },
+  { id: '2', name: 'Grade 2', section: 'B', branchId: 'b1' },
+  { id: '3', name: 'Grade 3', section: 'A', branchId: 'b2' },
 ];
 
 export const PARENTS: Parent[] = [
