@@ -62,3 +62,14 @@ export const useDeleteSection = () => {
     },
   });
 };
+
+/**
+ * Hook to fetch sections for a specific class ID
+ */
+export const useSectionsByClass = (classId: number | null) => {
+  return useQuery({
+    queryKey: ['sections', 'by-class', classId],
+    queryFn: () => sectionService.getSectionsByClass(classId!),
+    enabled: !!classId,
+  });
+};

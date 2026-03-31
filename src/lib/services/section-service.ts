@@ -41,5 +41,13 @@ export const sectionService = {
    */
   deleteSection: async (id: number): Promise<void> => {
     await apiClient.delete(`/sections/${id}`);
-  }
+  },
+
+  /**
+   * Fetches sections for a specific class.
+   */
+  getSectionsByClass: async (classId: number): Promise<SectionData[]> => {
+    const response = await apiClient.get<SectionData[]>(`/sections-by-class/${classId}`);
+    return response.data;
+  },
 };

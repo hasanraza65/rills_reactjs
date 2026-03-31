@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   User, 
@@ -23,11 +23,12 @@ import {
   Image,
   Upload
 } from 'lucide-react';
-import { cn, FeeHead } from '../types';
+import { cn, FeeHead, FeeFrequency } from '../types';
+import { apiClient } from '../lib/api-client';
 import { AddClassModal } from './AddClassModal';
 import { useClasses } from '../hooks/use-class';
 import { useParents, useCreateParent } from '../hooks/use-parent';
-import { useSections } from '../hooks/use-section';
+import { useSections, useSectionsByClass } from '../hooks/use-section';
 import { useCreateStudent, useUpdateStudent } from '../hooks/use-student';
 import { StudentData } from '../types/api/student';
 
@@ -53,14 +54,6 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
   const [activeDocKey, setActiveDocKey] = useState<string | null>(null);
-  
-  // API Hooks
-  const { data: classesList } = useClasses();
-  const { data: parentsList } = useParents(1); // Branch ID 1
-  const { data: sectionsList } = useSections();
-  const createStudent = useCreateStudent();
-  const updateStudent = useUpdateStudent();
-  const createParent = useCreateParent();
   
   // Form State
   const [formData, setFormData] = useState({
@@ -99,12 +92,60 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     feeHeads: [
       { id: 'fh1', name: 'Tuition Fee', amount: 8000, isEnabled: true },
       { id: 'fh2', name: 'Transport', amount: 3000, isEnabled: true },
+      { id: 'fh2', name: 'Transport', amount: 3000, isEnabled: true },
       { id: 'fh3', name: 'Lab Charges', amount: 1500, isEnabled: true },
       { id: 'fh4', name: 'Library Fee', amount: 500, isEnabled: true },
     ] as FeeHead[],
   });
 
+  // API Hooks
+  const { data: classesList } = useClasses();
+  const { data: parentsList } = useParents(1); // Branch ID 1
+  const { data: sectionsList } = useSectionsByClass(formData.classId ? parseInt(formData.classId) : null);
+  const createStudent = useCreateStudent();
+  const updateStudent = useUpdateStudent();
+  const createParent = useCreateParent();
+
   const [parentSearch, setParentSearch] = useState('');
+
+  // Fetch Fee Heads when section changes
+  useEffect(() => {
+    const fetchSectionFees = async () => {
+      if (!formData.sectionId) return;
+      
+      try {
+        const response = await apiClient.get(`/feeheads_by_section/${formData.sectionId}`);
+        if (response.data.status) {
+          const apiHeads = response.data.data.map((h: any) => ({
+            id: h.id.toString(),
+            name: h.head_name,
+            amount: parseFloat(h.head_amount),
+            frequency: mapBackendToFrontendFreq(h.head_frequency),
+            isEnabled: true
+          }));
+          
+          setFormData(prev => ({
+            ...prev,
+            feeHeads: apiHeads
+          }));
+        }
+      } catch (err) {
+        console.error('Failed to fetch fee heads for section:', err);
+      }
+    };
+    
+    fetchSectionFees();
+  }, [formData.sectionId]);
+
+  const mapBackendToFrontendFreq = (freq: string): any => {
+    switch (freq.toLowerCase()) {
+      case 'monthly': return 'MONTHLY';
+      case 'annual': return 'ANNUAL';
+      case 'one time': return 'ONE_TIME';
+      case 'quarterly': return 'QUARTERLY';
+      default: return 'MONTHLY';
+    }
+  };
 
   const filteredParents = useMemo(() => {
     if (!parentsList) return [];
@@ -132,8 +173,19 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
   const totalMonthlyFee = useMemo(() => {
     return formData.feeHeads
-      .filter(fh => fh.isEnabled)
+      .filter(fh => fh.isEnabled && fh.frequency === 'MONTHLY')
       .reduce((sum, fh) => sum + fh.amount, 0);
+  }, [formData.feeHeads]);
+
+  const totalAnnualTotal = useMemo(() => {
+    // Standard calculation: Sum of all enabled heads multiplied as per frequency
+    return formData.feeHeads
+      .filter(fh => fh.isEnabled)
+      .reduce((sum, fh) => {
+        if (fh.frequency === 'MONTHLY') return sum + (fh.amount * 12);
+        if (fh.frequency === 'QUARTERLY') return sum + (fh.amount * 4);
+        return sum + fh.amount; // ONE_TIME or ANNUAL
+      }, 0);
   }, [formData.feeHeads]);
 
   const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, 5));
@@ -382,16 +434,6 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Branch</label>
-          <select 
-            value={formData.branchId}
-            onChange={e => setFormData({...formData, branchId: parseInt(e.target.value)})}
-            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
-          >
-            <option value={1}>Main Branch</option>
-          </select>
-        </div>
-        <div className="space-y-2">
           <div className="flex items-center justify-between">
             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Class</label>
             <button 
@@ -404,30 +446,31 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           </div>
           <select 
             value={formData.classId}
-            onChange={e => setFormData({...formData, classId: e.target.value})}
+            onChange={e => setFormData({...formData, classId: e.target.value, sectionId: ''})}
             className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
           >
             <option value="">Select a class...</option>
-            {classesList?.filter(c => c.branch_id === formData.branchId).map(c => (
+            {classesList?.map(c => (
               <option key={c.id} value={c.id}>{c.name}</option>
             ))}
           </select>
         </div>
-      </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Section</label>
           <select 
             value={formData.sectionId}
             onChange={e => setFormData({...formData, sectionId: e.target.value})}
             className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
+            disabled={!formData.classId}
           >
             <option value="">Select a section...</option>
-            {sectionsList?.filter(s => s.school_class_id === parseInt(formData.classId)).map(s => (
+            {sectionsList?.map(s => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
           </select>
         </div>
+      </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Currently Studying (Level)</label>
           <div className="relative">
@@ -870,27 +913,33 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
         </div>
 
         <div className="space-y-6">
-          <div className="bg-slate-900 rounded-3xl p-6 text-white shadow-xl shadow-slate-200">
-            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Fee Summary</h4>
-            <div className="space-y-4 mb-6">
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-400">Monthly Total</span>
-                <span className="font-bold">PKR {totalMonthlyFee.toLocaleString()}</span>
-              </div>
-              <div className="flex justify-between items-center text-sm">
-                <span className="text-slate-400">Annual Total</span>
-                <span className="font-bold text-brand-400">PKR {(totalMonthlyFee * 12).toLocaleString()}</span>
-              </div>
-              <div className="h-px bg-slate-800" />
-              <div className="flex justify-between items-center">
-                <span className="text-slate-400 font-bold">Total Yearly Payable</span>
-                <span className="text-xl font-extrabold text-brand-400">PKR {(totalMonthlyFee * 12).toLocaleString()}</span>
-              </div>
-            </div>
-            <p className="text-[10px] text-slate-500 italic">
-              * Annual total is calculated as (Monthly Total × 12 months), including all enabled fee heads.
-            </p>
-          </div>
+                {/* Summary Card */}
+                <div className="lg:col-span-1">
+                  <div className="bg-slate-900 rounded-[2.5rem] p-8 text-white shadow-2xl relative overflow-hidden group">
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-brand-500/10 rounded-full -mr-16 -mt-16 blur-2xl group-hover:bg-brand-500/20 transition-all" />
+                    
+                    <h4 className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-8">Fee Summary</h4>
+                    
+                    <div className="space-y-6">
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm font-bold">Monthly Total</span>
+                        <span className="text-lg font-black tracking-tight">PKR {totalMonthlyFee.toLocaleString()}</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="text-slate-400 text-sm font-bold">Annual Total</span>
+                        <span className="text-brand-400 text-lg font-black tracking-tight">PKR {totalAnnualTotal.toLocaleString()}</span>
+                      </div>
+                      
+                      <div className="pt-6 border-t border-slate-800">
+                        <div className="flex justify-between items-center mb-2">
+                          <span className="text-xs font-black uppercase tracking-widest text-slate-500">Total Yearly Payable</span>
+                          <span className="text-2xl font-black text-brand-400">PKR {totalAnnualTotal.toLocaleString()}</span>
+                        </div>
+                        <p className="text-[9px] text-slate-500 italic leading-relaxed">* Annual total is calculated based on enabled fee heads frequency.</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
 
           <div className="p-6 rounded-3xl border-2 border-dashed border-slate-100 flex flex-col items-center justify-center text-center space-y-2">
             <div className="w-12 h-12 rounded-full bg-slate-50 flex items-center justify-center text-slate-400">
