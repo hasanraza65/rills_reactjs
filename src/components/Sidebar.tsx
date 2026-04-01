@@ -19,6 +19,7 @@ import {
   UserCircle,
   FileText,
   Layers,
+  Key,
   Library as LibraryIcon
 } from 'lucide-react';
 import { cn, UserRole } from '../types';
@@ -60,6 +61,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: GraduationCap, label: 'Students', id: 'students' },
     { icon: Users, label: 'Parents', id: 'families' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
+    { icon: Key, label: 'Admission Keys', id: 'admission-keys' },
     { icon: CreditCard, label: 'Fees', id: 'fees' },
     { 
       icon: BookOpen, 
