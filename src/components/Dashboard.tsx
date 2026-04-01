@@ -27,6 +27,7 @@ import {
   Trash2,
   Eye,
   Edit2,
+  Key,
   MoreHorizontal
 } from 'lucide-react';
 import { StatCard } from './StatCard';
@@ -43,9 +44,12 @@ import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
 import { ClassManagement } from './ClassManagement';
 import { SectionManagement } from './SectionManagement';
+import { AdmissionKeys } from './AdmissionKeys';
 import { useStudents, useDeleteStudent } from '../hooks/use-student';
+import { useCreateAdmissionKey } from '../hooks/use-admission-keys';
 import { StudentDetailsModal } from './StudentDetailsModal';
 import { NotificationPanel } from './NotificationPanel';
+import { AddAdmissionKeyModal } from './AddAdmissionKeyModal';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
@@ -94,6 +98,21 @@ interface DashboardProps {
 export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChange }) => {
   const { user } = useAuthStore();
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
+  const [isAddKeyModalOpen, setIsAddKeyModalOpen] = React.useState(false);
+
+  const createKeyMutation = useCreateAdmissionKey();
+
+  const handleCreateKey = async (phoneNumber: string) => {
+    try {
+      await createKeyMutation.mutateAsync({
+        branch_id: 1, 
+        key: phoneNumber
+      });
+      setIsAddKeyModalOpen(false);
+    } catch (err) {
+      console.error('Failed to create key:', err);
+    }
+  };
   const [isLoading, setIsLoading] = React.useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
   
@@ -388,6 +407,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           <span className="whitespace-nowrap">Parents</span>
         </button>
         <button 
+          onClick={() => onTabChange('staff')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'staff' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <Users size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Staff</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('admission-keys')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'admission-keys' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <Key size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Admission Keys</span>
+        </button>
+        <button 
           onClick={() => onTabChange('fees')}
           className={cn(
             "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
@@ -418,26 +457,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           <span className="whitespace-nowrap">Syllabus</span>
         </button>
         <button 
-          onClick={() => onTabChange('diary')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <FileText size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Diary</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('staff')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'staff' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Users size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Staff</span>
-        </button>
-        <button 
           onClick={() => onTabChange('library')}
           className={cn(
             "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
@@ -446,6 +465,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         >
           <LibraryIcon size={18} className="shrink-0" />
           <span className="whitespace-nowrap">Library</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('diary')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <FileText size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Diary</span>
         </button>
 
       </div>
@@ -876,6 +905,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <LibraryManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'admission-keys' && (
+          <motion.div
+            key="admission-keys"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdmissionKeys />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1633,6 +1673,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
           </div>
           <div className="flex items-center gap-4">
+            {role === 'BRANCH_ADMIN' && (
+              <Button 
+                variant="outline" 
+                size="icon"
+                onClick={() => setIsAddKeyModalOpen(true)}
+                className="relative text-brand-600 border-brand-100 hover:bg-brand-50"
+                title="Generate Admission Key"
+              >
+                <Key size={18} />
+              </Button>
+            )}
             <Button 
               variant="outline" 
               size="icon"
@@ -1658,6 +1709,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
       {renderContent()}
 
       <NotificationPanel isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
+      
+      <AddAdmissionKeyModal 
+        isOpen={isAddKeyModalOpen}
+        onClose={() => setIsAddKeyModalOpen(false)}
+        onConfirm={handleCreateKey}
+        isLoading={createKeyMutation.isPending}
+      />
     </div>
   );
 };

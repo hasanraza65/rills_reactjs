@@ -107,6 +107,24 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const createParent = useCreateParent();
 
   const [parentSearch, setParentSearch] = useState('');
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+
+  // Update preview when photo changes
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    if (formData.photo instanceof File) {
+      objectUrl = URL.createObjectURL(formData.photo);
+      setPhotoPreview(objectUrl);
+    } else if (typeof formData.photo === 'string' && formData.photo) {
+      setPhotoPreview(formData.photo);
+    } else {
+      setPhotoPreview(null);
+    }
+
+    return () => {
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [formData.photo]);
 
   // Fetch Fee Heads when section changes
   useEffect(() => {
@@ -144,6 +162,16 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       case 'one time': return 'ONE_TIME';
       case 'quarterly': return 'QUARTERLY';
       default: return 'MONTHLY';
+    }
+  };
+
+  const mapFrontendToBackendFreq = (freq: FeeFrequency): string => {
+    switch (freq) {
+      case 'ONE_TIME': return 'One Time';
+      case 'MONTHLY': return 'Monthly';
+      case 'QUARTERLY': return 'Quarterly';
+      case 'ANNUAL': return 'Annual';
+      default: return 'Monthly';
     }
   };
 
@@ -249,10 +277,17 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
             className="w-32 h-32 rounded-3xl bg-slate-50 border-2 border-dashed border-slate-200 flex flex-col items-center justify-center p-2 text-center group hover:border-brand-500 transition-all cursor-pointer overflow-hidden relative"
             onClick={() => photoInputRef.current?.click()}
           >
-            {formData.photo ? (
+            {photoPreview ? (
               <>
-                <div className="w-full h-full bg-brand-50 flex items-center justify-center text-brand-600 font-bold text-xs uppercase text-center p-2">
-                  {formData.photo instanceof File ? formData.photo.name : formData.photo}
+                <div className="w-full h-full relative overflow-hidden group">
+                  <img 
+                    src={photoPreview} 
+                    alt="Preview" 
+                    className="w-full h-full object-cover"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Upload size={20} className="text-white" />
+                  </div>
                 </div>
                 <button 
                   onClick={(e) => {
@@ -1011,6 +1046,13 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       } else if (typeof fileToAppend === 'string' && fileToAppend) {
         formDataObj.append(`attachments[${index}]`, fileToAppend);
       }
+    });
+
+    // Add Fee Heads
+    data.feeHeads.filter((fh: any) => fh.isEnabled).forEach((fh: any, index: number) => {
+      formDataObj.append(`fee_heads[${index}][head_name]`, fh.name);
+      formDataObj.append(`fee_heads[${index}][head_amount]`, fh.amount.toString());
+      formDataObj.append(`fee_heads[${index}][head_frequency]`, mapFrontendToBackendFreq(fh.frequency));
     });
 
     if (editingStudent) {

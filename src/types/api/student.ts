@@ -52,6 +52,11 @@ export interface CreateStudentInput {
   source?: string;
   photo?: string | File;
   attachments?: (string | File)[];
+  fee_heads?: Array<{
+    head_name: string;
+    head_amount: number;
+    head_frequency: string;
+  }>;
 }
 
 export interface UpdateStudentInput extends Partial<CreateStudentInput> {}
