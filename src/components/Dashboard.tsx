@@ -28,7 +28,8 @@ import {
   Eye,
   Edit2,
   Key,
-  MoreHorizontal
+  MoreHorizontal,
+  Layers
 } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { SchoolCard } from './SuperAdmin/SchoolCard';
@@ -213,6 +214,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           <LibraryIcon size={18} className="shrink-0" />
           <span className="whitespace-nowrap">Library</span>
         </button>
+        <button 
+          onClick={() => onTabChange('classes')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'classes' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <BookOpen size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Classes</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('sections')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'sections' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <Layers size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Sections</span>
+        </button>
 
       </div>
 
@@ -359,6 +380,28 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <LibraryManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'classes' && (
+          <motion.div
+            key="classes"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'sections' && (
+          <motion.div
+            key="sections"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SectionManagement />
           </motion.div>
         )}
       </AnimatePresence>
