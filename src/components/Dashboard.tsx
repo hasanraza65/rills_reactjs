@@ -664,7 +664,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                               </div>
                             </div>
                           </td>
-                          <td className="px-8 py-5 text-sm font-bold text-slate-600 truncate max-w-[150px]">{s.admission_no}</td>
+                          <td className="px-8 py-5">
+                            <p className="text-sm font-bold text-slate-600 truncate max-w-[150px] leading-tight">{s.admission_no}</p>
+                            <p className="text-[10px] text-brand-600 font-bold mt-1">
+                              {s.parent?.father_contact_no || s.parent?.mother_contact_no || 'N/A'}
+                            </p>
+                          </td>
                           <td className="px-8 py-5">
                             <div className="flex flex-col gap-1">
                               <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase w-fit">
@@ -742,8 +747,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                               {s.name?.charAt(0) || '?'}
                             </div>
                             <div>
-                              <p className="font-bold text-slate-800">{s.name}</p>
-                              <p className="text-xs text-slate-400 uppercase font-medium">{s.admission_no}</p>
+                              <p className="font-bold text-slate-800 leading-none mb-1">{s.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{s.admission_no}</p>
+                                <span className="text-slate-200 text-[10px]">•</span>
+                                <p className="text-[10px] text-brand-600 font-black tracking-tight">{s.parent?.father_contact_no || s.parent?.mother_contact_no || 'N/A'}</p>
+                              </div>
                             </div>
                           </div>
                           <div className="flex items-center gap-1.5 text-emerald-500 text-[10px] font-bold bg-emerald-50 px-2 py-1 rounded-full uppercase">

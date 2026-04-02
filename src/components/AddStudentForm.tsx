@@ -750,9 +750,16 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
                     formData.selectedParentId === p.id.toString() ? "border-brand-500 bg-brand-50" : "border-slate-50 hover:border-slate-100"
                   )}
                 >
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold text-slate-800 truncate">{p.father_name}</p>
-                    <p className="text-[10px] sm:text-xs text-slate-500">{p.father_cnic}</p>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center justify-between gap-4">
+                      <p className="text-sm font-bold text-slate-800 truncate">{p.father_name}</p>
+                      <div className="flex items-center gap-2 text-[10px] font-bold text-brand-600 bg-brand-50/50 px-2 py-0.5 rounded-lg shrink-0">
+                        {p.father_contact_no}
+                        {p.father_contact_no && p.mother_contact_no && <span className="opacity-30">|</span>}
+                        {p.mother_contact_no}
+                      </div>
+                    </div>
+                    <p className="text-[10px] sm:text-xs text-slate-500 uppercase tracking-widest">{p.father_cnic}</p>
                   </div>
                   {formData.selectedParentId === p.id.toString() && <CheckCircle2 className="text-brand-500 shrink-0 ml-2" size={20} />}
                 </button>
