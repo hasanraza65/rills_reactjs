@@ -41,9 +41,9 @@ interface AddStudentFormProps {
 }
 
 const STEPS = [
-  { id: 1, title: 'Personal', icon: User },
-  { id: 2, title: 'Academic', icon: GraduationCap },
-  { id: 3, title: 'Parent', icon: Users },
+  { id: 1, title: 'Parent', icon: Users },
+  { id: 2, title: 'Personal', icon: User },
+  { id: 3, title: 'Academic', icon: GraduationCap },
   { id: 4, title: 'Documents', icon: FileText },
   { id: 5, title: 'Fees', icon: CreditCard },
 ];
@@ -191,13 +191,47 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
     if (!parentSearch) return list;
     
-    return list.filter(p => 
-      p.father_name?.toLowerCase().includes(parentSearch.toLowerCase()) || 
-      p.father_cnic?.includes(parentSearch) ||
-      p.mother_name?.toLowerCase().includes(parentSearch.toLowerCase()) ||
-      p.mother_cnic?.includes(parentSearch)
-    );
+    const query = parentSearch.toLowerCase().trim();
+    const strippedQuery = query.replace(/[- ]/g, '');
+    
+    return list.filter(p => {
+      // Basic text search for names
+      const father_name = (p.father_name || '').toLowerCase();
+      const mother_name = (p.mother_name || '').toLowerCase();
+      
+      // Dash-insensitive search for CNIC and phone numbers
+      const father_cnic = (p.father_cnic || '').replace(/[- ]/g, '');
+      const mother_cnic = (p.mother_cnic || '').replace(/[- ]/g, '');
+      const father_phone = (p.father_contact_no || '').replace(/[- ]/g, '');
+      const mother_phone = (p.mother_contact_no || '').replace(/[- ]/g, '');
+      
+      // Search by sibling names (if available)
+      const sibling_names = (p.students || []).map((s: any) => (s.name || '').toLowerCase()).join(' ');
+
+      return father_name.includes(query) || 
+             mother_name.includes(query) || 
+             father_cnic.includes(strippedQuery) || 
+             mother_cnic.includes(strippedQuery) || 
+             father_phone.includes(strippedQuery) || 
+             mother_phone.includes(strippedQuery) ||
+             sibling_names.includes(query);
+    });
   }, [parentSearch, parentsList]);
+
+  const selectedParent = useMemo(() => {
+    if (!formData.selectedParentId || !parentsList) return null;
+    
+    let list: any[] = [];
+    if (Array.isArray(parentsList)) {
+      list = parentsList;
+    } else if (parentsList && typeof parentsList === 'object') {
+      const pList = parentsList as any;
+      list = pList.data || pList.parents || pList.items || [];
+    }
+    
+    if (!Array.isArray(list)) list = [];
+    return list.find(p => p.id.toString() === formData.selectedParentId);
+  }, [formData.selectedParentId, parentsList]);
 
   const totalMonthlyFee = useMemo(() => {
     return formData.feeHeads
@@ -736,6 +770,44 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
                 </div>
               )}
             </div>
+
+            {/* Sibling Information for Existing Parent */}
+            <AnimatePresence>
+              {selectedParent && selectedParent.students && selectedParent.students.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10, height: 0 }}
+                  animate={{ opacity: 1, y: 0, height: 'auto' }}
+                  exit={{ opacity: 0, y: -10, height: 0 }}
+                  className="mt-6 pt-6 border-t border-slate-100 overflow-hidden"
+                >
+                  <div className="flex items-center gap-2 mb-4">
+                    <GraduationCap className="text-brand-500" size={18} />
+                    <h4 className="text-xs font-black text-slate-800 uppercase tracking-widest leading-none">Registered Siblings</h4>
+                    <span className="bg-brand-50 text-brand-600 px-2 py-0.5 rounded-full text-[10px] font-bold leading-none">
+                      {selectedParent.students.length}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {selectedParent.students.map((student: any) => (
+                      <div 
+                        key={student.id}
+                        className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100/50 group hover:border-brand-100 transition-all"
+                      >
+                        <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center text-brand-500 shadow-sm font-bold text-xs uppercase tracking-tighter">
+                          {student.name?.charAt(0) || '?'}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-xs font-bold text-slate-700 truncate">{student.name || 'Untitled'}</p>
+                          <p className="text-[10px] text-slate-400 font-medium uppercase tracking-tight truncate">
+                            {student.admission_no} • {student.currently_studying || 'No Grade'}
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
           </motion.div>
         ) : (
           <motion.div 
@@ -1127,9 +1199,9 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
       {/* Form Content */}
       <div className={cn("flex-1 overflow-y-auto p-6 sm:p-12", isPage && "sm:p-16")}>
-        {currentStep === 1 && renderStep1()}
-        {currentStep === 2 && renderStep2()}
-        {currentStep === 3 && renderStep3()}
+        {currentStep === 1 && renderStep3()}
+        {currentStep === 2 && renderStep1()}
+        {currentStep === 3 && renderStep2()}
         {currentStep === 4 && renderStep5()}
         {currentStep === 5 && renderStep4()}
       </div>

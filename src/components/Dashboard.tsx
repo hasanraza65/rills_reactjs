@@ -366,10 +366,33 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   );
 
   const renderBranchAdmin = () => {
-    const filteredStudents = students?.filter(s => 
-      s.name?.toLowerCase()?.includes(studentSearchQuery.toLowerCase()) ||
-      s.admission_no?.toLowerCase()?.includes(studentSearchQuery.toLowerCase())
-    ) || [];
+    const filteredStudents = students?.filter(s => {
+      const query = studentSearchQuery.toLowerCase().trim();
+      if (!query) return true;
+      
+      const strippedQuery = query.replace(/[- ]/g, '');
+      
+      // Student basic info
+      const name = (s.name || '').toLowerCase();
+      const adm_no = (s.admission_no || '').toLowerCase();
+      
+      // Parent Information
+      const father_name = (s.parent?.father_name || '').toLowerCase();
+      const mother_name = (s.parent?.mother_name || '').toLowerCase();
+      const f_cnic = (s.parent?.father_cnic || '').replace(/[- ]/g, '');
+      const m_cnic = (s.parent?.mother_cnic || '').replace(/[- ]/g, '');
+      const f_phone = (s.parent?.father_contact_no || '').replace(/[- ]/g, '');
+      const m_phone = (s.parent?.mother_contact_no || '').replace(/[- ]/g, '');
+
+      return name.includes(query) || 
+             adm_no.includes(query) ||
+             father_name.includes(query) ||
+             mother_name.includes(query) ||
+             f_cnic.includes(strippedQuery) ||
+             m_cnic.includes(strippedQuery) ||
+             f_phone.includes(strippedQuery) ||
+             m_phone.includes(strippedQuery);
+    }) || [];
 
     return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
