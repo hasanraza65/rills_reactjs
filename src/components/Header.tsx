@@ -9,8 +9,9 @@ import {
   Menu
 } from 'lucide-react';
 
-import { BRANCHES, Branch, User, ROLES } from '../types';
+import { Branch, User, ROLES } from '../types';
 import { cn } from '../types';
+import { useBranches } from '../hooks/use-branch';
 
 interface HeaderProps {
   user: User;
@@ -22,6 +23,8 @@ interface HeaderProps {
 
 
 export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchChange, onLogout, onMenuClick }) => {
+  const { data: apiBranches, isLoading } = useBranches();
+  const branches = apiBranches || [];
 
   return (
     <header className={cn(
@@ -53,18 +56,26 @@ export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchCha
 
         <div className="flex items-center gap-2">
           <Globe size={18} className="text-slate-400" />
-          <select 
-            value={currentBranch.id}
-            onChange={(e) => {
-              const b = BRANCHES.find(br => br.id === e.target.value);
-              if (b) onBranchChange(b);
-            }}
-            className="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer outline-none"
-          >
-            {BRANCHES.map(b => (
-              <option key={b.id} value={b.id}>{b.name}</option>
-            ))}
-          </select>
+          {isLoading ? (
+            <div className="w-32 h-4 bg-slate-100 animate-pulse rounded-md" />
+          ) : (
+            <select 
+              value={currentBranch.id}
+              onChange={(e) => {
+                const b = branches.find(br => br.id === Number(e.target.value));
+                if (b) onBranchChange(b);
+              }}
+              className="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer outline-none"
+            >
+              {branches.length > 0 ? (
+                branches.map(b => (
+                  <option key={b.id} value={b.id}>{b.branch_name}</option>
+                ))
+              ) : (
+                <option value={currentBranch.id}>{currentBranch.branch_name}</option>
+              )}
+            </select>
+          )}
         </div>
       </div>
 

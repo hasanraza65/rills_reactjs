@@ -7,9 +7,11 @@ import { Branch, BRANCHES, cn } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from './store/use-auth-store';
 import { UserRole } from './types/models/user';
+import { useBranches } from './hooks/use-branch';
 
 export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
+  const { data: branches } = useBranches();
   const [currentBranch, setCurrentBranch] = useState<Branch>(BRANCHES[0]);
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
@@ -22,6 +24,12 @@ export default function App() {
       }
     }
   }, [isAuthenticated, user]);
+
+  React.useEffect(() => {
+    if (branches && branches.length > 0 && !currentBranch) {
+      setCurrentBranch(branches[0]);
+    }
+  }, [branches, currentBranch]);
 
   const handleLogin = (userData: any) => {
     setActiveTab(userData.role === 'GATE_KEEPER' ? 'visitors' : 'overview');

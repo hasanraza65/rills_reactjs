@@ -21,13 +21,15 @@ export interface User {
 }
 
 export interface Branch {
-  id: string;
-  schoolId: string;
-  name: string;
-  location: string;
-  plan: PlanType;
-  isActive: boolean;
-  adminEmail?: string;
+  id: number;
+  branch_name: string;
+  branch_city: string;
+  branch_address: string;
+  branch_phone: string;
+  added_by?: number;
+  deleted_at?: string | null;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface School {
@@ -264,9 +266,8 @@ export const ROLES: Record<UserRole, { label: string; color: string }> = {
 };
 
 export const BRANCHES: Branch[] = [
-  { id: 'b1', schoolId: 's1', name: 'Main Campus', location: 'Gulberg, Lahore', plan: 'PAID', isActive: true },
-  { id: 'b2', schoolId: 's1', name: 'DHA Branch', location: 'Phase 5, Lahore', plan: 'PAID', isActive: true },
-  { id: 'b3', schoolId: 's2', name: 'North Campus', location: 'Nazimabad, Karachi', plan: 'FREE', isActive: true },
+  { id: 1, branch_name: 'Main Campus', branch_city: 'Lahore', branch_address: '123 Model Town', branch_phone: '03001234567' },
+  { id: 2, branch_name: 'DHA Branch', branch_city: 'Lahore', branch_address: 'Phase 5, Lahore', branch_phone: '03007654321' },
 ];
 
 export const SCHOOLS: School[] = [
@@ -276,8 +277,8 @@ export const SCHOOLS: School[] = [
     adminName: 'Ahmed Ali',
     adminEmail: 'ahmed@beaconhouse.edu.pk',
     branches: [
-      { id: 'b1', schoolId: 's1', name: 'Main Campus', location: 'Gulberg, Lahore', plan: 'PAID', isActive: true },
-      { id: 'b2', schoolId: 's1', name: 'DHA Branch', location: 'Phase 5, Lahore', plan: 'PAID', isActive: true },
+      { id: 1, branch_name: 'Main Campus', branch_city: 'Lahore', branch_address: '123 Model Town', branch_phone: '03001234567' },
+      { id: 2, branch_name: 'DHA Branch', branch_city: 'Lahore', branch_address: 'Phase 5, Lahore', branch_phone: '03007654321' },
     ]
   },
   {
@@ -286,7 +287,7 @@ export const SCHOOLS: School[] = [
     adminName: 'Fatima Khan',
     adminEmail: 'fatima@cityschool.edu.pk',
     branches: [
-      { id: 'b3', schoolId: 's2', name: 'North Campus', location: 'Nazimabad, Karachi', plan: 'FREE', isActive: true },
+      { id: 3, branch_name: 'North Campus', branch_city: 'Karachi', branch_address: 'Nazimabad, Karachi', branch_phone: '03001112223' },
     ]
   },
   {
