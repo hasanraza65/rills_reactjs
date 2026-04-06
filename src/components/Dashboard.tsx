@@ -29,11 +29,13 @@ import {
   Edit2,
   Key,
   MoreHorizontal,
-  Layers
+  Layers,
+  Building2
 } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { SchoolCard } from './SuperAdmin/SchoolCard';
 import { PricingConfig } from './SuperAdmin/PricingConfig';
+import { BranchManagement } from './SuperAdmin/BranchManagement';
 import { AddStudentForm } from './AddStudentForm';
 import { FamilyManagement } from './FamilyManagement';
 import { FeeDashboard } from './FeeManagement/FeeDashboard';
@@ -183,6 +185,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         >
           <School size={18} className="shrink-0" />
           <span className="whitespace-nowrap">Manage Schools</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('branches')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'branches' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <Building2 size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Branches</span>
         </button>
         <button 
           onClick={() => onTabChange('pricing')}
@@ -336,6 +348,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 <SchoolCard key={school.id} school={school} />
               ))}
             </div>
+          </motion.div>
+        )}
+        
+        {activeTab === 'branches' && (
+          <motion.div
+            key="branches"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <BranchManagement />
           </motion.div>
         )}
 
@@ -596,6 +619,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 </div>
               </div>
             </div>
+          </motion.div>
+        )}
+
+        {activeTab === 'branches' && (
+          <motion.div
+            key="branches"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <BranchManagement />
           </motion.div>
         )}
 
