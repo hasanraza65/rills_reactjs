@@ -23,14 +23,16 @@ import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
 import { AddAdmissionKeyModal } from './AddAdmissionKeyModal';
 import { motion, AnimatePresence } from 'motion/react';
 import { format } from 'date-fns';
+import { useBranchStore } from '../store/use-branch-store';
 
 export const AdmissionKeys: React.FC = () => {
   const [searchQuery, setSearchQuery] = React.useState('');
   const [deletingKeyId, setDeletingKeyId] = React.useState<number | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [editingKey, setEditingKey] = React.useState<AdmissionKeyData | null>(null);
+  const { selectedBranchId } = useBranchStore();
   
-  const { data: keys, isLoading, error } = useAdmissionKeys();
+  const { data: keys, isLoading, error } = useAdmissionKeys(selectedBranchId || 1);
   const deleteKeyMutation = useDeleteAdmissionKey();
   const createKeyMutation = useCreateAdmissionKey();
   const updateKeyMutation = useUpdateAdmissionKey();
@@ -51,7 +53,7 @@ export const AdmissionKeys: React.FC = () => {
         });
       } else {
         await createKeyMutation.mutateAsync({
-          branch_id: 1, // Assuming default branch ID 1
+          branch_id: selectedBranchId || 1,
           key: phoneNumber
         });
       }

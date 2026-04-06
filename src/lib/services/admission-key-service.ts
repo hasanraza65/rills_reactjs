@@ -5,8 +5,10 @@ export const admissionKeyService = {
   /**
    * Fetches the list of admission keys.
    */
-  getKeys: async (): Promise<AdmissionKeyData[]> => {
-    const response = await apiClient.get<{ status: boolean; data: AdmissionKeyData[] }>('/temp-add-keys');
+  getKeys: async (branchId: number = 1): Promise<AdmissionKeyData[]> => {
+    const response = await apiClient.get<{ status: boolean; data: AdmissionKeyData[] }>('/temp-add-keys', {
+      params: { branch_id: branchId }
+    });
     return response.data.data;
   },
 

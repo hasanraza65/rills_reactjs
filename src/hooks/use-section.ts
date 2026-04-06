@@ -2,13 +2,15 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { sectionService } from '../lib/services/section-service';
 import { CreateSectionInput, UpdateSectionInput } from '../types/api/section';
 
+import { useBranchStore } from '../store/use-branch-store';
+
 /**
  * Hook to fetch the list of sections.
  */
-export const useSections = () => {
+export const useSections = (branchId: number = 1) => {
   return useQuery({
-    queryKey: ['sections'],
-    queryFn: () => sectionService.getSections(),
+    queryKey: ['sections', branchId],
+    queryFn: () => sectionService.getSections(branchId),
   });
 };
 
@@ -28,6 +30,7 @@ export const useSection = (id: number | null) => {
  */
 export const useCreateSection = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (data: CreateSectionInput) => sectionService.createSection(data),
     onSuccess: () => {

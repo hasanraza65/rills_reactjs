@@ -21,6 +21,7 @@ import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { visitorService } from '../lib/services/visitor-service';
 import { useAuthStore } from '../store/use-auth-store';
+import { useBranchStore } from '../store/use-branch-store';
 
 const VISITOR_TYPES: { type: VisitorType; label: string; icon: any; color: string }[] = [
   { type: 'NEW_ADMISSION', label: 'New Admission', icon: UserPlus, color: 'bg-blue-500' },
@@ -74,8 +75,10 @@ export const VisitorManagement: React.FC = () => {
         'OTHER': 'other'
       };
 
+      const { selectedBranchId } = useBranchStore.getState();
+
       const payload = {
-        branch_id: 1, // Defaulting to 1 as per user request example
+        branch_id: selectedBranchId || 1, // Defaulting to selected branch
         name: formData.name,
         phone: formData.phone,
         cnic: formData.cnic,

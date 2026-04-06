@@ -8,11 +8,11 @@ import { ClassData, CreateClassInput, UpdateClassInput } from '../../types/api/c
 export const classService = {
   /**
    * Fetches the list of classes for a given branch.
-   * Currently hardcoded to branch_id=1 as per user request.
    */
-  getClasses: async (): Promise<ClassData[]> => {
-    // Setting branch_id=1 static for now as requested
-    const response = await apiClient.get<ClassData[]>('/classes?branch_id=1');
+  getClasses: async (branchId: number = 1): Promise<ClassData[]> => {
+    const response = await apiClient.get<ClassData[]>('/classes', {
+      params: { branch_id: branchId }
+    });
     return response.data;
   },
 

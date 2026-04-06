@@ -22,6 +22,7 @@ import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { useParents, useParent, useCreateParent, useUpdateParent, useDeleteParent } from '../hooks/use-parent';
 import { ParentData, CreateParentInput } from '../types/api/parent';
+import { useBranchStore } from '../store/use-branch-store';
 
 export const FamilyManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -30,10 +31,11 @@ export const FamilyManagement: React.FC = () => {
   const [editingParent, setEditingParent] = useState<ParentData | null>(null);
   const [selectedParentId, setSelectedParentId] = useState<number | null>(null);
   const [parentToDelete, setParentToDelete] = useState<ParentData | null>(null);
-
+  const { selectedBranchId } = useBranchStore();
+  
   // Form State
   const [formData, setFormData] = useState<CreateParentInput>({
-    branch_id: 1,
+    branch_id: selectedBranchId || 1,
     father_name: '',
     father_cnic: '',
     father_education: '',
@@ -48,7 +50,7 @@ export const FamilyManagement: React.FC = () => {
     guardian_type: 'father'
   });
 
-  const { data: parents, isLoading, error } = useParents();
+  const { data: parents, isLoading, error } = useParents(selectedBranchId || 1);
   const { data: parentDetails, isLoading: isLoadingDetails } = useParent(selectedParentId);
 
   const createMutation = useCreateParent();
@@ -77,7 +79,7 @@ export const FamilyManagement: React.FC = () => {
   const handleOpenAddForm = () => {
     setEditingParent(null);
     setFormData({
-      branch_id: 1,
+      branch_id: selectedBranchId || 1,
       father_name: '',
       father_cnic: '',
       father_education: '',

@@ -5,9 +5,9 @@ export const sectionService = {
   /**
    * Fetches the list of sections for a given branch.
    */
-  getSections: async (): Promise<SectionData[]> => {
+  getSections: async (branchId: number = 1): Promise<SectionData[]> => {
     const response = await apiClient.get<SectionData[]>('/sections', {
-      params: { branch_id: 1 }
+      params: { branch_id: branchId }
     });
     return response.data;
   },

@@ -21,6 +21,7 @@ import { EmptyState } from './ui/EmptyState';
 import { useSections, useSection, useCreateSection, useUpdateSection, useDeleteSection } from '../hooks/use-section';
 import { useClasses } from '../hooks/use-class';
 import { SectionData } from '../types/api/section';
+import { useBranchStore } from '../store/use-branch-store';
 
 export const SectionManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -32,8 +33,9 @@ export const SectionManagement: React.FC = () => {
   const [selectedSectionId, setSelectedSectionId] = useState<number | null>(null);
   const [sectionToDelete, setSectionToDelete] = useState<SectionData | null>(null);
   
-  const { data: sections, isLoading, error } = useSections();
-  const { data: classes } = useClasses();
+  const { selectedBranchId } = useBranchStore();
+  const { data: sections, isLoading, error } = useSections(selectedBranchId || 1);
+  const { data: classes } = useClasses(selectedBranchId || 1);
   const { data: sectionDetails, isLoading: isLoadingDetails } = useSection(selectedSectionId);
 
   const createMutation = useCreateSection();
@@ -75,7 +77,7 @@ export const SectionManagement: React.FC = () => {
       );
     } else {
       createMutation.mutate(
-        { name: sectionName, school_class_id: parentClassId, branch_id: 1 },
+        { name: sectionName, school_class_id: parentClassId, branch_id: selectedBranchId || 1 },
         { onSuccess: () => setIsFormOpen(false) }
       );
     }

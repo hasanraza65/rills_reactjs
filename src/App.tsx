@@ -8,14 +8,22 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from './store/use-auth-store';
 import { UserRole } from './types/models/user';
 import { useBranches } from './hooks/use-branch';
+import { useBranchStore } from './store/use-branch-store';
 
 export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
   const { data: branches } = useBranches();
-  const [currentBranch, setCurrentBranch] = useState<Branch>(BRANCHES[0]);
+  const { selectedBranchId, setSelectedBranchId } = useBranchStore();
+  
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
+  // Derived currentBranch object
+  const currentBranch = React.useMemo(() => {
+    if (!branches) return BRANCHES[0];
+    const found = branches.find(b => b.id === selectedBranchId);
+    return found || branches[0] || BRANCHES[0];
+  }, [branches, selectedBranchId]);
 
   React.useEffect(() => {
     if (isAuthenticated && user && activeTab === 'overview') {
@@ -26,10 +34,10 @@ export default function App() {
   }, [isAuthenticated, user]);
 
   React.useEffect(() => {
-    if (branches && branches.length > 0 && !currentBranch) {
-      setCurrentBranch(branches[0]);
+    if (branches && branches.length > 0 && !selectedBranchId) {
+      setSelectedBranchId(branches[0].id);
     }
-  }, [branches, currentBranch]);
+  }, [branches, selectedBranchId, setSelectedBranchId]);
 
   const handleLogin = (userData: any) => {
     setActiveTab(userData.role === 'GATE_KEEPER' ? 'visitors' : 'overview');
@@ -47,7 +55,7 @@ export default function App() {
   };
 
   const handleBranchChange = (newBranch: Branch) => {
-    setCurrentBranch(newBranch);
+    setSelectedBranchId(newBranch.id);
   };
 
   if (!isAuthenticated || !user) {

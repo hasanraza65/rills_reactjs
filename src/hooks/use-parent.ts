@@ -2,6 +2,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { parentService } from '../lib/services/parent-service';
 import { CreateParentInput, UpdateParentInput } from '../types/api/parent';
 
+import { useBranchStore } from '../store/use-branch-store';
+
 /**
  * Hook to fetch the list of parents.
  */
@@ -28,6 +30,7 @@ export const useParent = (id: number | null) => {
  */
 export const useCreateParent = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (data: CreateParentInput) => parentService.createParent(data),
     onSuccess: () => {

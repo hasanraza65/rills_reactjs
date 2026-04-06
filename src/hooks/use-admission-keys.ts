@@ -1,13 +1,15 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { admissionKeyService } from '../lib/services/admission-key-service';
 
+import { useBranchStore } from '../store/use-branch-store';
+
 /**
  * Hook to fetch the list of admission keys.
  */
-export const useAdmissionKeys = () => {
+export const useAdmissionKeys = (branchId: number = 1) => {
   return useQuery({
-    queryKey: ['admission-keys', 'list'],
-    queryFn: () => admissionKeyService.getKeys(),
+    queryKey: ['admission-keys', 'list', branchId],
+    queryFn: () => admissionKeyService.getKeys(branchId),
   });
 };
 
@@ -16,6 +18,7 @@ export const useAdmissionKeys = () => {
  */
 export const useCreateAdmissionKey = () => {
   const queryClient = useQueryClient();
+
   return useMutation({
     mutationFn: (data: { branch_id: number; key: string }) => 
       admissionKeyService.createKey(data),

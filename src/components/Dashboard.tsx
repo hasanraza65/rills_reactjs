@@ -73,6 +73,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UserRole, cn, SCHOOLS, CLASSES } from '../types';
 import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
 import { useAuthStore } from '../store/use-auth-store';
+import { useBranchStore } from '../store/use-branch-store';
 
 const data = [
   { name: 'Mon', students: 400, revenue: 2400 },
@@ -100,6 +101,7 @@ interface DashboardProps {
 
 export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChange }) => {
   const { user } = useAuthStore();
+  const { selectedBranchId } = useBranchStore();
   const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
   const [isAddKeyModalOpen, setIsAddKeyModalOpen] = React.useState(false);
 
@@ -108,7 +110,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   const handleCreateKey = async (phoneNumber: string) => {
     try {
       await createKeyMutation.mutateAsync({
-        branch_id: 1, 
+        branch_id: selectedBranchId || 1, 
         key: phoneNumber
       });
       setIsAddKeyModalOpen(false);
@@ -124,7 +126,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
   const [editingStudent, setEditingStudent] = React.useState<any | null>(null);
   const [deletingStudentId, setDeletingStudentId] = React.useState<number | null>(null);
 
-  const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(1);
+  const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(selectedBranchId || 1);
   const deleteStudentMutation = useDeleteStudent();
 
   React.useEffect(() => {

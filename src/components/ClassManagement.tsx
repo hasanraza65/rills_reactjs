@@ -20,6 +20,7 @@ import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { useClasses, useCreateClass, useUpdateClass, useDeleteClass, useClass } from '../hooks/use-class';
 import { ClassData } from '../types/api/class';
+import { useBranchStore } from '../store/use-branch-store';
 
 export const ClassManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -29,8 +30,9 @@ export const ClassManagement: React.FC = () => {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [classToDelete, setClassToDelete] = useState<ClassData | null>(null);
+  const { selectedBranchId } = useBranchStore();
   
-  const { data: classes, isLoading, error } = useClasses();
+  const { data: classes, isLoading, error } = useClasses(selectedBranchId || 1);
   const { data: classDetails, isLoading: isLoadingDetails, error: detailsError } = useClass(selectedClassId || 0);
   
   const createClassMutation = useCreateClass();
@@ -69,7 +71,7 @@ export const ClassManagement: React.FC = () => {
       );
     } else {
       createClassMutation.mutate(
-        { name: className, branch_id: 1 },
+        { name: className, branch_id: selectedBranchId || 1 },
         { onSuccess: () => setIsFormOpen(false) }
       );
     }

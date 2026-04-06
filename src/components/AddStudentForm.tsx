@@ -48,7 +48,11 @@ const STEPS = [
   { id: 5, title: 'Fees', icon: CreditCard },
 ];
 
+import { useBranchStore } from '../store/use-branch-store';
+
+
 export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave, editingStudent, isPage }) => {
+  const { selectedBranchId } = useBranchStore();
   const [currentStep, setCurrentStep] = useState(1);
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
@@ -60,7 +64,7 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     name: editingStudent?.name || '',
     dob: editingStudent?.dob ? editingStudent.dob.split('T')[0] : '',
     gender: (editingStudent?.gender?.toLowerCase() === 'male' ? 'MALE' : 'FEMALE') as 'MALE' | 'FEMALE',
-    branchId: editingStudent?.branch_id || 1,
+    branchId: editingStudent?.branch_id || selectedBranchId || 1,
     classId: editingStudent?.class_id?.toString() || '',
     sectionId: editingStudent?.section_id?.toString() || '',
     nationality: editingStudent?.nationality || 'Pakistani',
@@ -98,9 +102,16 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     ] as FeeHead[],
   });
 
+  // Sync branchId from store if not editing
+  useEffect(() => {
+    if (!editingStudent && selectedBranchId && formData.branchId !== selectedBranchId) {
+      setFormData(prev => ({ ...prev, branchId: selectedBranchId }));
+    }
+  }, [selectedBranchId, editingStudent]);
+
   // API Hooks
-  const { data: classesList } = useClasses();
-  const { data: parentsList } = useParents(1); // Branch ID 1
+  const { data: classesList } = useClasses(formData.branchId);
+  const { data: parentsList } = useParents(formData.branchId);
   const { data: sectionsList } = useSectionsByClass(formData.classId ? parseInt(formData.classId) : null);
   const createStudent = useCreateStudent();
   const updateStudent = useUpdateStudent();
