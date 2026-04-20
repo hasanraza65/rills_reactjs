@@ -15,7 +15,12 @@ export interface ParentData {
   mother_education: string;
   mother_occupation: string;
   mother_contact_no: string;
-  guardian_type: 'father' | 'mother';
+  guardian_type: 'father' | 'mother' | 'other';
+  guardian_name?: string;
+  guardian_cnic?: string;
+  guardian_education?: string;
+  guardian_occupation?: string;
+  guardian_contact_no?: string;
 }
 
 export interface CreateParentInput {
@@ -31,7 +36,12 @@ export interface CreateParentInput {
   mother_occupation: string;
   mother_contact_no: string;
   address: string;
-  guardian_type: 'father' | 'mother';
+  guardian_type: 'father' | 'mother' | 'other';
+  guardian_name?: string;
+  guardian_cnic?: string;
+  guardian_education?: string;
+  guardian_occupation?: string;
+  guardian_contact_no?: string;
 }
 
 export interface UpdateParentInput {
@@ -46,5 +56,10 @@ export interface UpdateParentInput {
   mother_occupation?: string;
   mother_contact_no?: string;
   address?: string;
-  guardian_type?: 'father' | 'mother';
+  guardian_type?: 'father' | 'mother' | 'other';
+  guardian_name?: string;
+  guardian_cnic?: string;
+  guardian_education?: string;
+  guardian_occupation?: string;
+  guardian_contact_no?: string;
 }
