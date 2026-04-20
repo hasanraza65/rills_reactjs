@@ -5,6 +5,9 @@ export interface Branch {
   branch_city: string;
   branch_address: string;
   branch_phone: string;
+  branch_code?: string;
+  campus_start_date?: string;
+  campus_email?: string;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -15,6 +18,9 @@ export interface CreateBranchInput {
   branch_city: string;
   branch_address: string;
   branch_phone: string;
+  branch_code?: string;
+  campus_start_date?: string;
+  campus_email?: string;
 }
 
 export interface UpdateBranchInput extends Partial<CreateBranchInput> {
