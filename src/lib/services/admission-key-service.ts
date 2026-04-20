@@ -1,5 +1,5 @@
 import { apiClient } from '../api-client';
-import { AdmissionKeyData } from '../../types/api/admission-key';
+import { AdmissionKeyData, CreateAdmissionKeyPayload } from '../../types/api/admission-key';
 
 export const admissionKeyService = {
   /**
@@ -15,7 +15,7 @@ export const admissionKeyService = {
   /**
    * Creates a new admission key.
    */
-  createKey: async (data: { branch_id: number; key: string }): Promise<AdmissionKeyData> => {
+  createKey: async (data: CreateAdmissionKeyPayload): Promise<AdmissionKeyData> => {
     const response = await apiClient.post<{ status: boolean; data: AdmissionKeyData }>('/temp-add-keys', data);
     return response.data.data;
   },
@@ -31,7 +31,7 @@ export const admissionKeyService = {
    * Updates an admission key.
    * Laravel pattern: POST to ID with _method: "put"
    */
-  updateKey: async (id: number, data: { branch_id: number; key: string }): Promise<AdmissionKeyData> => {
+  updateKey: async (id: number, data: CreateAdmissionKeyPayload): Promise<AdmissionKeyData> => {
     const response = await apiClient.post<{ status: boolean; data: AdmissionKeyData }>(`/temp-add-keys/${id}`, {
       ...data,
       _method: "put"

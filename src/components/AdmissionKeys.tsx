@@ -17,7 +17,7 @@ import {
   useCreateAdmissionKey,
   useUpdateAdmissionKey 
 } from '../hooks/use-admission-keys';
-import { AdmissionKeyData } from '../types/api/admission-key';
+import { AdmissionKeyData, CreateAdmissionKeyPayload } from '../types/api/admission-key';
 import { EmptyState } from './ui/EmptyState';
 import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
 import { AddAdmissionKeyModal } from './AddAdmissionKeyModal';
@@ -41,21 +41,15 @@ export const AdmissionKeys: React.FC = () => {
     item.key.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  const handleSave = async (phoneNumber: string) => {
+  const handleSave = async (payload: CreateAdmissionKeyPayload) => {
     try {
       if (editingKey) {
         await updateKeyMutation.mutateAsync({
           id: editingKey.id,
-          data: {
-            branch_id: editingKey.branch_id,
-            key: phoneNumber
-          }
+          data: payload
         });
       } else {
-        await createKeyMutation.mutateAsync({
-          branch_id: selectedBranchId || 1,
-          key: phoneNumber
-        });
+        await createKeyMutation.mutateAsync(payload);
       }
       setIsAddModalOpen(false);
       setEditingKey(null);
@@ -267,8 +261,9 @@ export const AdmissionKeys: React.FC = () => {
         }}
         onConfirm={handleSave}
         isLoading={createKeyMutation.isPending || updateKeyMutation.isPending}
-        initialValue={editingKey?.key}
+        initialData={editingKey}
         mode={editingKey ? 'edit' : 'create'}
+        branchId={selectedBranchId || 1}
       />
     </div>
   );
