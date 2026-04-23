@@ -48,6 +48,7 @@ import { LibraryManager } from './Library/LibraryManager';
 import { ClassManagement } from './ClassManagement';
 import { SectionManagement } from './SectionManagement';
 import { AdmissionKeys } from './AdmissionKeys';
+import { InvoiceManagement } from './FeeManagement/InvoiceManagement';
 import { useStudents, useDeleteStudent } from '../hooks/use-student';
 import { useCreateAdmissionKey } from '../hooks/use-admission-keys';
 import { StudentDetailsModal } from './StudentDetailsModal';
@@ -528,6 +529,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           <span className="whitespace-nowrap">Fees</span>
         </button>
         <button 
+          onClick={() => onTabChange('invoices')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'invoices' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <FileText size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Invoices</span>
+        </button>
+        <button 
           onClick={() => onTabChange('attendance')}
           className={cn(
             "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
@@ -939,6 +950,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <FeeDashboard />
+          </motion.div>
+        )}
+
+        {activeTab === 'invoices' && (
+          <motion.div
+            key="invoices"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <InvoiceManagement />
           </motion.div>
         )}
 

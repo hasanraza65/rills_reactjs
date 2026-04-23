@@ -49,5 +49,15 @@ export const studentService = {
    */
   deleteStudent: async (id: number): Promise<void> => {
     await apiClient.delete(`/students/${id}`);
+  },
+
+  /**
+   * Fetches students by parent ID.
+   */
+  getStudentsByParent: async (parentId: number, branchId?: number): Promise<StudentData[]> => {
+    const response = await apiClient.get<StudentData[]>(`/students_by_parent/${parentId}`, {
+      params: branchId ? { branch_id: branchId } : {}
+    });
+    return response.data;
   }
 };

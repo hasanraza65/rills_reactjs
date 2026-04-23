@@ -72,6 +72,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: Users, label: 'Staff Management', id: 'staff' },
     { icon: Key, label: 'Admission Keys', id: 'admission-keys' },
     { icon: CreditCard, label: 'Fees', id: 'fees' },
+    { icon: FileText, label: 'Invoices', id: 'invoices' },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },

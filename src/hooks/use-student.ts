@@ -64,3 +64,14 @@ export const useDeleteStudent = () => {
     },
   });
 };
+
+/**
+ * Hook to fetch students by parent ID.
+ */
+export const useStudentsByParent = (parentId: number | null, branchId?: number) => {
+  return useQuery({
+    queryKey: ['students', 'by-parent', parentId, branchId],
+    queryFn: () => studentService.getStudentsByParent(parentId!, branchId),
+    enabled: !!parentId,
+  });
+};
