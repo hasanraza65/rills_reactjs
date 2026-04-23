@@ -4,32 +4,60 @@ import {
   Plus, 
   Search, 
   Filter, 
-  MoreHorizontal, 
   Eye, 
   Download, 
   Trash2,
   Calendar,
-  CreditCard,
   Loader2
 } from 'lucide-react';
-import { motion } from 'motion/react';
-import { useInvoices } from '../../hooks/use-invoice';
+import { useInvoices, useDeleteInvoice } from '../../hooks/use-invoice';
 import { useBranchStore } from '../../store/use-branch-store';
 import { cn } from '../../types';
-import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { GenerateInvoiceModal } from './GenerateInvoiceModal';
+import { InvoiceDetailsModal } from './InvoiceDetailsModal';
+import { ConfirmationModal } from '../ui/ConfirmationModal';
+// import { toast } from 'react-hot-toast';
 
 export const InvoiceManagement: React.FC = () => {
   const { selectedBranchId } = useBranchStore();
   const { data: invoices, isLoading, error } = useInvoices(selectedBranchId || 1);
+  const deleteInvoiceMutation = useDeleteInvoice();
+
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
+  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
   const filteredInvoices = invoices?.filter(inv => 
     inv.id.toString().includes(searchQuery) || 
+    inv.invoice_no?.toLowerCase().includes(searchQuery.toLowerCase()) ||
     inv.status.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
+
+  const handleShowDetails = (id: number) => {
+    setSelectedInvoiceId(id);
+    setIsDetailsModalOpen(true);
+  };
+
+  const handleDeleteClick = (id: number) => {
+    setInvoiceToDelete(id);
+  };
+
+  const confirmDelete = () => {
+    if (invoiceToDelete) {
+      deleteInvoiceMutation.mutate(invoiceToDelete, {
+        onSuccess: () => {
+          // toast.success('Invoice deleted successfully');
+          setInvoiceToDelete(null);
+        },
+        onError: () => {
+          // toast.error('Failed to delete invoice');
+        }
+      });
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -52,7 +80,7 @@ export const InvoiceManagement: React.FC = () => {
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
             <input 
-              placeholder="Search invoices by ID or status..."
+              placeholder="Search invoices by ID, number or status..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none font-medium"
@@ -122,7 +150,7 @@ export const InvoiceManagement: React.FC = () => {
                           <FileText size={20} />
                         </div>
                         <div>
-                          <p className="text-sm font-bold text-slate-800">#{inv.id}</p>
+                          <p className="text-sm font-bold text-slate-800">{inv.invoice_no || `#${inv.id}`}</p>
                           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fee Voucher</p>
                         </div>
                       </div>
@@ -143,14 +171,20 @@ export const InvoiceManagement: React.FC = () => {
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all">
+                      <div className="flex items-center justify-end gap-2 transition-all">
+                        <button 
+                          onClick={() => handleShowDetails(inv.id)}
+                          className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                        >
                           <Eye size={18} />
                         </button>
                         <button className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all">
                           <Download size={18} />
                         </button>
-                        <button className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all">
+                        <button 
+                          onClick={() => handleDeleteClick(inv.id)}
+                          className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                        >
                           <Trash2 size={18} />
                         </button>
                       </div>
@@ -166,6 +200,22 @@ export const InvoiceManagement: React.FC = () => {
       <GenerateInvoiceModal 
         isOpen={isGenerateModalOpen} 
         onClose={() => setIsGenerateModalOpen(false)} 
+      />
+
+      <InvoiceDetailsModal 
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+        invoiceId={selectedInvoiceId}
+      />
+
+      <ConfirmationModal 
+        isOpen={!!invoiceToDelete}
+        onClose={() => setInvoiceToDelete(null)}
+        onConfirm={confirmDelete}
+        isLoading={deleteInvoiceMutation.isPending}
+        title="Delete Invoice"
+        message="Are you sure you want to delete this invoice? This action cannot be undone."
+        confirmLabel="Delete"
       />
     </div>
   );

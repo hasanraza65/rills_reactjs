@@ -118,12 +118,12 @@ export const GenerateInvoiceModal: React.FC<GenerateInvoiceModalProps> = ({ isOp
             onClick={onClose}
             className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
           />
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 20 }}
-            className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden"
-          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative w-full max-w-lg bg-white rounded-[2.5rem] shadow-2xl overflow-hidden min-h-[28rem] flex flex-col"
+            >
             <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
                 <h3 className="text-xl font-bold text-slate-800">Generate Invoice</h3>
@@ -134,8 +134,9 @@ export const GenerateInvoiceModal: React.FC<GenerateInvoiceModalProps> = ({ isOp
               </button>
             </div>
 
-            <form onSubmit={handleGenerate} className="p-6 space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <form onSubmit={handleGenerate} className="p-6 flex flex-col flex-1">
+              <div className="flex-1 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="md:col-span-2">
                   <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Select Parent</label>
                   <div className="relative" ref={dropdownRef}>
@@ -211,7 +212,7 @@ export const GenerateInvoiceModal: React.FC<GenerateInvoiceModalProps> = ({ isOp
 
                 {/* Scrollable Content Area */}
                 {selectedParentId && (
-                  <div className="md:col-span-2 max-h-[18rem] overflow-y-auto pr-2 custom-scrollbar space-y-8">
+                  <div className="md:col-span-2 max-h-[22rem] overflow-y-auto pr-2 custom-scrollbar space-y-8">
                     <div className="space-y-4">
                       <label className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2 block">Select Students</label>
                       {isLoadingStudents ? (
@@ -293,10 +294,9 @@ export const GenerateInvoiceModal: React.FC<GenerateInvoiceModalProps> = ({ isOp
                   </div>
                 )}
               </div>
+            </div>
 
-              {/* Footer is below */}
-
-              <div className="flex gap-4 pt-2">
+            <div className="flex gap-4 pt-6 mt-auto">
                 <Button
                   variant="ghost"
                   type="button"
