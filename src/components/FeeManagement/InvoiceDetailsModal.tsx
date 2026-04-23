@@ -1,8 +1,12 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, FileText, User, Calendar, CreditCard, Receipt, Loader2, Download } from 'lucide-react';
 import { useInvoice } from '../../hooks/use-invoice';
 import { cn } from '../../types';
+import { InvoicePDFTemplate } from './InvoicePDFTemplate';
+import { renderToString } from 'react-dom/server';
+// @ts-ignore
+import html2pdf from 'html2pdf.js';
 
 interface InvoiceDetailsModalProps {
   isOpen: boolean;
@@ -12,6 +16,49 @@ interface InvoiceDetailsModalProps {
 
 export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen, onClose, invoiceId }) => {
   const { data: invoice, isLoading } = useInvoice(invoiceId);
+  const pdfRef = useRef<HTMLDivElement>(null);
+
+  const formatDate = (dateStr: string | undefined) => {
+    if (!dateStr) return 'N/A';
+    try {
+      const date = new Date(dateStr);
+      if (isNaN(date.getTime())) return dateStr; // Return raw string if invalid but not null
+      return date.toLocaleDateString();
+    } catch (e) {
+      return dateStr || 'N/A';
+    }
+  };
+
+  const handleDownloadPDF = async () => {
+    if (!invoice) return;
+    
+    // Render template to HTML string
+    const htmlString = renderToString(<InvoicePDFTemplate invoice={invoice} />);
+
+    const opt = {
+      margin: 10,
+      filename: `Invoice_${invoice.invoice_no || invoice.id}.pdf`,
+      image: { type: 'jpeg' as const, quality: 0.98 },
+      html2canvas: { 
+        scale: 2, 
+        useCORS: true,
+        letterRendering: true,
+        logging: false,
+        // CRITICAL: Remove all external styles from the clone to avoid oklch errors
+        onclone: (clonedDoc: Document) => {
+          const styleElements = clonedDoc.querySelectorAll('style, link[rel="stylesheet"]');
+          styleElements.forEach(el => el.remove());
+        }
+      },
+      jsPDF: { unit: 'mm' as const, format: 'a4' as const, orientation: 'portrait' as const }
+    };
+
+    try {
+      await html2pdf().set(opt).from(htmlString).save();
+    } catch (error) {
+      console.error('PDF Generation Error:', error);
+    }
+  };
 
   return (
     <AnimatePresence>
@@ -53,47 +100,100 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
               ) : invoice ? (
                 <div className="space-y-8">
                   {/* Header Info */}
-                  <div className="grid grid-cols-2 gap-6 bg-slate-50 p-6 rounded-[2rem] border border-slate-100/50">
+                  <div className="grid grid-cols-2 gap-6 bg-white p-6 rounded-[2rem] border-2 border-slate-50 shadow-sm">
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoice Number</p>
-                      <p className="text-lg font-black text-brand-600">#{invoice.invoice_no || invoice.id}</p>
+                      <p className="text-xl font-black text-brand-600">#{invoice.invoice_no || invoice.id}</p>
                     </div>
                     <div className="text-right space-y-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</p>
                       <span className={cn(
-                        "px-3 py-1 rounded-lg text-[10px] font-bold uppercase inline-flex items-center gap-1.5 ml-auto",
-                        invoice.status.toLowerCase() === 'paid' ? "bg-emerald-50 text-emerald-600" : "bg-amber-50 text-amber-600"
+                        "px-3 py-1.5 rounded-xl text-[10px] font-bold uppercase inline-flex items-center gap-1.5 ml-auto",
+                        invoice.status.toLowerCase() === 'paid' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" : 
+                        invoice.status.toLowerCase() === 'partial' ? "bg-amber-50 text-amber-600 border border-amber-100" :
+                        "bg-slate-50 text-slate-600 border border-slate-100"
                       )}>
-                        <div className={cn("w-1.5 h-1.5 rounded-full", invoice.status.toLowerCase() === 'paid' ? "bg-emerald-500" : "bg-amber-500")} />
-                        {invoice.status}
+                        <div className={cn("w-1.5 h-1.5 rounded-full", 
+                          invoice.status.toLowerCase() === 'paid' ? "bg-emerald-500" : 
+                          invoice.status.toLowerCase() === 'partial' ? "bg-amber-500" :
+                          "bg-slate-400"
+                        )} />
+                        {invoice.status.replace('_', ' ')}
                       </span>
                     </div>
                     <div className="space-y-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Issue Date</p>
-                      <div className="flex items-center gap-2 text-slate-700 font-bold">
-                        <Calendar size={14} className="text-slate-400" />
-                        {new Date(invoice.issue_date).toLocaleDateString()}
+                      <div className="flex items-center gap-2 text-slate-700 font-bold bg-slate-50/50 p-2 rounded-xl border border-slate-100/50">
+                        <Calendar size={14} className="text-brand-500" />
+                        {formatDate(invoice.issue_date || invoice.created_at)}
                       </div>
                     </div>
                     <div className="text-right space-y-1">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Due Date</p>
-                      <div className="flex items-center gap-2 text-slate-700 font-bold justify-end">
-                        <Calendar size={14} className="text-slate-400" />
-                        {new Date(invoice.due_date).toLocaleDateString()}
+                      <div className="flex items-center gap-2 text-slate-700 font-bold justify-end bg-slate-50/50 p-2 rounded-xl border border-slate-100/50 ml-auto inline-flex">
+                        <Calendar size={14} className="text-rose-500" />
+                        {formatDate(invoice.due_date)}
                       </div>
                     </div>
                   </div>
 
-                  {/* Parent Info */}
-                  <div className="space-y-3">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Parent Details</label>
-                    <div className="flex items-center gap-4 p-4 bg-white border-2 border-slate-50 rounded-2xl">
-                      <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xl">
-                        {invoice.parent?.father_name?.charAt(0) || <User size={24} />}
+                  {/* Parent & Family Info */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Father / Guardian</label>
+                      <div className="p-4 bg-white border-2 border-slate-50 rounded-[2rem] space-y-3 shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-xl shadow-inner">
+                            {invoice.parent?.father_name?.charAt(0) || <User size={24} />}
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-800 leading-tight">{invoice.parent?.father_name || 'N/A'}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{invoice.parent?.father_occupation || 'Occupation'}</p>
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t border-slate-50 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">CNIC</span>
+                            <span className="text-xs font-bold text-slate-600">{invoice.parent?.father_cnic || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Contact</span>
+                            <span className="text-xs font-bold text-slate-600">{invoice.parent?.father_contact_no || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Education</span>
+                            <span className="text-xs font-bold text-slate-600">{invoice.parent?.father_education || 'N/A'}</span>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-bold text-slate-800">{invoice.parent?.father_name || 'N/A'}</p>
-                        <p className="text-xs text-slate-500 font-medium">{invoice.parent?.father_contact_no || 'No contact'}</p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Mother Details</label>
+                      <div className="p-4 bg-white border-2 border-slate-50 rounded-[2rem] space-y-3 shadow-sm">
+                        <div className="flex items-center gap-4">
+                          <div className="w-12 h-12 rounded-2xl bg-rose-50 text-rose-600 flex items-center justify-center font-bold text-xl shadow-inner">
+                            {invoice.parent?.mother_name?.charAt(0) || <User size={24} />}
+                          </div>
+                          <div>
+                            <p className="font-black text-slate-800 leading-tight">{invoice.parent?.mother_name || 'N/A'}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{invoice.parent?.mother_occupation || 'Occupation'}</p>
+                          </div>
+                        </div>
+                        <div className="pt-2 border-t border-slate-50 space-y-2">
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">CNIC</span>
+                            <span className="text-xs font-bold text-slate-600">{invoice.parent?.mother_cnic || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Contact</span>
+                            <span className="text-xs font-bold text-slate-600">{invoice.parent?.mother_contact_no || 'N/A'}</span>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-[10px] font-bold text-slate-400 uppercase">Address</span>
+                            <span className="text-xs font-bold text-slate-600 truncate max-w-[100px]">{invoice.parent?.address || 'N/A'}</span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -101,32 +201,51 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
                   {/* Items Breakdown */}
                   <div className="space-y-3">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-1">Fee Breakdown</label>
-                    <div className="border-2 border-slate-50 rounded-[2rem] overflow-hidden">
+                    <div className="border-2 border-slate-50 rounded-[2.5rem] overflow-hidden shadow-sm bg-white">
                       <table className="w-full text-left">
                         <thead>
                           <tr className="bg-slate-50/50">
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase">Student / Head</th>
-                            <th className="px-6 py-3 text-[10px] font-bold text-slate-400 uppercase text-right">Amount</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase">Student / Description</th>
+                            <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase text-right">Total</th>
+                            <th className="px-4 py-4 text-[10px] font-bold text-slate-400 uppercase text-right">Paid</th>
+                            <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase text-right">Remaining</th>
                           </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                          {invoice.items?.map((item: any) => (
-                            <tr key={item.id}>
-                              <td className="px-6 py-4">
-                                <p className="text-sm font-bold text-slate-800">{item.student?.name || 'Student'}</p>
-                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{item.head_name}</p>
+                          {invoice.items?.map((item: any, idx: number) => (
+                            <tr key={item.id || `${item.student_id}-${item.head_name}-${idx}`} className="hover:bg-slate-50/30 transition-colors">
+                              <td className="px-6 py-5">
+                                <div className="flex items-center gap-3">
+                                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 font-bold text-xs">
+                                    {item.student?.name?.charAt(0)}
+                                  </div>
+                                  <div>
+                                    <p className="text-sm font-black text-slate-800">{item.student?.name || 'Student'}</p>
+                                    <div className="flex items-center gap-2 mt-0.5">
+                                      <p className="text-[10px] text-brand-600 font-bold uppercase tracking-wider">{item.head_name}</p>
+                                      <span className="text-[10px] text-slate-300">•</span>
+                                      <p className="text-[10px] text-slate-400 font-medium">{item.student?.admission_no}</p>
+                                    </div>
+                                  </div>
+                                </div>
                               </td>
-                              <td className="px-6 py-4 text-right">
-                                <p className="text-sm font-black text-slate-700">Rs. {Number(item.amount).toLocaleString()}</p>
+                              <td className="px-4 py-5 text-right">
+                                <p className="text-sm font-bold text-slate-600">Rs. {Number(item.total_amount || item.amount).toLocaleString()}</p>
+                              </td>
+                              <td className="px-4 py-5 text-right">
+                                <p className="text-sm font-bold text-emerald-600">Rs. {Number(item.paid || 0).toLocaleString()}</p>
+                              </td>
+                              <td className="px-6 py-5 text-right">
+                                <p className="text-sm font-black text-rose-600">Rs. {Number(item.remaining || (item.total_amount - (item.paid || 0))).toLocaleString()}</p>
                               </td>
                             </tr>
                           ))}
                         </tbody>
                         <tfoot>
-                          <tr className="bg-brand-50/30">
-                            <td className="px-6 py-5 font-bold text-slate-800">Total Amount</td>
-                            <td className="px-6 py-5 text-right">
-                              <p className="text-lg font-black text-brand-600 underline decoration-brand-200 decoration-4 underline-offset-4">
+                          <tr className="bg-brand-50/50">
+                            <td className="px-6 py-6 font-black text-brand-800">Grand Total Payable</td>
+                            <td colSpan={3} className="px-6 py-6 text-right">
+                              <p className="text-2xl font-black text-brand-600 underline decoration-brand-200 decoration-4 underline-offset-8">
                                 Rs. {Number(invoice.total_amount).toLocaleString()}
                               </p>
                             </td>
@@ -151,6 +270,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
                 Close
               </button>
               <button
+                onClick={handleDownloadPDF}
                 className="flex-1 py-4 bg-brand-500 text-white rounded-2xl font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
               >
                 <Download size={18} />
@@ -158,8 +278,10 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
               </button>
             </div>
           </motion.div>
+
         </div>
       )}
     </AnimatePresence>
   );
 };
+

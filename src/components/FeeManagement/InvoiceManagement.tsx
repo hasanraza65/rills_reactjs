@@ -5,7 +5,6 @@ import {
   Search, 
   Filter, 
   Eye, 
-  Download, 
   Trash2,
   Calendar,
   Loader2
@@ -178,9 +177,7 @@ export const InvoiceManagement: React.FC = () => {
                         >
                           <Eye size={18} />
                         </button>
-                        <button className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all">
-                          <Download size={18} />
-                        </button>
+
                         <button 
                           onClick={() => handleDeleteClick(inv.id)}
                           className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
