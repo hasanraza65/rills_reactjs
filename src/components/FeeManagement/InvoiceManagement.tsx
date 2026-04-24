@@ -7,7 +7,8 @@ import {
   Eye, 
   Trash2,
   Calendar,
-  Loader2
+  Loader2,
+  Wallet
 } from 'lucide-react';
 import { useInvoices, useDeleteInvoice } from '../../hooks/use-invoice';
 import { useBranchStore } from '../../store/use-branch-store';
@@ -15,6 +16,7 @@ import { cn } from '../../types';
 import { EmptyState } from '../ui/EmptyState';
 import { GenerateInvoiceModal } from './GenerateInvoiceModal';
 import { InvoiceDetailsModal } from './InvoiceDetailsModal';
+import { InvoicePaymentModal } from './InvoicePaymentModal';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
 // import { toast } from 'react-hot-toast';
 
@@ -24,8 +26,9 @@ export const InvoiceManagement: React.FC = () => {
   const deleteInvoiceMutation = useDeleteInvoice();
 
   const [isGenerateModalOpen, setIsGenerateModalOpen] = useState(false);
-  const [selectedInvoiceId, setSelectedInvoiceId] = useState<number | null>(null);
+  const [selectedInvoice, setSelectedInvoice] = useState<any | null>(null);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
   const [invoiceToDelete, setInvoiceToDelete] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -35,9 +38,14 @@ export const InvoiceManagement: React.FC = () => {
     inv.status.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
-  const handleShowDetails = (id: number) => {
-    setSelectedInvoiceId(id);
+  const handleShowDetails = (inv: any) => {
+    setSelectedInvoice(inv);
     setIsDetailsModalOpen(true);
+  };
+
+  const handleMakePayment = (inv: any) => {
+    setSelectedInvoice(inv);
+    setIsPaymentModalOpen(true);
   };
 
   const handleDeleteClick = (id: number) => {
@@ -172,12 +180,21 @@ export const InvoiceManagement: React.FC = () => {
                     <td className="px-8 py-5 text-right">
                       <div className="flex items-center justify-end gap-2 transition-all">
                         <button 
-                          onClick={() => handleShowDetails(inv.id)}
+                          onClick={() => handleShowDetails(inv)}
                           className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                          title="View Details"
                         >
                           <Eye size={18} />
                         </button>
-
+                        {inv.status.toLowerCase() !== 'paid' && (
+                          <button 
+                            onClick={() => handleMakePayment(inv)}
+                            className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all"
+                            title="Make Payment"
+                          >
+                            <Wallet size={18} />
+                          </button>
+                        )}
                         <button 
                           onClick={() => handleDeleteClick(inv.id)}
                           className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
@@ -202,7 +219,18 @@ export const InvoiceManagement: React.FC = () => {
       <InvoiceDetailsModal 
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
-        invoiceId={selectedInvoiceId}
+        invoiceId={selectedInvoice?.id}
+        onMakePayment={(inv) => {
+          setIsDetailsModalOpen(false);
+          handleMakePayment(inv);
+        }}
+      />
+
+      <InvoicePaymentModal 
+        key={selectedInvoice?.id || 'new'}
+        isOpen={isPaymentModalOpen}
+        onClose={() => setIsPaymentModalOpen(false)}
+        initialData={selectedInvoice}
       />
 
       <ConfirmationModal 

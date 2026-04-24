@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, FileText, User, Calendar, CreditCard, Receipt, Loader2, Download } from 'lucide-react';
+import { X, FileText, User, Calendar, CreditCard, Receipt, Loader2, Download, Wallet } from 'lucide-react';
 import { useInvoice } from '../../hooks/use-invoice';
 import { cn } from '../../types';
 import { InvoicePDFTemplate } from './InvoicePDFTemplate';
@@ -12,9 +12,10 @@ interface InvoiceDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   invoiceId: number | null;
+  onMakePayment?: (invoice: any) => void;
 }
 
-export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen, onClose, invoiceId }) => {
+export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen, onClose, invoiceId, onMakePayment }) => {
   const { data: invoice, isLoading } = useInvoice(invoiceId);
   const pdfRef = useRef<HTMLDivElement>(null);
 
@@ -120,20 +121,6 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
                         )} />
                         {invoice.status.replace('_', ' ')}
                       </span>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Issue Date</p>
-                      <div className="flex items-center gap-2 text-slate-700 font-bold bg-slate-50/50 p-2 rounded-xl border border-slate-100/50">
-                        <Calendar size={14} className="text-brand-500" />
-                        {formatDate(invoice.issue_date || invoice.created_at)}
-                      </div>
-                    </div>
-                    <div className="text-right space-y-1">
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Due Date</p>
-                      <div className="flex items-center gap-2 text-slate-700 font-bold justify-end bg-slate-50/50 p-2 rounded-xl border border-slate-100/50 ml-auto inline-flex">
-                        <Calendar size={14} className="text-rose-500" />
-                        {formatDate(invoice.due_date)}
-                      </div>
                     </div>
                   </div>
 
@@ -269,6 +256,15 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
               >
                 Close
               </button>
+              {invoice?.status?.toLowerCase() !== 'paid' && (
+                <button
+                  onClick={() => invoice && onMakePayment?.(invoice)}
+                  className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-bold hover:bg-emerald-600 transition-all shadow-lg shadow-emerald-100 flex items-center justify-center gap-2"
+                >
+                  <Wallet size={18} />
+                  Make Payment
+                </button>
+              )}
               <button
                 onClick={handleDownloadPDF}
                 className="flex-1 py-4 bg-brand-500 text-white rounded-2xl font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
