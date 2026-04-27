@@ -70,6 +70,16 @@ const menuItems: Record<UserRole, any[]> = {
         { label: 'Student Attendance', id: 'student-attendance' },
       ]
     },
+    {
+      icon: FileText,
+      label: 'Lesson Plan',
+      id: 'lesson-plan-menu',
+      subItems: [
+        { label: 'Teachers', id: 'lesson-plan-teachers' },
+        { label: 'Add lesson plan', id: 'add-lesson-plan' },
+        { label: 'Lesson Plan', id: 'lesson-plan-list' },
+      ]
+    },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
     { icon: Settings, label: 'System Settings', id: 'settings' },
@@ -85,6 +95,16 @@ const menuItems: Record<UserRole, any[]> = {
       subItems: [
         { label: 'Dashboard', id: 'attendance' },
         { label: 'Student Attendance', id: 'student-attendance' },
+      ]
+    },
+    {
+      icon: FileText,
+      label: 'Lesson Plan',
+      id: 'lesson-plan-menu',
+      subItems: [
+        { label: 'Teachers', id: 'lesson-plan-teachers' },
+        { label: 'Add lesson plan', id: 'add-lesson-plan' },
+        { label: 'Lesson Plan', id: 'lesson-plan-list' },
       ]
     },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },

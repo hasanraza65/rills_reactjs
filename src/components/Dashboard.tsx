@@ -41,6 +41,9 @@ import { FamilyManagement } from './FamilyManagement';
 import { FeeDashboard } from './FeeManagement/FeeDashboard';
 import { AttendanceDashboard } from './AttendanceModule/AttendanceDashboard';
 import { StudentAttendanceManager } from './AttendanceModule/StudentAttendanceManager';
+import { LessonPlanTeachers } from './LessonPlan/LessonPlanTeachers';
+import { AddLessonPlan } from './LessonPlan/AddLessonPlan';
+import { LessonPlanList } from './LessonPlan/LessonPlanList';
 import { SyllabusManager } from './Academic/SyllabusManager';
 import { StudentDiary } from './Academic/StudentDiary';
 import { SubjectsManager } from './Academic/SubjectsManager';
@@ -441,6 +444,39 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <StudentAttendanceManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'lesson-plan-teachers' && (
+          <motion.div
+            key="lesson-plan-teachers"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <LessonPlanTeachers />
+          </motion.div>
+        )}
+
+        {activeTab === 'add-lesson-plan' && (
+          <motion.div
+            key="add-lesson-plan"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AddLessonPlan />
+          </motion.div>
+        )}
+
+        {activeTab === 'lesson-plan-list' && (
+          <motion.div
+            key="lesson-plan-list"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <LessonPlanList />
           </motion.div>
         )}
 
