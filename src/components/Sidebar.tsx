@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
 import { 
@@ -50,7 +50,26 @@ const menuItems: Record<UserRole, any[]> = {
         { label: 'Sections', id: 'sections' },
       ]
     },
-    { icon: Calendar, label: 'Attendance', id: 'attendance' },
+    {
+      icon: GraduationCap,
+      label: 'Academic',
+      id: 'academic',
+      subItems: [
+        { label: 'What I have learnt', id: 'what-i-learnt' },
+        { label: 'Subjects', id: 'subjects' },
+        { label: 'Results', id: 'results' },
+        { label: 'Class Syllabus', id: 'class-syllabus' },
+      ]
+    },
+    {
+      icon: Calendar,
+      label: 'Attendance',
+      id: 'attendance-menu',
+      subItems: [
+        { label: 'Dashboard', id: 'attendance' },
+        { label: 'Student Attendance', id: 'student-attendance' },
+      ]
+    },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
     { icon: Settings, label: 'System Settings', id: 'settings' },
@@ -59,7 +78,15 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: LayoutDashboard, label: 'Dashboard', id: 'overview' },
     { icon: Building2, label: 'My Branches', id: 'branches' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
-    { icon: Calendar, label: 'Attendance', id: 'attendance' },
+    {
+      icon: Calendar,
+      label: 'Attendance',
+      id: 'attendance-menu',
+      subItems: [
+        { label: 'Dashboard', id: 'attendance' },
+        { label: 'Student Attendance', id: 'student-attendance' },
+      ]
+    },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     { icon: GraduationCap, label: 'Academic Years', id: 'academics' },
@@ -107,6 +134,7 @@ const menuItems: Record<UserRole, any[]> = {
 };
 
 export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, onRoleChange, availableRoles, onLogout, isOpen, onClose }) => {
+  const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
 
   return (
     <>
@@ -151,6 +179,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
           const hasSubItems = item.subItems && item.subItems.length > 0;
           const isSubItemActive = hasSubItems && item.subItems.some((sub: any) => activeTab === sub.id);
           const isMainActive = activeTab === item.id || isSubItemActive;
+          const isExpanded = isMainActive || expandedMenus.includes(item.id);
 
           return (
             <div key={item.id} className="space-y-1">
@@ -158,7 +187,15 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
                 initial={{ opacity: 0, x: -10 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: idx * 0.05 }}
-                onClick={() => onTabChange(item.id)}
+                onClick={() => {
+                  if (hasSubItems) {
+                    setExpandedMenus(prev => 
+                      prev.includes(item.id) ? prev.filter(id => id !== item.id) : [...prev, item.id]
+                    );
+                  } else {
+                    onTabChange(item.id);
+                  }
+                }}
                 className={cn(
                   "w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all group",
                   isMainActive && !isSubItemActive
@@ -169,12 +206,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
                 <item.icon size={20} className={cn(isMainActive ? "text-brand-600" : "text-slate-400 group-hover:text-slate-600")} />
                 <span className="flex-1 text-left text-sm">{item.label}</span>
                 {hasSubItems && (
-                  <ChevronRight size={14} className={cn("transition-transform", isMainActive ? "rotate-90 text-brand-600" : "text-slate-300")} />
+                  <ChevronRight size={14} className={cn("transition-transform", isExpanded ? "rotate-90 text-brand-600" : "text-slate-300")} />
                 )}
                 {isMainActive && !hasSubItems && <div className="w-1.5 h-1.5 rounded-full bg-brand-600" />}
               </motion.button>
 
-              {hasSubItems && (isMainActive || activeTab === item.id) && (
+              {hasSubItems && isExpanded && (
                 <div className="ml-10 space-y-1 relative before:absolute before:left-[-1.5rem] before:top-0 before:bottom-2 before:w-[1px] before:bg-slate-100">
                   {item.subItems.map((sub: any) => (
                     <button

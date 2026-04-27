@@ -40,8 +40,14 @@ import { AddStudentForm } from './AddStudentForm';
 import { FamilyManagement } from './FamilyManagement';
 import { FeeDashboard } from './FeeManagement/FeeDashboard';
 import { AttendanceDashboard } from './AttendanceModule/AttendanceDashboard';
+import { StudentAttendanceManager } from './AttendanceModule/StudentAttendanceManager';
 import { SyllabusManager } from './Academic/SyllabusManager';
 import { StudentDiary } from './Academic/StudentDiary';
+import { SubjectsManager } from './Academic/SubjectsManager';
+import { ClassSyllabusManager } from './Academic/ClassSyllabusManager';
+import { DiariesManager } from './Academic/DiariesManager';
+import { ResultsManager } from './Academic/ResultsManager';
+
 import { StaffManagement } from './StaffManagement';
 import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
@@ -249,6 +255,46 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           <Layers size={18} className="shrink-0" />
           <span className="whitespace-nowrap">Sections</span>
         </button>
+        <button 
+          onClick={() => onTabChange('what-i-learnt')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'what-i-learnt' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <BookOpen size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">What I have learnt</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('subjects')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'subjects' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <BookOpen size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Subjects</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('results')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'results' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <GraduationCap size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Results</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('class-syllabus')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'class-syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <FileText size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Class Syllabus</span>
+        </button>
 
       </div>
 
@@ -387,6 +433,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
           </motion.div>
         )}
 
+        {activeTab === 'student-attendance' && (
+          <motion.div
+            key="student-attendance"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <StudentAttendanceManager />
+          </motion.div>
+        )}
+
         {activeTab === 'syllabus' && (
           <motion.div
             key="syllabus"
@@ -428,6 +485,50 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <SectionManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'what-i-learnt' && (
+          <motion.div
+            key="what-i-learnt"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <DiariesManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'subjects' && (
+          <motion.div
+            key="subjects"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SubjectsManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'results' && (
+          <motion.div
+            key="results"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ResultsManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'class-syllabus' && (
+          <motion.div
+            key="class-syllabus"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassSyllabusManager />
           </motion.div>
         )}
       </AnimatePresence>
