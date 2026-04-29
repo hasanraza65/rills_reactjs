@@ -22,8 +22,32 @@ interface InvoicePaymentModalProps {
 }
 
 export const InvoicePaymentModal: React.FC<InvoicePaymentModalProps> = ({ isOpen, onClose, invoiceId, initialData }) => {
-  const { data: fetchedInvoice, isLoading: isFetching } = useInvoice(!initialData ? invoiceId || null : null);
-  const invoice = initialData || fetchedInvoice;
+  const needsFetch = !initialData?.items || initialData.items.some((item: any) => {
+    return !(item.id || item.invoice_item_id || item.invoice_detail_id || item.invoice_item?.id || item.invoice_item_detail_id);
+  });
+  const { data: fetchedInvoice, isLoading: isFetching } = useInvoice(needsFetch ? invoiceId || initialData?.id || null : null);
+  
+  // MERGE LOGIC: If fetched data is missing IDs, try to recover them from initialData (list data)
+  const invoice = React.useMemo(() => {
+    const rawInvoice = needsFetch ? fetchedInvoice : (initialData?.items ? initialData : fetchedInvoice);
+    if (!rawInvoice) return null;
+    if (!initialData?.items) return rawInvoice;
+
+    const mergedItems = rawInvoice.items.map((item: any) => {
+      // If already has a valid ID, keep it
+      if (item.id || item.invoice_item_id || item.invoice_detail_id) return item;
+      
+      // Try to find matching item in initialData (which usually comes from list API and HAS IDs)
+      const match = initialData.items.find((i: any) => 
+        i.head_name === item.head_name && 
+        (i.student_id === item.student_id || i.student?.id === item.student?.id)
+      );
+
+      return match ? { ...item, id: match.id || match.invoice_item_id } : item;
+    });
+
+    return { ...rawInvoice, items: mergedItems };
+  }, [fetchedInvoice, initialData, needsFetch]);
   const isLoading = !invoice && isFetching;
   const payMutation = usePayInvoice();
   
@@ -43,7 +67,8 @@ export const InvoicePaymentModal: React.FC<InvoicePaymentModalProps> = ({ isOpen
       invoice.items.forEach((item: any, index: number) => {
         const total = Number(item.total_amount || item.amount || 0);
         const paid = Number(item.paid || 0);
-        const remaining = Number(item.remaining || (total - paid));
+        const previousPaid = Number(item.previous_paid || 0);
+        const remaining = Number(item.remaining || (total - previousPaid - paid));
         initialPayments[index] = isNaN(remaining) ? 0 : remaining;
       });
       setItemPayments(initialPayments);
@@ -77,9 +102,16 @@ export const InvoicePaymentModal: React.FC<InvoicePaymentModalProps> = ({ isOpen
         item.invoice_item_id || 
         item.invoice_detail_id || 
         item.invoice_item?.id || 
-        item.invoice_item_detail_id;
+        item.invoice_item_detail_id ||
+        item.invoice_head_id ||
+        item.head_id ||
+        item.fee_head_id ||
+        item.item_id ||
+        item.detail_id;
 
       if (!actualId) {
+        console.error('Invoice item missing ID. Available keys:', Object.keys(item));
+        console.log('Full item object:', item);
         alert(`Unable to determine invoice item id for item "${item.head_name || 'at position ' + (index + 1)}". Please check console.`);
         return;
       }
@@ -201,7 +233,10 @@ export const InvoicePaymentModal: React.FC<InvoicePaymentModalProps> = ({ isOpen
                       onClick={() => {
                         const all: Record<number, number> = {};
                         invoice.items.forEach((item: any, i: number) => {
-                          all[i] = Number(item.remaining || (item.total_amount - (item.paid || 0)));
+                          const total = Number(item.total_amount || item.amount || 0);
+                          const previousPaid = Number(item.previous_paid || 0);
+                          const paid = Number(item.paid || 0);
+                          all[i] = Number(item.remaining || (total - previousPaid - paid));
                         });
                         setItemPayments(all);
                       }}
@@ -217,7 +252,8 @@ export const InvoicePaymentModal: React.FC<InvoicePaymentModalProps> = ({ isOpen
                       {invoice.items?.map((item: any, index: number) => {
                         const total = Number(item.total_amount || item.amount || 0);
                         const paid = Number(item.paid || 0);
-                        const remaining = Number(item.remaining || (total - paid));
+                        const previousPaid = Number(item.previous_paid || 0);
+                        const remaining = Number(item.remaining || (total - previousPaid - paid));
                         const displayRemaining = isNaN(remaining) ? 0 : remaining;
                         const itemId = item.id || item.invoice_item_id || index;
                         return (
@@ -233,7 +269,7 @@ export const InvoicePaymentModal: React.FC<InvoicePaymentModalProps> = ({ isOpen
                               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-300">Rs.</span>
                               <input 
                                 type="number"
-                                value={itemPayments[index] ?? ''}
+                                value={itemPayments[index] === 0 ? '' : itemPayments[index]}
                                 onChange={(e) => handleAmountChange(index, e.target.value)}
                                 placeholder="0"
                                 className="w-full bg-white border border-slate-200 rounded-xl px-4 py-2 pl-9 text-xs font-bold text-slate-700 outline-none focus:border-emerald-300 transition-all shadow-sm"

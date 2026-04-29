@@ -6,6 +6,7 @@ export interface InvoiceItem {
   amount: string;
   total_amount?: number;
   paid?: number;
+  previous_paid?: number;
   remaining?: number;
   student?: any;
   created_at: string;

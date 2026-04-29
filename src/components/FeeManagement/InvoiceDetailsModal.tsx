@@ -12,11 +12,38 @@ interface InvoiceDetailsModalProps {
   isOpen: boolean;
   onClose: () => void;
   invoiceId: number | null;
+  initialInvoice?: any;
   onMakePayment?: (invoice: any) => void;
 }
 
-export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen, onClose, invoiceId, onMakePayment }) => {
-  const { data: invoice, isLoading } = useInvoice(invoiceId);
+export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ 
+  isOpen, 
+  onClose, 
+  invoiceId, 
+  initialInvoice,
+  onMakePayment 
+}) => {
+  const { data: fetchedInvoice, isLoading } = useInvoice(invoiceId);
+  
+  // MERGE LOGIC: If fetchedInvoice is missing IDs in items, try to recover them from initialInvoice
+  const invoice = React.useMemo(() => {
+    if (!fetchedInvoice) return null;
+    if (!initialInvoice?.items) return fetchedInvoice;
+
+    const mergedItems = fetchedInvoice.items.map((item: any) => {
+      if (item.id) return item; // Already has ID
+      
+      // Find matching item in initialInvoice (from list API)
+      const match = initialInvoice.items.find((i: any) => 
+        i.head_name === item.head_name && 
+        (i.student_id === item.student_id || i.student?.id === item.student?.id)
+      );
+
+      return match ? { ...item, id: match.id } : item;
+    });
+
+    return { ...fetchedInvoice, items: mergedItems };
+  }, [fetchedInvoice, initialInvoice]);
   const pdfRef = useRef<HTMLDivElement>(null);
 
   const formatDate = (dateStr: string | undefined) => {
@@ -220,7 +247,7 @@ export const InvoiceDetailsModal: React.FC<InvoiceDetailsModalProps> = ({ isOpen
                                 <p className="text-sm font-bold text-slate-600">Rs. {Number(item.total_amount || item.amount).toLocaleString()}</p>
                               </td>
                               <td className="px-4 py-5 text-right">
-                                <p className="text-sm font-bold text-emerald-600">Rs. {Number(item.paid || 0).toLocaleString()}</p>
+                                <p className="text-sm font-bold text-emerald-600">Rs. {Number(item.previous_paid || 0).toLocaleString()}</p>
                               </td>
                               <td className="px-6 py-5 text-right">
                                 <p className="text-sm font-black text-rose-600">Rs. {Number(item.remaining || (item.total_amount - (item.paid || 0))).toLocaleString()}</p>

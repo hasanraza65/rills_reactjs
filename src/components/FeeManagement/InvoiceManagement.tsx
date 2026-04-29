@@ -219,7 +219,8 @@ export const InvoiceManagement: React.FC = () => {
       <InvoiceDetailsModal 
         isOpen={isDetailsModalOpen}
         onClose={() => setIsDetailsModalOpen(false)}
-        invoiceId={selectedInvoice?.id}
+        invoiceId={selectedInvoice?.id || null}
+        initialInvoice={selectedInvoice}
         onMakePayment={(inv) => {
           setIsDetailsModalOpen(false);
           handleMakePayment(inv);
@@ -230,6 +231,7 @@ export const InvoiceManagement: React.FC = () => {
         key={selectedInvoice?.id || 'new'}
         isOpen={isPaymentModalOpen}
         onClose={() => setIsPaymentModalOpen(false)}
+        invoiceId={selectedInvoice?.id}
         initialData={selectedInvoice}
       />
 

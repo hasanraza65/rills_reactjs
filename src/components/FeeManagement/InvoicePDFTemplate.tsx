@@ -97,7 +97,7 @@ export const InvoicePDFTemplate: React.FC<InvoicePDFTemplateProps> = ({
                   </div>
                 </td>
                 <td style={{ padding: '20px 16px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#334155' }}>Rs. {Number(item.total_amount || item.amount).toLocaleString()}</td>
-                <td style={{ padding: '20px 16px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#059669' }}>Rs. {Number(item.paid || 0).toLocaleString()}</td>
+                <td style={{ padding: '20px 16px', textAlign: 'right', fontSize: '14px', fontWeight: 'bold', color: '#059669' }}>Rs. {Number(item.previous_paid || 0).toLocaleString()}</td>
                 <td style={{ padding: '20px 16px', textAlign: 'right', fontSize: '14px', fontWeight: 900, color: '#e11d48' }}>Rs. {Number(item.remaining || (item.total_amount - (item.paid || 0))).toLocaleString()}</td>
               </tr>
             ))}
