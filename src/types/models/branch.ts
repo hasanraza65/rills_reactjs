@@ -8,6 +8,8 @@ export interface Branch {
   branch_code?: string;
   campus_start_date?: string;
   campus_email?: string;
+  admin_email?: string;
+  admin_password?: string;
   deleted_at: string | null;
   created_at: string;
   updated_at: string;
@@ -21,6 +23,8 @@ export interface CreateBranchInput {
   branch_code?: string;
   campus_start_date?: string;
   campus_email?: string;
+  admin_email?: string;
+  admin_password?: string;
 }
 
 export interface UpdateBranchInput extends Partial<CreateBranchInput> {
