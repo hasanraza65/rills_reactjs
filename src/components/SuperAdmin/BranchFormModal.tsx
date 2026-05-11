@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Building2, MapPin, Phone, Loader2, Home, Hash, Calendar, Mail } from 'lucide-react';
+import { X, Building2, MapPin, Phone, Loader2, Home, Hash, Calendar, Mail, Lock } from 'lucide-react';
 import { Branch, CreateBranchInput } from '../../types/models/branch';
 import { useCreateBranch, useUpdateBranch } from '../../hooks/use-branch';
 
@@ -19,6 +19,8 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
     branch_code: '',
     campus_start_date: '',
     campus_email: '',
+    admin_email: '',
+    admin_password: '',
   });
 
   const createMutation = useCreateBranch();
@@ -36,6 +38,8 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
         branch_code: branch.branch_code || '',
         campus_start_date: branch.campus_start_date || '',
         campus_email: branch.campus_email || '',
+        admin_email: branch.admin_email || '',
+        admin_password: '',
       });
     } else {
       setFormData({
@@ -46,6 +50,8 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
         branch_code: '',
         campus_start_date: '',
         campus_email: '',
+        admin_email: '',
+        admin_password: '',
       });
     }
   }, [branch, isOpen]);
@@ -184,6 +190,40 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
                     </div>
                   </div>
                 </div>
+
+                {/* Admin Email & Password */}
+                {!branch && (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Admin Email</label>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                        <input
+                          required
+                          type="email"
+                          value={formData.admin_email}
+                          onChange={(e) => setFormData({ ...formData, admin_email: e.target.value })}
+                          placeholder="admin@school.com"
+                          className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Admin Password</label>
+                      <div className="relative">
+                        <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                        <input
+                          required
+                          type="password"
+                          value={formData.admin_password}
+                          onChange={(e) => setFormData({ ...formData, admin_password: e.target.value })}
+                          placeholder="********"
+                          className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none font-medium"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 block ml-1">Full Address</label>
