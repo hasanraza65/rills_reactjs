@@ -19,6 +19,7 @@ const mapApiUserToUser = (response: LoginResponse): User => {
     avatar: user.avatar,
     cnic: user.cnic,
     token: token,
+    branches: user.branches,
   };
 };
 

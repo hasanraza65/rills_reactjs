@@ -4,6 +4,8 @@
 
 import { UserRole } from '../models/user';
 
+import { Branch } from '../models/branch';
+
 /**
  * Interface for the user object returned by the API.
  */
@@ -19,6 +21,7 @@ export interface ApiUser {
   is_active: number;
   created_at: string;
   updated_at: string;
+  branches?: Branch[];
 }
 
 /**

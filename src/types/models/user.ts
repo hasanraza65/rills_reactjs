@@ -14,6 +14,8 @@ export type UserRole =
   | 'GATE_KEEPER' 
   | 'LIBRARIAN';
 
+import { Branch } from './branch';
+
 /**
  * Domain model for a User.
  */
@@ -26,6 +28,7 @@ export interface User {
   avatar?: string | null;
   cnic?: string | null;
   token?: string;
+  branches?: Branch[];
 }
 
 /**
