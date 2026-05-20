@@ -56,6 +56,7 @@ import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
 import { ClassManagement } from './ClassManagement';
 import { SectionManagement } from './SectionManagement';
+import { SubjectModule } from './SubjectModule';
 import { AdmissionKeys } from './AdmissionKeys';
 import { InvoiceManagement } from './FeeManagement/InvoiceManagement';
 import { useStudents, useDeleteStudent } from '../hooks/use-student';
@@ -257,6 +258,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
         >
           <Layers size={18} className="shrink-0" />
           <span className="whitespace-nowrap">Sections</span>
+        </button>
+        <button 
+          onClick={() => onTabChange('class-subjects')}
+          className={cn(
+            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
+            activeTab === 'class-subjects' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+          )}
+        >
+          <BookOpen size={18} className="shrink-0" />
+          <span className="whitespace-nowrap">Subjects</span>
         </button>
         <button 
           onClick={() => onTabChange('what-i-learnt')}
@@ -521,6 +532,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
           >
             <SectionManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'class-subjects' && (
+          <motion.div
+            key="class-subjects"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SubjectModule />
           </motion.div>
         )}
 
