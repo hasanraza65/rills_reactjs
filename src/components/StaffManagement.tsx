@@ -176,14 +176,14 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Staff Distribution</h3>
                 <div className="space-y-6">
                   {BRANCHES.map(branch => {
-                    const count = STAFF_DATA.filter(s => s.branchId === branch.id).length;
+                    const count = STAFF_DATA.filter(s => Number(s.branchId) === branch.id).length;
                     const percentage = (count / STAFF_DATA.length) * 100;
                     return (
                       <div key={branch.id} className="space-y-2">
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-3">
                             <div className="w-2 h-2 rounded-full bg-brand-500" />
-                            <span className="text-sm font-bold text-slate-700">{branch.name}</span>
+                            <span className="text-sm font-bold text-slate-700">{branch.branch_name}</span>
                           </div>
                           <span className="text-sm font-extrabold text-slate-900">{count} Members</span>
                         </div>
@@ -273,7 +273,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                       <div className="w-full pt-4 border-t border-slate-50 flex flex-col gap-3">
                         <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
                           <Building2 className="w-4 h-4 text-slate-400" />
-                          <span>{BRANCHES.find(b => b.id === staff.branchId)?.name}</span>
+                          <span>{BRANCHES.find(b => b.id === Number(staff.branchId))?.branch_name}</span>
                         </div>
                         <div className="flex items-center gap-3 text-xs text-slate-500 font-medium">
                           <Mail className="w-4 h-4 text-slate-400" />
@@ -712,7 +712,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">Branch</label>
                   <select className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none">
-                    {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                    {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.branch_name}</option>)}
                   </select>
                 </div>
               </div>

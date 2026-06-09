@@ -100,7 +100,7 @@ export const AdminAttendanceReports: React.FC = () => {
               onChange={(e) => setSelectedBranch(e.target.value)}
               className="bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 outline-none"
             >
-              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+              {BRANCHES.map(b => <option key={b.id} value={b.id}>{b.branch_name}</option>)}
             </select>
             <select 
               value={selectedClass}

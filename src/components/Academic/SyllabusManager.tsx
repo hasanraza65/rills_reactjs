@@ -126,8 +126,8 @@ export const SyllabusManager: React.FC<SyllabusManagerProps> = ({ role }) => {
                 <div className="pt-6 border-t border-slate-200/60 flex items-center justify-between">
                   <div className="flex -space-x-2">
                     {syl.assignedBranches.slice(0, 3).map((bId, i) => (
-                      <div key={i} className="w-8 h-8 rounded-full bg-white border-2 border-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400 shadow-sm" title={BRANCHES.find(b => b.id === bId)?.name}>
-                        {BRANCHES.find(b => b.id === bId)?.name.charAt(0)}
+                      <div key={i} className="w-8 h-8 rounded-full bg-white border-2 border-slate-50 flex items-center justify-center text-[10px] font-black text-slate-400 shadow-sm" title={BRANCHES.find(b => b.id === bId)?.branch_name}>
+                        {BRANCHES.find(b => b.id === bId)?.branch_name.charAt(0)}
                       </div>
                     ))}
                     {syl.assignedBranches.length > 3 && (
@@ -235,7 +235,7 @@ export const SyllabusManager: React.FC<SyllabusManagerProps> = ({ role }) => {
                             : "border-slate-50 hover:border-slate-100 text-slate-600 bg-white"
                         )}
                       >
-                        <span className="text-sm font-black">{branch.name}</span>
+                        <span className="text-sm font-black">{branch.branch_name}</span>
                         {activeSyllabus.assignedBranches.includes(branch.id) && <CheckCircle2 size={20} className="text-emerald-500" />}
                       </button>
                     ))}

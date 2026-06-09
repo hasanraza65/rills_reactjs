@@ -48,6 +48,7 @@ const menuItems: Record<UserRole, any[]> = {
       subItems: [
         { label: 'Management', id: 'classes' },
         { label: 'Sections', id: 'sections' },
+        { label: 'Subjects', id: 'class-subjects' },
       ]
     },
     {

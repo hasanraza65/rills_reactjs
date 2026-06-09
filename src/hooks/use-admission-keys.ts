@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { admissionKeyService } from '../lib/services/admission-key-service';
-
+import { CreateAdmissionKeyPayload } from '../types/api/admission-key';
 import { useBranchStore } from '../store/use-branch-store';
 
 /**
@@ -20,7 +20,7 @@ export const useCreateAdmissionKey = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: (data: { branch_id: number; key: string }) => 
+    mutationFn: (data: CreateAdmissionKeyPayload) =>
       admissionKeyService.createKey(data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admission-keys'] });
