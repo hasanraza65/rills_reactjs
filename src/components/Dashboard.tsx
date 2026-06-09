@@ -122,7 +122,12 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
     try {
       await createKeyMutation.mutateAsync({
         branch_id: selectedBranchId || 1, 
-        key: phoneNumber
+        key: phoneNumber,
+        visitor_name: '',
+        address: '',
+        purpose: '',
+        remarks: '',
+        students: []
       });
       setIsAddKeyModalOpen(false);
     } catch (err) {
