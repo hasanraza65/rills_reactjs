@@ -1,24 +1,24 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Search, 
-  Filter, 
+import {
+  Search,
+  Filter,
   Plus,
   Calendar,
-  FileText,
   Download,
-  Printer,
-  Copy,
   X,
   BookOpen,
   Layers,
   CheckCircle,
   Clock,
-  ArrowLeft
+  ArrowLeft,
+  ChevronDown
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
+import { classSubjectService } from '../../lib/services/class-subject-service';
+import { ClassSubjectData } from '../../types/api/class-subject';
 
 interface MockDiarySection {
   id: number;
@@ -176,12 +176,202 @@ const DiaryDetailView: React.FC<{ section: MockDiarySection, onBack: () => void 
   );
 };
 
+const today = new Date().toISOString().split('T')[0];
+
+interface AddDiaryForm {
+  subject_id: string;
+  topic: string;
+  page_number: string;
+  resources: string;
+  date: string;
+  link: string;
+  activity: string;
+  home_work: string;
+}
+
+const AddDiaryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const [subjects, setSubjects] = useState<ClassSubjectData[]>([]);
+  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [form, setForm] = useState<AddDiaryForm>({
+    subject_id: '',
+    topic: '',
+    page_number: '',
+    resources: '',
+    date: today,
+    link: '',
+    activity: '',
+    home_work: '',
+  });
+
+  useEffect(() => {
+    classSubjectService.getSubjectsByBranch(1).then(res => {
+      setSubjects(res.data ?? []);
+    }).catch(() => {
+      setSubjects([]);
+    }).finally(() => {
+      setLoadingSubjects(false);
+    });
+  }, []);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((prev: AddDiaryForm) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    // TODO: wire up diary creation API
+    console.log('Diary form submitted:', form);
+    onClose();
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white w-full max-w-3xl rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100 max-h-[90vh] flex flex-col"
+      >
+        {/* Header */}
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
+          <div>
+            <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-0.5">Class Diary</p>
+            <h3 className="text-lg font-bold text-slate-900">Create New</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400">
+            <X size={20} />
+          </button>
+        </div>
+
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="overflow-y-auto">
+          <div className="p-6 space-y-5">
+            {/* Subject */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Subjects</label>
+              <div className="relative">
+                <select
+                  name="subject_id"
+                  value={form.subject_id}
+                  onChange={handleChange}
+                  required
+                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 pr-10"
+                >
+                  <option value="" disabled>
+                    {loadingSubjects ? 'Loading...' : 'Choose Subject'}
+                  </option>
+                  {subjects.map((s: ClassSubjectData) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
+            </div>
+
+            {/* Topic / Page Number / Resources / Date */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Topic</label>
+                <input
+                  type="text"
+                  name="topic"
+                  value={form.topic}
+                  onChange={handleChange}
+                  placeholder="Topic"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Page Number</label>
+                <input
+                  type="text"
+                  name="page_number"
+                  value={form.page_number}
+                  onChange={handleChange}
+                  placeholder="e.g 1-3"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Resources</label>
+                <input
+                  type="text"
+                  name="resources"
+                  value={form.resources}
+                  onChange={handleChange}
+                  placeholder="e.g Book"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Date</label>
+                <input
+                  type="date"
+                  name="date"
+                  value={form.date}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
+                />
+              </div>
+            </div>
+
+            {/* Link */}
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Link</label>
+              <input
+                type="url"
+                name="link"
+                value={form.link}
+                onChange={handleChange}
+                placeholder="Enter Link"
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
+              />
+            </div>
+
+            {/* Activity / Home Work */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Activity</label>
+                <textarea
+                  name="activity"
+                  value={form.activity}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none"
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Home Work</label>
+                <textarea
+                  name="home_work"
+                  value={form.home_work}
+                  onChange={handleChange}
+                  rows={4}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-start gap-3 shrink-0">
+            <Button type="submit">Submit</Button>
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
 export const DiariesManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [diariesList] = useState<MockDiarySection[]>(DUMMY_DIARIES);
   const [selectedSection, setSelectedSection] = useState<MockDiarySection | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
-  const filteredList = diariesList.filter(d => 
+  const filteredList = diariesList.filter(d =>
     d.sectionName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.className.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -202,7 +392,7 @@ export const DiariesManager: React.FC = () => {
           <Button variant="outline" className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-md shadow-emerald-200">
             All Diaries
           </Button>
-          <Button leftIcon={<Plus size={18} />}>
+          <Button leftIcon={<Plus size={18} />} onClick={() => setIsAddModalOpen(true)}>
             Add New
           </Button>
         </div>
@@ -289,6 +479,10 @@ export const DiariesManager: React.FC = () => {
           </div>
         )}
       </Card>
+
+      <AnimatePresence>
+        {isAddModalOpen && <AddDiaryModal onClose={() => setIsAddModalOpen(false)} />}
+      </AnimatePresence>
     </div>
   );
 };

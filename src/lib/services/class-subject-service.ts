@@ -17,6 +17,16 @@ export const classSubjectService = {
   },
 
   /**
+   * Fetches subjects for a given branch.
+   */
+  getSubjectsByBranch: async (branchId: number): Promise<ClassSubjectsResponse> => {
+    const response = await apiClient.get<ClassSubjectsResponse>('/class-subjects', {
+      params: { branch_id: branchId }
+    });
+    return response.data;
+  },
+
+  /**
    * Creates a new subject for a class section.
    */
   createSubject: async (data: CreateClassSubjectInput): Promise<any> => {
