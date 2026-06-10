@@ -12,7 +12,10 @@ import {
   CheckCircle,
   Clock,
   ArrowLeft,
-  ChevronDown
+  ChevronDown,
+  Pencil,
+  Trash2,
+  AlertTriangle
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
@@ -33,10 +36,19 @@ interface DiaryRow {
 }
 
 const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ section, onBack }) => {
-  const [selectedDate, setSelectedDate] = useState('2026-04-27');
+  const [selectedDate, setSelectedDate] = useState(section.raw.date);
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
-  const [tempDate, setTempDate] = useState('2026-04-27');
-  
+  const [tempDate, setTempDate] = useState(section.raw.date);
+  const [diaryDetail, setDiaryDetail] = useState(section.raw);
+  const [detailLoading, setDetailLoading] = useState(true);
+
+  useEffect(() => {
+    diaryService.getDiaryById(section.raw.id)
+      .then(res => setDiaryDetail(res.data))
+      .catch(() => setDiaryDetail(section.raw))
+      .finally(() => setDetailLoading(false));
+  }, [section.raw.id]);
+
   const handleDateSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSelectedDate(tempDate);
@@ -85,32 +97,30 @@ const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ 
         </div>
 
         <div className="p-6 sm:p-10">
+          {detailLoading ? (
+            <div className="flex items-center justify-center py-10 text-slate-400 font-medium text-sm">
+              Loading...
+            </div>
+          ) : (
            <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-200 shadow-inner">
-             
              {[
-               { label: 'Heads', value: 'English Literature' },
-               { label: 'Topic', value: 'Reading Comprehension & Grammar' },
-               { label: 'Page.No', value: '45 - 48' },
-               { label: 'Resource', value: 'Oxford English Book 2' },
-               { label: 'Activity', value: 'Group reading and class discussion on the story of the brave little tailor.' },
-               { label: 'Home Work', value: 'Complete the questions on page 49 in your notebook.' },
-               { label: 'Link', value: 'https://example.com/materials/english-ch4' }
+               { label: 'Subject', value: diaryDetail.class_subject?.subject_name ?? '-' },
+               { label: 'Topic', value: diaryDetail.topic ?? '-' },
+               { label: 'Description', value: diaryDetail.description ?? '-' },
+               { label: 'Date', value: diaryDetail.date ?? '-' },
+               { label: 'Status', value: diaryDetail.status ?? 'Not created' },
              ].map((row, idx) => (
                <div key={idx} className="flex flex-col sm:flex-row p-4 sm:p-5 hover:bg-white transition-colors group">
                  <div className="w-full sm:w-1/4 font-black text-slate-400 text-xs sm:text-sm uppercase tracking-widest group-hover:text-brand-500 transition-colors pt-0.5">
                    {row.label}
                  </div>
                  <div className="w-full sm:w-3/4 font-bold text-slate-700 text-sm sm:text-base mt-1 sm:mt-0 leading-relaxed">
-                   {row.label === 'Link' ? (
-                     <a href="#" className="text-brand-500 hover:text-brand-600 hover:underline">{row.value}</a>
-                   ) : (
-                     row.value
-                   )}
+                   {row.value}
                  </div>
                </div>
              ))}
-
            </div>
+          )}
         </div>
       </Card>
       
@@ -160,6 +170,151 @@ const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ 
   );
 };
 
+interface EditDiaryForm { topic: string; description: string; date: string; status: string; }
+
+// ─── Edit Modal ──────────────────────────────────────────────────────────────
+const EditDiaryModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuccess: () => void }> = ({ diary, onClose, onSuccess }) => {
+  const [form, setForm] = useState<EditDiaryForm>({
+    topic: diary.raw.topic ?? '',
+    description: diary.raw.description ?? '',
+    date: diary.raw.date ?? '',
+    status: diary.raw.status ?? 'Pending',
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setForm((prev: EditDiaryForm) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await diaryService.updateDiary(diary.raw.id, { ...form, _method: 'PUT' });
+      onSuccess();
+      onClose();
+    } catch {
+      setSubmitError('Failed to update diary. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100"
+      >
+        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+          <div>
+            <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-0.5">Class Diary</p>
+            <h3 className="text-lg font-bold text-slate-900">Edit Diary</h3>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400">
+            <X size={20} />
+          </button>
+        </div>
+        <form onSubmit={handleSubmit}>
+          <div className="p-6 space-y-4">
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Topic</label>
+              <input type="text" name="topic" value={form.topic} onChange={handleChange} required
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Description</label>
+              <textarea name="description" value={form.description} onChange={handleChange} rows={3}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Date</label>
+                <input type="date" name="date" value={form.date} onChange={handleChange} required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Status</label>
+                <div className="relative">
+                  <select name="status" value={form.status} onChange={handleChange}
+                    className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10">
+                    <option value="Pending">Pending</option>
+                    <option value="Approved">Approved</option>
+                  </select>
+                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-start gap-3">
+            <Button type="submit" disabled={submitting}>{submitting ? 'Saving...' : 'Save Changes'}</Button>
+            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
+            {submitError && <p className="text-sm text-red-500 font-medium">{submitError}</p>}
+          </div>
+        </form>
+      </motion.div>
+    </div>
+  );
+};
+
+// ─── Delete Confirm Modal ─────────────────────────────────────────────────────
+const DeleteConfirmModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuccess: () => void }> = ({ diary, onClose, onSuccess }) => {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError(null);
+    try {
+      await diaryService.deleteDiary(diary.raw.id);
+      onSuccess();
+      onClose();
+    } catch {
+      setDeleteError('Failed to delete diary. Please try again.');
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: 20 }}
+        className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100"
+      >
+        <div className="p-6 flex flex-col items-center text-center gap-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center">
+            <AlertTriangle size={28} className="text-red-500" />
+          </div>
+          <div>
+            <h3 className="text-lg font-bold text-slate-900">Delete Diary?</h3>
+            <p className="text-sm text-slate-500 font-medium mt-1">
+              Are you sure you want to delete <span className="text-slate-700 font-bold">"{diary.raw.topic}"</span>? This action cannot be undone.
+            </p>
+          </div>
+          {deleteError && <p className="text-sm text-red-500 font-medium">{deleteError}</p>}
+        </div>
+        <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+          <Button variant="ghost" onClick={onClose} disabled={deleting}>Cancel</Button>
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className="px-5 py-2.5 bg-red-500 hover:bg-red-600 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors"
+          >
+            {deleting ? 'Deleting...' : 'Delete'}
+          </button>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
 const today = new Date().toISOString().split('T')[0];
 
 interface AddDiaryForm {
@@ -173,9 +328,11 @@ interface AddDiaryForm {
   home_work: string;
 }
 
-const AddDiaryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
   const [subjects, setSubjects] = useState<ClassSubjectData[]>([]);
   const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
   const [form, setForm] = useState<AddDiaryForm>({
     subject_id: '',
     topic: '',
@@ -202,11 +359,26 @@ const AddDiaryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     setForm((prev: AddDiaryForm) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: wire up diary creation API
-    console.log('Diary form submitted:', form);
-    onClose();
+    setSubmitting(true);
+    setSubmitError(null);
+    try {
+      await diaryService.createDiary({
+        class_subject_id: Number(form.subject_id),
+        topic: form.topic,
+        description: form.activity,
+        date: form.date,
+        status: 'Pending',
+        branch_id: 1,
+      });
+      onSuccess();
+      onClose();
+    } catch {
+      setSubmitError('Failed to create diary. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -246,7 +418,9 @@ const AddDiaryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
                     {loadingSubjects ? 'Loading...' : 'Choose Subject'}
                   </option>
                   {subjects.map((s: ClassSubjectData) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
+                    <option key={s.id} value={s.id}>
+                      {s.subject_name}{s.class?.name ? ` - ${s.class.name}` : ''}{s.section?.name ? ` (${s.section.name})` : ''}
+                    </option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
@@ -340,8 +514,11 @@ const AddDiaryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           </div>
 
           {/* Footer */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-start gap-3 shrink-0">
-            <Button type="submit">Submit</Button>
+          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-start gap-3 shrink-0">
+            <Button type="submit" disabled={submitting}>
+              {submitting ? 'Submitting...' : 'Submit'}
+            </Button>
+            {submitError && <p className="text-sm text-red-500 font-medium">{submitError}</p>}
           </div>
         </form>
       </motion.div>
@@ -356,37 +533,38 @@ export const DiariesManager: React.FC = () => {
   const [fetchError, setFetchError] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<DiaryRow | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<DiaryRow | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<DiaryRow | null>(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setFetchError(null);
-        const [diariesRes, sectionsRes, classesRes] = await Promise.all([
-          diaryService.getDiaries(1),
-          sectionService.getSections(1),
-          classService.getClasses(1),
-        ]);
-        const sectionMap = new Map((sectionsRes ?? []).map(s => [s.id, s.name]));
-        const classMap = new Map((classesRes ?? []).map(c => [c.id, c.name]));
-        const rows: DiaryRow[] = (diariesRes.data ?? []).map(diary => ({
-          id: diary.id,
-          sectionName: sectionMap.get(diary.class_subject?.section_id) ?? String(diary.class_subject?.section_id ?? '-'),
-          className: classMap.get(diary.class_subject?.class_id) ?? String(diary.class_subject?.class_id ?? '-'),
-          todayApprove: diary.status || 'Not created',
-          raw: diary,
-        }));
-        setDiariesList(rows);
-      } catch {
-        setFetchError('Failed to load diaries');
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const loadDiaries = async () => {
+    try {
+      setLoading(true);
+      setFetchError(null);
+      const [diariesRes, sectionsRes, classesRes] = await Promise.all([
+        diaryService.getDiaries(1),
+        sectionService.getSections(1),
+        classService.getClasses(1),
+      ]);
+      const sectionMap = new Map((sectionsRes ?? []).map(s => [s.id, s.name]));
+      const classMap = new Map((classesRes ?? []).map(c => [c.id, c.name]));
+      const rows: DiaryRow[] = (diariesRes.data ?? []).map(diary => ({
+        id: diary.id,
+        sectionName: sectionMap.get(diary.class_subject?.section_id) ?? String(diary.class_subject?.section_id ?? '-'),
+        className: classMap.get(diary.class_subject?.class_id) ?? String(diary.class_subject?.class_id ?? '-'),
+        todayApprove: diary.status || 'Not created',
+        raw: diary,
+      }));
+      setDiariesList(rows);
+    } catch {
+      setFetchError('Failed to load diaries');
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  const filteredList = diariesList.filter(d =>
+  useEffect(() => { loadDiaries(); }, []);
+
+  const filteredList = diariesList.filter((d: DiaryRow) =>
     d.sectionName.toLowerCase().includes(searchQuery.toLowerCase()) ||
     d.className.toLowerCase().includes(searchQuery.toLowerCase())
   );
@@ -421,7 +599,7 @@ export const DiariesManager: React.FC = () => {
               type="text"
               placeholder="Search sections or classes..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 transition-all"
             />
           </div>
@@ -458,7 +636,7 @@ export const DiariesManager: React.FC = () => {
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
-                {filteredList.map((item) => (
+                {filteredList.map((item: DiaryRow) => (
                   <tr key={item.id} className="hover:bg-slate-50/50 transition-colors group">
                     <td className="px-8 py-5">
                       <p className="text-sm font-bold text-slate-500">#{item.id}</p>
@@ -487,13 +665,29 @@ export const DiariesManager: React.FC = () => {
                       </div>
                     </td>
                     <td className="px-8 py-5 text-right">
-                      <button 
-                        onClick={() => setSelectedSection(item)}
-                        className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:border-brand-500 hover:text-brand-600 hover:shadow-md transition-all shadow-sm flex items-center gap-2 ml-auto"
-                      >
-                        <BookOpen size={14} />
-                        View Diary
-                      </button>
+                      <div className="flex items-center justify-end gap-2">
+                        <button
+                          onClick={() => setSelectedSection(item)}
+                          className="px-4 py-2 bg-white border border-slate-200 text-slate-600 text-xs font-bold rounded-xl hover:border-brand-500 hover:text-brand-600 hover:shadow-md transition-all shadow-sm flex items-center gap-2"
+                        >
+                          <BookOpen size={14} />
+                          View Diary
+                        </button>
+                        <button
+                          onClick={() => setEditTarget(item)}
+                          className="p-2 bg-white border border-slate-200 text-slate-500 rounded-xl hover:border-brand-500 hover:text-brand-600 hover:shadow-md transition-all shadow-sm"
+                          title="Edit"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={() => setDeleteTarget(item)}
+                          className="p-2 bg-white border border-slate-200 text-slate-500 rounded-xl hover:border-red-400 hover:text-red-500 hover:shadow-md transition-all shadow-sm"
+                          title="Delete"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -504,7 +698,13 @@ export const DiariesManager: React.FC = () => {
       </Card>
 
       <AnimatePresence>
-        {isAddModalOpen && <AddDiaryModal onClose={() => setIsAddModalOpen(false)} />}
+        {isAddModalOpen && <AddDiaryModal onClose={() => setIsAddModalOpen(false)} onSuccess={loadDiaries} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {editTarget && <EditDiaryModal diary={editTarget} onClose={() => setEditTarget(null)} onSuccess={loadDiaries} />}
+      </AnimatePresence>
+      <AnimatePresence>
+        {deleteTarget && <DeleteConfirmModal diary={deleteTarget} onClose={() => setDeleteTarget(null)} onSuccess={loadDiaries} />}
       </AnimatePresence>
     </div>
   );

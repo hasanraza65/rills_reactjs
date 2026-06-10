@@ -4,12 +4,17 @@
 
 export interface ClassSubjectData {
   id: number;
+  branch_id: number;
+  class_id: number;
   section_id: number;
-  name: string;
-  teacher_name?: string;
+  teacher_id: number;
+  subject_name: string;
   created_at: string;
   updated_at: string;
-  [key: string]: any; // Allow extra fields from API
+  class?: { id: number; name: string };
+  section?: { id: number; name: string };
+  teacher?: { id: number; name: string };
+  [key: string]: any;
 }
 
 export interface ClassSubjectsResponse {

@@ -30,3 +30,25 @@ export interface DiariesResponse {
   success: boolean;
   data: DiaryData[];
 }
+
+export interface DiaryDetailResponse {
+  success: boolean;
+  data: DiaryData;
+}
+
+export interface CreateDiaryInput {
+  class_subject_id: number;
+  topic: string;
+  description: string;
+  date: string;
+  status: string;
+  branch_id: number;
+}
+
+export interface UpdateDiaryInput {
+  topic: string;
+  description: string;
+  date: string;
+  status: string;
+  _method: 'PUT';
+}
