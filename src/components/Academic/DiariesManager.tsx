@@ -25,7 +25,9 @@ import { ClassSubjectData } from '../../types/api/class-subject';
 import { diaryService } from '../../lib/services/diary-service';
 import { DiaryData } from '../../types/api/diary';
 import { sectionService } from '../../lib/services/section-service';
+import { SectionData } from '../../types/api/section';
 import { classService } from '../../lib/services/class-service';
+import { ClassData } from '../../types/api/class';
 
 interface DiaryRow {
   id: number;
@@ -317,8 +319,7 @@ const DeleteConfirmModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuc
 
 const today = new Date().toISOString().split('T')[0];
 
-interface AddDiaryForm {
-  subject_id: string;
+interface AddDiaryStep2Form {
   topic: string;
   page_number: string;
   resources: string;
@@ -329,34 +330,63 @@ interface AddDiaryForm {
 }
 
 const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const [step, setStep] = useState<1 | 2>(1);
+
+  // Step 1 — cascading selects
+  const [classes, setClasses] = useState<ClassData[]>([]);
+  const [sections, setSections] = useState<SectionData[]>([]);
   const [subjects, setSubjects] = useState<ClassSubjectData[]>([]);
-  const [loadingSubjects, setLoadingSubjects] = useState(true);
+  const [selectedClassId, setSelectedClassId] = useState('');
+  const [selectedSectionId, setSelectedSectionId] = useState('');
+  const [selectedSubjectId, setSelectedSubjectId] = useState('');
+  const [loadingClasses, setLoadingClasses] = useState(true);
+  const [loadingSections, setLoadingSections] = useState(false);
+  const [loadingSubjects, setLoadingSubjects] = useState(false);
+
+  // Step 2 — details form
+  const [form, setForm] = useState<AddDiaryStep2Form>({
+    topic: '', page_number: '', resources: '', date: today, link: '', activity: '', home_work: '',
+  });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [form, setForm] = useState<AddDiaryForm>({
-    subject_id: '',
-    topic: '',
-    page_number: '',
-    resources: '',
-    date: today,
-    link: '',
-    activity: '',
-    home_work: '',
-  });
 
+  // Load classes on mount
   useEffect(() => {
-    classSubjectService.getSubjectsByBranch(1).then(res => {
-      setSubjects(res.data ?? []);
-    }).catch(() => {
-      setSubjects([]);
-    }).finally(() => {
-      setLoadingSubjects(false);
-    });
+    classService.getClasses(1)
+      .then(res => setClasses(res ?? []))
+      .catch(() => setClasses([]))
+      .finally(() => setLoadingClasses(false));
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Load sections when class changes
+  useEffect(() => {
+    if (!selectedClassId) { setSections([]); setSelectedSectionId(''); setSubjects([]); setSelectedSubjectId(''); return; }
+    setLoadingSections(true);
+    setSections([]);
+    setSelectedSectionId('');
+    setSubjects([]);
+    setSelectedSubjectId('');
+    sectionService.getSectionsByClass(Number(selectedClassId))
+      .then(res => setSections(res ?? []))
+      .catch(() => setSections([]))
+      .finally(() => setLoadingSections(false));
+  }, [selectedClassId]);
+
+  // Load subjects when section changes
+  useEffect(() => {
+    if (!selectedSectionId) { setSubjects([]); setSelectedSubjectId(''); return; }
+    setLoadingSubjects(true);
+    setSubjects([]);
+    setSelectedSubjectId('');
+    classSubjectService.getSubjectsBySection(Number(selectedSectionId))
+      .then(res => setSubjects(res.data ?? []))
+      .catch(() => setSubjects([]))
+      .finally(() => setLoadingSubjects(false));
+  }, [selectedSectionId]);
+
+  const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setForm((prev: AddDiaryForm) => ({ ...prev, [name]: value }));
+    setForm((prev: AddDiaryStep2Form) => ({ ...prev, [name]: value }));
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -365,7 +395,7 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
     setSubmitError(null);
     try {
       await diaryService.createDiary({
-        class_subject_id: Number(form.subject_id),
+        class_subject_id: Number(selectedSubjectId),
         topic: form.topic,
         description: form.activity,
         date: form.date,
@@ -381,6 +411,10 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
     }
   };
 
+  const inputCls = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm";
+  const selectCls = `${inputCls} appearance-none pr-10`;
+  const labelCls = "text-xs font-bold text-slate-700 uppercase tracking-widest";
+
   return (
     <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <motion.div
@@ -395,132 +429,160 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
             <p className="text-xs text-slate-400 font-semibold uppercase tracking-widest mb-0.5">Class Diary</p>
             <h3 className="text-lg font-bold text-slate-900">Create New</h3>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400">
-            <X size={20} />
-          </button>
+          <div className="flex items-center gap-4">
+            {/* Step indicator */}
+            <div className="flex items-center gap-2">
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step === 1 ? 'bg-brand-500 text-white' : 'bg-emerald-500 text-white'}`}>1</div>
+              <div className={`w-8 h-0.5 rounded ${step === 2 ? 'bg-brand-500' : 'bg-slate-200'}`} />
+              <div className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-bold transition-colors ${step === 2 ? 'bg-brand-500 text-white' : 'bg-slate-200 text-slate-400'}`}>2</div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400">
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
-        {/* Form */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto">
-          <div className="p-6 space-y-5">
-            {/* Subject */}
+        {/* Step 1 — Class / Section / Subject */}
+        {step === 1 && (
+          <div className="p-6 space-y-5 overflow-y-auto">
+            {/* Class */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Subjects</label>
+              <label className={labelCls}>Class</label>
               <div className="relative">
                 <select
-                  name="subject_id"
-                  value={form.subject_id}
-                  onChange={handleChange}
-                  required
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 pr-10"
+                  value={selectedClassId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedClassId(e.target.value)}
+                  className={selectCls}
                 >
-                  <option value="" disabled>
-                    {loadingSubjects ? 'Loading...' : 'Choose Subject'}
-                  </option>
-                  {subjects.map((s: ClassSubjectData) => (
-                    <option key={s.id} value={s.id}>
-                      {s.subject_name}{s.class?.name ? ` - ${s.class.name}` : ''}{s.section?.name ? ` (${s.section.name})` : ''}
-                    </option>
+                  <option value="" disabled>{loadingClasses ? 'Loading...' : 'Choose Class'}</option>
+                  {classes.map((c: ClassData) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
                   ))}
                 </select>
                 <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
 
-            {/* Topic / Page Number / Resources / Date */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Topic</label>
-                <input
-                  type="text"
-                  name="topic"
-                  value={form.topic}
-                  onChange={handleChange}
-                  placeholder="Topic"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Page Number</label>
-                <input
-                  type="text"
-                  name="page_number"
-                  value={form.page_number}
-                  onChange={handleChange}
-                  placeholder="e.g 1-3"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Resources</label>
-                <input
-                  type="text"
-                  name="resources"
-                  value={form.resources}
-                  onChange={handleChange}
-                  placeholder="e.g Book"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Date</label>
-                <input
-                  type="date"
-                  name="date"
-                  value={form.date}
-                  onChange={handleChange}
-                  required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
-                />
-              </div>
-            </div>
-
-            {/* Link */}
+            {/* Section */}
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Link</label>
-              <input
-                type="url"
-                name="link"
-                value={form.link}
-                onChange={handleChange}
-                placeholder="Enter Link"
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm"
-              />
+              <label className={labelCls}>Section</label>
+              <div className="relative">
+                <select
+                  value={selectedSectionId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSectionId(e.target.value)}
+                  disabled={!selectedClassId || loadingSections}
+                  className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <option value="" disabled>
+                    {loadingSections ? 'Loading...' : !selectedClassId ? 'Select class first' : 'Choose Section'}
+                  </option>
+                  {sections.map((s: SectionData) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              </div>
             </div>
 
-            {/* Activity / Home Work */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Activity</label>
-                <textarea
-                  name="activity"
-                  value={form.activity}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none"
-                />
-              </div>
-              <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Home Work</label>
-                <textarea
-                  name="home_work"
-                  value={form.home_work}
-                  onChange={handleChange}
-                  rows={4}
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none"
-                />
+            {/* Subject */}
+            <div className="space-y-1.5">
+              <label className={labelCls}>Subject</label>
+              <div className="relative">
+                <select
+                  value={selectedSubjectId}
+                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSubjectId(e.target.value)}
+                  disabled={!selectedSectionId || loadingSubjects}
+                  className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
+                >
+                  <option value="" disabled>
+                    {loadingSubjects ? 'Loading...' : !selectedSectionId ? 'Select section first' : 'Choose Subject'}
+                  </option>
+                  {subjects.map((s: ClassSubjectData) => (
+                    <option key={s.id} value={s.id}>{s.subject_name}</option>
+                  ))}
+                </select>
+                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
               </div>
             </div>
           </div>
+        )}
 
-          {/* Footer */}
-          <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-start gap-3 shrink-0">
-            <Button type="submit" disabled={submitting}>
-              {submitting ? 'Submitting...' : 'Submit'}
-            </Button>
-            {submitError && <p className="text-sm text-red-500 font-medium">{submitError}</p>}
-          </div>
-        </form>
+        {/* Step 2 — Details */}
+        {step === 2 && (
+          <form id="diary-step2" onSubmit={handleSubmit} className="overflow-y-auto">
+            <div className="p-6 space-y-5">
+              {/* Topic / Page Number / Resources / Date */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Topic</label>
+                  <input type="text" name="topic" value={form.topic} onChange={handleFormChange} placeholder="Topic" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Page Number</label>
+                  <input type="text" name="page_number" value={form.page_number} onChange={handleFormChange} placeholder="e.g 1-3" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Resources</label>
+                  <input type="text" name="resources" value={form.resources} onChange={handleFormChange} placeholder="e.g Book" className={inputCls} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Date</label>
+                  <input type="date" name="date" value={form.date} onChange={handleFormChange} required className={inputCls} />
+                </div>
+              </div>
+
+              {/* Link */}
+              <div className="space-y-1.5">
+                <label className={labelCls}>Link</label>
+                <input type="url" name="link" value={form.link} onChange={handleFormChange} placeholder="Enter Link" className={inputCls} />
+              </div>
+
+              {/* Activity / Home Work */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Activity</label>
+                  <textarea name="activity" value={form.activity} onChange={handleFormChange} rows={4} className={`${inputCls} resize-none`} />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelCls}>Home Work</label>
+                  <textarea name="home_work" value={form.home_work} onChange={handleFormChange} rows={4} className={`${inputCls} resize-none`} />
+                </div>
+              </div>
+            </div>
+          </form>
+        )}
+
+        {/* Footer */}
+        <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-3 shrink-0">
+          {step === 1 ? (
+            <>
+              <span />
+              <Button
+                type="button"
+                disabled={!selectedClassId || !selectedSectionId || !selectedSubjectId}
+                onClick={() => setStep(2)}
+              >
+                Next →
+              </Button>
+            </>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => setStep(1)}
+                className="flex items-center gap-2 px-4 py-2.5 text-slate-600 hover:text-slate-800 font-bold text-sm transition-colors"
+              >
+                <ArrowLeft size={16} /> Back
+              </button>
+              <div className="flex items-center gap-3">
+                {submitError && <p className="text-sm text-red-500 font-medium">{submitError}</p>}
+                <Button type="submit" form="diary-step2" disabled={submitting}>
+                  {submitting ? 'Submitting...' : 'Submit'}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
       </motion.div>
     </div>
   );
