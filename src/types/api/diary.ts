@@ -40,6 +40,10 @@ export interface CreateDiaryInput {
   class_subject_id: number;
   topic: string;
   description: string;
+  page_number: string;
+  resources: string;
+  link: string;
+  home_work: string;
   date: string;
   status: string;
   branch_id: number;

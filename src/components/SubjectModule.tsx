@@ -64,6 +64,7 @@ const SectionSubjectsView: React.FC<{
         section_id: section.id,
         teacher_id: teacherId,
         subject_name: subjectName.trim(),
+        branch_id: 1,
       },
       {
         onSuccess: () => {
@@ -303,6 +304,107 @@ const SectionSubjectsView: React.FC<{
         )}
       </Card>
 
+      {/* Edit Subject Modal */}
+      <AnimatePresence>
+        {isEditModalOpen && editingSubject && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Edit Subject</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">
+                    {classTitle} — Section {section.name}
+                  </p>
+                </div>
+                <button onClick={() => setIsEditModalOpen(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <form onSubmit={handleEditSubmit}>
+                <div className="p-6 space-y-5">
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                      <BookOpen size={14} className="text-brand-500" />
+                      Subject Name
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="e.g. Mathematics"
+                      value={editSubjectName}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEditSubjectName(e.target.value)}
+                      required
+                      autoFocus
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 outline-none transition-all font-medium text-sm"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
+                      <User size={14} className="text-indigo-500" />
+                      Assign Teacher
+                    </label>
+                    <select
+                      value={editTeacherId}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditTeacherId(Number(e.target.value))}
+                      required
+                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-sm appearance-none"
+                    >
+                      <option value={1}>Default Teacher (ID: 1)</option>
+                    </select>
+                  </div>
+                </div>
+                <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 rounded-b-3xl">
+                  <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
+                  <Button type="submit" className="shadow-xl shadow-brand-200" isLoading={updateMutation.isPending}>Save Changes</Button>
+                </div>
+              </form>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Delete Confirm Modal */}
+      <AnimatePresence>
+        {subjectToDelete && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100"
+            >
+              <div className="p-6 flex flex-col items-center text-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-rose-50 flex items-center justify-center">
+                  <Trash2 size={26} className="text-rose-500" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Delete Subject?</h3>
+                  <p className="text-sm text-slate-500 font-medium mt-1">
+                    Are you sure you want to delete <span className="text-slate-700 font-bold">"{subjectToDelete.subject_name}"</span>? This cannot be undone.
+                  </p>
+                </div>
+              </div>
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
+                <Button variant="ghost" onClick={() => setSubjectToDelete(null)} disabled={deleteMutation.isPending}>Cancel</Button>
+                <button
+                  onClick={confirmDelete}
+                  disabled={deleteMutation.isPending}
+                  className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors"
+                >
+                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
       {/* Add Subject Modal */}
       <AnimatePresence>
         {isAddModalOpen && (
@@ -343,7 +445,7 @@ const SectionSubjectsView: React.FC<{
                       type="text"
                       placeholder="e.g. Mathematics, English, Science..."
                       value={subjectName}
-                      onChange={(e) => setSubjectName(e.target.value)}
+                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSubjectName(e.target.value)}
                       required
                       autoFocus
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 outline-none transition-all font-medium text-sm"
@@ -358,7 +460,7 @@ const SectionSubjectsView: React.FC<{
                     </label>
                     <select
                       value={teacherId}
-                      onChange={(e) => setTeacherId(Number(e.target.value))}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTeacherId(Number(e.target.value))}
                       required
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 outline-none transition-all font-medium text-sm appearance-none"
                     >
@@ -462,7 +564,7 @@ export const SubjectModule: React.FC = () => {
               type="text"
               placeholder="Search classes..."
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-50 border-none rounded-xl py-3 pl-12 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/20 transition-all font-medium"
             />
           </div>

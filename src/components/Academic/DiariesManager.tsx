@@ -378,7 +378,7 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
     setLoadingSubjects(true);
     setSubjects([]);
     setSelectedSubjectId('');
-    classSubjectService.getSubjectsBySection(Number(selectedSectionId))
+    classSubjectService.getSubjectsBySection(Number(selectedSectionId), 1)
       .then(res => setSubjects(res.data ?? []))
       .catch(() => setSubjects([]))
       .finally(() => setLoadingSubjects(false));
@@ -398,6 +398,10 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
         class_subject_id: Number(selectedSubjectId),
         topic: form.topic,
         description: form.activity,
+        page_number: form.page_number,
+        resources: form.resources,
+        link: form.link,
+        home_work: form.home_work,
         date: form.date,
         status: 'Pending',
         branch_id: 1,
