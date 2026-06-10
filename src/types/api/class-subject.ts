@@ -27,6 +27,7 @@ export interface CreateClassSubjectInput {
   section_id: number;
   teacher_id: number;
   subject_name: string;
+  branch_id: number;
 }
 
 export interface UpdateClassSubjectInput {
