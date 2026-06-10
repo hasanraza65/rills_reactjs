@@ -19,36 +19,20 @@ import { Button } from '../ui/Button';
 import { EmptyState } from '../ui/EmptyState';
 import { classSubjectService } from '../../lib/services/class-subject-service';
 import { ClassSubjectData } from '../../types/api/class-subject';
+import { diaryService } from '../../lib/services/diary-service';
+import { DiaryData } from '../../types/api/diary';
+import { sectionService } from '../../lib/services/section-service';
+import { classService } from '../../lib/services/class-service';
 
-interface MockDiarySection {
+interface DiaryRow {
   id: number;
   sectionName: string;
   className: string;
   todayApprove: string;
+  raw: DiaryData;
 }
 
-const DUMMY_DIARIES: MockDiarySection[] = [
-  {
-    id: 1,
-    sectionName: 'KK 101',
-    className: 'ONE',
-    todayApprove: 'Not created'
-  },
-  {
-    id: 2,
-    sectionName: 'A',
-    className: 'TWO',
-    todayApprove: 'Approved'
-  },
-  {
-    id: 3,
-    sectionName: 'B',
-    className: 'TWO',
-    todayApprove: 'Pending'
-  }
-];
-
-const DiaryDetailView: React.FC<{ section: MockDiarySection, onBack: () => void }> = ({ section, onBack }) => {
+const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ section, onBack }) => {
   const [selectedDate, setSelectedDate] = useState('2026-04-27');
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
   const [tempDate, setTempDate] = useState('2026-04-27');
@@ -367,9 +351,40 @@ const AddDiaryModal: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
 export const DiariesManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [diariesList] = useState<MockDiarySection[]>(DUMMY_DIARIES);
-  const [selectedSection, setSelectedSection] = useState<MockDiarySection | null>(null);
+  const [diariesList, setDiariesList] = useState<DiaryRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [selectedSection, setSelectedSection] = useState<DiaryRow | null>(null);
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setLoading(true);
+        setFetchError(null);
+        const [diariesRes, sectionsRes, classesRes] = await Promise.all([
+          diaryService.getDiaries(1),
+          sectionService.getSections(1),
+          classService.getClasses(1),
+        ]);
+        const sectionMap = new Map((sectionsRes ?? []).map(s => [s.id, s.name]));
+        const classMap = new Map((classesRes ?? []).map(c => [c.id, c.name]));
+        const rows: DiaryRow[] = (diariesRes.data ?? []).map(diary => ({
+          id: diary.id,
+          sectionName: sectionMap.get(diary.class_subject?.section_id) ?? String(diary.class_subject?.section_id ?? '-'),
+          className: classMap.get(diary.class_subject?.class_id) ?? String(diary.class_subject?.class_id ?? '-'),
+          todayApprove: diary.status || 'Not created',
+          raw: diary,
+        }));
+        setDiariesList(rows);
+      } catch {
+        setFetchError('Failed to load diaries');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchData();
+  }, []);
 
   const filteredList = diariesList.filter(d =>
     d.sectionName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -416,8 +431,16 @@ export const DiariesManager: React.FC = () => {
           </button>
         </div>
 
-        {filteredList.length === 0 ? (
-          <EmptyState 
+        {loading ? (
+          <div className="flex items-center justify-center py-16 text-slate-400 font-medium text-sm">
+            Loading diaries...
+          </div>
+        ) : fetchError ? (
+          <div className="flex items-center justify-center py-16 text-red-500 font-medium text-sm">
+            {fetchError}
+          </div>
+        ) : filteredList.length === 0 ? (
+          <EmptyState
             icon={BookOpen}
             title="No Diaries Found"
             description="No sections match your search criteria."
