@@ -17,6 +17,10 @@ export interface DiaryData {
   class_subject_id: number;
   topic: string;
   description: string | null;
+  page_number: string | null;
+  resources: string | null;
+  link: string | null;
+  home_work: string | null;
   date: string;
   status: string | null;
   campus_id: number | null;

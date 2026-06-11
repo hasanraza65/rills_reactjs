@@ -106,18 +106,26 @@ const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ 
           ) : (
            <div className="bg-slate-50 rounded-2xl border border-slate-200 overflow-hidden divide-y divide-slate-200 shadow-inner">
              {[
-               { label: 'Subject', value: diaryDetail.class_subject?.subject_name ?? '-' },
-               { label: 'Topic', value: diaryDetail.topic ?? '-' },
-               { label: 'Description', value: diaryDetail.description ?? '-' },
-               { label: 'Date', value: diaryDetail.date ?? '-' },
-               { label: 'Status', value: diaryDetail.status ?? 'Not created' },
+               { label: 'Subject', value: diaryDetail.class_subject?.subject_name ?? '-', isLink: false },
+               { label: 'Topic', value: diaryDetail.topic ?? '-', isLink: false },
+               { label: 'Description', value: diaryDetail.description ?? '-', isLink: false },
+               { label: 'Page Number', value: diaryDetail.page_number ?? '-', isLink: false },
+               { label: 'Resources', value: diaryDetail.resources ?? '-', isLink: false },
+               { label: 'Link', value: diaryDetail.link ?? '-', isLink: !!diaryDetail.link },
+               { label: 'Home Work', value: diaryDetail.home_work ?? '-', isLink: false },
+               { label: 'Date', value: diaryDetail.date ?? '-', isLink: false },
+               { label: 'Status', value: diaryDetail.status ?? 'Not created', isLink: false },
              ].map((row, idx) => (
                <div key={idx} className="flex flex-col sm:flex-row p-4 sm:p-5 hover:bg-white transition-colors group">
                  <div className="w-full sm:w-1/4 font-black text-slate-400 text-xs sm:text-sm uppercase tracking-widest group-hover:text-brand-500 transition-colors pt-0.5">
                    {row.label}
                  </div>
                  <div className="w-full sm:w-3/4 font-bold text-slate-700 text-sm sm:text-base mt-1 sm:mt-0 leading-relaxed">
-                   {row.value}
+                   {row.isLink ? (
+                     <a href={row.value} target="_blank" rel="noopener noreferrer" className="text-brand-600 underline hover:text-brand-700 break-all">
+                       {row.value}
+                     </a>
+                   ) : row.value}
                  </div>
                </div>
              ))}
@@ -648,9 +656,6 @@ export const DiariesManager: React.FC = () => {
           <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">Manage what I have learnt</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
-          <Button variant="outline" className="bg-emerald-500 hover:bg-emerald-600 text-white border-none shadow-md shadow-emerald-200">
-            All Diaries
-          </Button>
           <Button leftIcon={<Plus size={18} />} onClick={() => setIsAddModalOpen(true)}>
             Add New
           </Button>
