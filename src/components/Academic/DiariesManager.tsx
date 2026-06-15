@@ -523,6 +523,23 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
         {step === 2 && (
           <form id="diary-step2" onSubmit={handleSubmit} className="overflow-y-auto">
             <div className="p-6 space-y-5">
+              {/* Step 1 summary */}
+              <div className="flex flex-wrap items-center gap-3 p-3 bg-brand-50 border border-brand-100 rounded-xl">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">Class:</span>
+                  <span className="text-xs font-bold text-brand-700">{classes.find(c => String(c.id) === selectedClassId)?.name ?? '—'}</span>
+                </div>
+                <span className="text-brand-200 font-bold">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">Section:</span>
+                  <span className="text-xs font-bold text-brand-700">{sections.find(s => String(s.id) === selectedSectionId)?.name ?? '—'}</span>
+                </div>
+                <span className="text-brand-200 font-bold">|</span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-bold text-brand-400 uppercase tracking-widest">Subject:</span>
+                  <span className="text-xs font-bold text-brand-700">{subjects.find(s => String(s.id) === selectedSubjectId)?.subject_name ?? '—'}</span>
+                </div>
+              </div>
               {/* Topic / Page Number / Resources / Date */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="space-y-1.5">
