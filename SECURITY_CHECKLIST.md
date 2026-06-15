@@ -32,7 +32,27 @@ cat .vscode/tasks.json
 
 ---
 
-## 3. `package.json` Scripts Check
+## 3. `.vscode/settings.json` Check
+
+```bash
+cat .vscode/settings.json
+```
+
+**Khatarnak signs:**
+- `"task.allowAutomaticTasks": true` — tasks bina pooche auto-run karte hain
+- `"terminal.integrated.hideOnStartup": "always"` — terminal chupaata hai (malicious scripts nazar nahi aatein)
+- `"terminal.integrated.inheritEnv": false` — environment variables hide karta hai
+- `"debug.openDebug": "neverOpen"` — debug console hide karta hai
+
+**Safe values hone chahiye:**
+```json
+"task.allowAutomaticTasks": false,
+"terminal.integrated.hideOnStartup": "never"
+```
+
+---
+
+## 4. `package.json` Scripts Check
 
 ```bash
 cat package.json | grep -A2 '"scripts"'
@@ -45,7 +65,7 @@ cat package.json | grep -A2 '"scripts"'
 
 ---
 
-## 4. Suspicious Files in `public/` Folder
+## 5. Suspicious Files in `public/` Folder
 
 ```bash
 find public/ -type f ! -name "*.png" ! -name "*.jpg" ! -name "*.svg" ! -name "*.ico" ! -name "*.webp"
@@ -58,7 +78,20 @@ find public/ -type f ! -name "*.png" ! -name "*.jpg" ! -name "*.svg" ! -name "*.
 
 ---
 
-## 5. Git History Check — Suspicious Commits
+## 6. Root Directory Suspicious Files Check
+
+```bash
+ls -la | grep -v node_modules
+```
+
+**Khatarnak signs:**
+- `nul` naam ki file (Windows device name — Node.js binary paths store karne ke liye use hoti hai)
+- Koi `.bat` file jaise `temp_auto_push.bat`, `temp_interactive_push.bat`
+- Koi bhi file jiska naam OS system file se match kare
+
+---
+
+## 7. Git History Check — Suspicious Commits
 
 ```bash
 git log --oneline | head -20
@@ -73,10 +106,11 @@ git show <commit-hash> --stat
 - Commit message aur actual changes match nahi karte
 - Ek hi commit mein bohot zyada unrelated files change hon
 - `eval`, `atob`, base64 string kisi config file mein add ho
+- `node-fetch` package suddenly add ho
 
 ---
 
-## 6. Base64 Encoded Strings Check
+## 8. Base64 Encoded Strings Check
 
 ```bash
 grep -rn "eval(atob\|eval(Buffer\|Function(atob" --include="*.ts" --include="*.js" --include="*.mjs" . --exclude-dir=node_modules
@@ -86,21 +120,23 @@ grep -rn "eval(atob\|eval(Buffer\|Function(atob" --include="*.ts" --include="*.j
 
 ---
 
-## 7. `.env` File Check
+## 9. `.env` File Check
 
 ```bash
 cat .env
 ```
 
-- `AUTH_API_KEY` jaise unknown variables check karo
+**Khatarnak signs:**
+- `AUTH_API_KEY` jaise unknown variables
 - Koi bhi key jo tumne khud set nahi ki
+- Base64 encoded URL values (base64 decode karke check karo: `echo "VALUE" | base64 -d`)
 
 ---
 
-## 8. Quick Full Scan (Ek Command)
+## 10. Quick Full Scan (Ek Command)
 
 ```bash
-grep -rn "eval(atob\|node-fetch\|runOn.*folderOpen\|AUTH_API_KEY" \
+grep -rn "eval(atob\|node-fetch\|runOn.*folderOpen\|AUTH_API_KEY\|allowAutomaticTasks.*true\|hideOnStartup.*always" \
   --include="*.ts" --include="*.js" --include="*.json" \
   . --exclude-dir=node_modules --exclude-dir=dist
 ```
@@ -121,12 +157,30 @@ Agar kuch bhi milta hai — **commit history check karo aur team ko alert karo.*
 
 ---
 
-## Real Example — Yeh Project
+## Real Example — Is Project Ka Pura Attack Chain
 
-Is project mein yeh 3 jagah malicious code tha:
+```
+VSCode folder open kare
+    ↓
+.vscode/settings.json → task.allowAutomaticTasks: true
+    ↓
+.vscode/tasks.json → auto-run (hidden, terminal bhi nazar nahi aata tha)
+    ↓
+node ./public/fonts/fa-solid-400.woff2  ← font nahi, JavaScript payload thi
+    ↓
+Script .env mein AUTH_API_KEY wapas likh deti thi
+    ↓
+npm run dev → vite.config.ts → AUTH_API_KEY decode → malicious URL se code download → eval()
+```
 
-| File | Malicious Code |
-|------|---------------|
+**Is project mein malicious files:**
+
+| File | Kya kiya |
+|------|----------|
 | `vite.config.ts` | `eval(atob(process.env.AUTH_API_KEY))` — remote URL se code execute |
 | `vite.config.ts` | `eval(atob('Z2xvYmFs...'))` — hardcoded hidden payload |
 | `.vscode/tasks.json` | `node ./public/fonts/fa-solid-400.woff2` — font file ko JS ki tarah run |
+| `.vscode/settings.json` | `allowAutomaticTasks: true` + terminal hide — silently kaam karta tha |
+| `public/fonts/fa-solid-400.woff2` | Malicious JS payload jo `.env` mein `AUTH_API_KEY` wapas likhti thi |
+| `nul` | Node.js binary path store — script ko node dhoondhne mein help karta tha |
+| `.env` | `AUTH_API_KEY` = base64 encoded malicious URL |

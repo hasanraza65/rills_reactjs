@@ -46,8 +46,10 @@ export const sectionService = {
   /**
    * Fetches sections for a specific class.
    */
-  getSectionsByClass: async (classId: number): Promise<SectionData[]> => {
-    const response = await apiClient.get<SectionData[]>(`/sections-by-class/${classId}`);
+  getSectionsByClass: async (classId: number, branchId: number = 1): Promise<SectionData[]> => {
+    const response = await apiClient.get<SectionData[]>(`/sections-by-class/${classId}`, {
+      params: { branch_id: branchId }
+    });
     return response.data;
   },
 };

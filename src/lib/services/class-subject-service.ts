@@ -9,9 +9,9 @@ export const classSubjectService = {
   /**
    * Fetches subjects for a given section.
    */
-  getSubjectsBySection: async (sectionId: number): Promise<ClassSubjectsResponse> => {
+  getSubjectsBySection: async (sectionId: number, branchId: number = 1): Promise<ClassSubjectsResponse> => {
     const response = await apiClient.get<ClassSubjectsResponse>('/class-subjects', {
-      params: { section_id: sectionId }
+      params: { section_id: sectionId, branch_id: branchId }
     });
     return response.data;
   },
