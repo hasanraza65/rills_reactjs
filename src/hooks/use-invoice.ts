@@ -2,19 +2,14 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { invoiceService } from '../lib/services/invoice-service';
 import { CreateInvoiceInput } from '../types/api/invoice';
 
-/**
- * Hook to fetch the list of invoices.
- */
-export const useInvoices = (branchId: number = 1) => {
+export const useInvoices = (branchId: number) => {
   return useQuery({
     queryKey: ['invoices', 'list', branchId],
     queryFn: () => invoiceService.getInvoices(branchId),
+    enabled: branchId > 0,
   });
 };
 
-/**
- * Hook to fetch a single invoice.
- */
 export const useInvoice = (id: number | null) => {
   return useQuery({
     queryKey: ['invoices', 'detail', id],
@@ -23,9 +18,14 @@ export const useInvoice = (id: number | null) => {
   });
 };
 
-/**
- * Hook to generate a new invoice.
- */
+export const useWallet = (parentId: number | null | undefined) => {
+  return useQuery({
+    queryKey: ['wallet', parentId],
+    queryFn: () => invoiceService.getWallet(parentId!),
+    enabled: !!parentId,
+  });
+};
+
 export const useGenerateInvoice = () => {
   const queryClient = useQueryClient();
 
@@ -37,9 +37,6 @@ export const useGenerateInvoice = () => {
   });
 };
 
-/**
- * Hook to delete an invoice.
- */
 export const useDeleteInvoice = () => {
   const queryClient = useQueryClient();
 
