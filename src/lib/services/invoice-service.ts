@@ -1,37 +1,41 @@
 import { apiClient } from '../api-client';
-import { InvoiceData, CreateInvoiceInput } from '../../types/api/invoice';
+import {
+  InvoiceData,
+  CreateInvoiceInput,
+  PayInvoiceInput,
+  PayInvoiceResponse,
+  WalletData,
+} from '../../types/api/invoice';
 
 export const invoiceService = {
-  /**
-   * Fetches the list of invoices for a given branch.
-   */
-  getInvoices: async (branchId: number = 1): Promise<InvoiceData[]> => {
-    const response = await apiClient.get<InvoiceData[]>('/invoices', {
-      params: { branch_id: branchId }
+  getInvoices: async (branchId: number): Promise<InvoiceData[]> => {
+    const res = await apiClient.get<{ success: boolean; data: InvoiceData[] }>('/invoices', {
+      params: { branch_id: branchId },
     });
-    return response.data;
+    return res.data.data;
   },
 
-  /**
-   * Fetches a single invoice by ID.
-   */
   getInvoice: async (id: number): Promise<InvoiceData> => {
-    const response = await apiClient.get<InvoiceData>(`/invoices/${id}`);
-    return response.data;
+    const res = await apiClient.get<InvoiceData>(`/invoices/${id}`);
+    return res.data;
   },
 
-  /**
-   * Creates a new invoice.
-   */
-  createInvoice: async (data: CreateInvoiceInput): Promise<any> => {
-    const response = await apiClient.post('/invoices/create', data);
-    return response.data;
+  createInvoice: async (data: CreateInvoiceInput): Promise<InvoiceData> => {
+    const res = await apiClient.post<{ success: boolean; data: InvoiceData }>('/invoices/create', data);
+    return res.data.data;
   },
 
-  /**
-   * Deletes an invoice.
-   */
   deleteInvoice: async (id: number): Promise<void> => {
     await apiClient.delete(`/invoices/${id}`);
-  }
+  },
+
+  getWallet: async (parentId: number): Promise<WalletData> => {
+    const res = await apiClient.get<{ success: boolean; data: WalletData }>(`/wallet/${parentId}`);
+    return res.data.data;
+  },
+
+  payInvoice: async (data: PayInvoiceInput): Promise<PayInvoiceResponse> => {
+    const res = await apiClient.post<PayInvoiceResponse>('/payments/pay', data);
+    return res.data;
+  },
 };
