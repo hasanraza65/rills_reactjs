@@ -20,7 +20,6 @@ import { cn, Student, CLASSES, StudentFeeStatus } from '../../types';
 interface StudentFeeDetailProps {
   student: Student;
   onBack: () => void;
-  onCollect: () => void;
 }
 
 // Mock data for a student's fee status
@@ -51,7 +50,7 @@ const history = [
   { id: '3', date: '2024-01-02', amount: 10000, method: 'Cash', ref: 'REC-7734', status: 'Success' },
 ];
 
-export const StudentFeeDetail: React.FC<StudentFeeDetailProps> = ({ student, onBack, onCollect }) => {
+export const StudentFeeDetail: React.FC<StudentFeeDetailProps> = ({ student, onBack }) => {
   const [activeView, setActiveView] = useState<'installments' | 'history' | 'customization'>('installments');
 
   const studentClass = CLASSES.find(c => c.id === student.classId);
@@ -76,13 +75,6 @@ export const StudentFeeDetail: React.FC<StudentFeeDetailProps> = ({ student, onB
         <div className="flex items-center gap-3">
           <button className="p-4 rounded-2xl bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
             <Printer size={20} />
-          </button>
-          <button 
-            onClick={onCollect}
-            className="px-6 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2"
-          >
-            <CreditCard size={20} />
-            Collect Payment
           </button>
         </div>
       </div>

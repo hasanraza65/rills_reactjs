@@ -209,48 +209,6 @@ export const FeeConfiguration: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h3 className="text-3xl font-black text-slate-800 tracking-tight">Global Fee Configuration</h3>
-          <p className="text-slate-500 font-bold mt-1">Define standard fee structures for each class</p>
-        </div>
-        <div className="flex items-center gap-4">
-          <AnimatePresence>
-            {showSuccess && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-wider shadow-sm border border-emerald-100"
-              >
-                <CheckCircle2 size={14} />
-                Configuration Saved!
-              </motion.div>
-            )}
-            {error && (
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 20 }}
-                className="flex items-center gap-2 px-5 py-3 rounded-2xl bg-rose-50 text-rose-600 text-xs font-black uppercase tracking-wider shadow-sm border border-rose-100"
-              >
-                <AlertCircle size={14} />
-                {error}
-              </motion.div>
-            )}
-          </AnimatePresence>
-          <Button
-            onClick={handleSave}
-            isLoading={isSaving}
-            icon={Save}
-            size="lg"
-            className="shadow-xl shadow-brand-100"
-          >
-            {selectedClassId && hasData[selectedClassId] ? 'Update Configuration' : 'Save Configuration'}
-          </Button>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <div className="lg:col-span-1 space-y-6">
           <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest px-2">Select Class</h4>
@@ -345,15 +303,50 @@ export const FeeConfiguration: React.FC = () => {
                         <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest mt-1">Section {sections.find(s => s.id.toString() === selectedClassId)?.name}</p>
                       </div>
                     </div>
-                    <Button 
-                      variant="outline"
-                      onClick={addFeeHead}
-                      icon={Plus}
-                      size="sm"
-                      className="rounded-xl border-slate-100 text-slate-500 hover:bg-brand-50 hover:border-brand-100 hover:text-brand-500"
-                    >
-                      Add Fee Head
-                    </Button>
+                    <div className="flex items-center gap-3">
+                      <AnimatePresence>
+                        {showSuccess && (
+                          <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-50 text-emerald-600 text-xs font-black uppercase tracking-wider shadow-sm border border-emerald-100"
+                          >
+                            <CheckCircle2 size={14} />
+                            Saved!
+                          </motion.div>
+                        )}
+                        {error && (
+                          <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            exit={{ opacity: 0, x: 20 }}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-rose-50 text-rose-600 text-xs font-black uppercase tracking-wider shadow-sm border border-rose-100"
+                          >
+                            <AlertCircle size={14} />
+                            {error}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <Button
+                        onClick={handleSave}
+                        isLoading={isSaving}
+                        icon={Save}
+                        size="sm"
+                        className="shadow-lg shadow-brand-100"
+                      >
+                        {selectedClassId && hasData[selectedClassId] ? 'Update Configuration' : 'Save Configuration'}
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={addFeeHead}
+                        icon={Plus}
+                        size="sm"
+                        className="rounded-xl border-slate-100 text-slate-500 hover:bg-brand-50 hover:border-brand-100 hover:text-brand-500"
+                      >
+                        Add Fee Head
+                      </Button>
+                    </div>
                   </div>
 
                   {currentFeeHeads.length === 0 ? (

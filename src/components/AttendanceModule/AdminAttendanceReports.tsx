@@ -41,8 +41,12 @@ const TAB_CONFIG: { key: Tab; label: string; icon: React.ElementType }[] = [
   { key: 'staff',    label: 'Staff Attendance', icon: UserCheck },
 ];
 
-export const AdminAttendanceReports: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<Tab>('overview');
+interface AdminAttendanceReportsProps {
+  view?: Tab;
+}
+
+export const AdminAttendanceReports: React.FC<AdminAttendanceReportsProps> = ({ view }) => {
+  const [activeTab, setActiveTab] = useState<Tab>(view ?? 'overview');
   const { selectedBranchId } = useBranchStore();
   const branchId = selectedBranchId ?? 1;
   const today = new Date().toISOString().split('T')[0];
@@ -69,38 +73,42 @@ export const AdminAttendanceReports: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-        <div>
-          <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Attendance</h3>
-          <p className="text-slate-500 font-medium">Monitor and manage daily attendance</p>
+      {/* Header — only shown when component manages its own tabs (not controlled via sidebar) */}
+      {!view && (
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+          <div>
+            <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Attendance</h3>
+            <p className="text-slate-500 font-medium">Monitor and manage daily attendance</p>
+          </div>
+          {activeTab === 'overview' && (
+            <button className="px-6 py-4 rounded-2xl bg-white border border-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2">
+              <Download size={20} />
+              Export Report
+            </button>
+          )}
         </div>
-        {activeTab === 'overview' && (
-          <button className="px-6 py-4 rounded-2xl bg-white border border-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2">
-            <Download size={20} />
-            Export Report
-          </button>
-        )}
-      </div>
+      )}
 
-      {/* Tabs */}
-      <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-fit gap-1">
-        {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            onClick={() => setActiveTab(key)}
-            className={cn(
-              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
-              activeTab === key
-                ? 'bg-brand-500 text-white shadow-lg shadow-brand-100'
-                : 'text-slate-500 hover:text-slate-700'
-            )}
-          >
-            <Icon size={16} />
-            {label}
-          </button>
-        ))}
-      </div>
+      {/* Tabs — hidden when view is controlled externally via sidebar */}
+      {!view && (
+        <div className="flex bg-white p-1.5 rounded-2xl border border-slate-100 shadow-sm w-fit gap-1">
+          {TAB_CONFIG.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              onClick={() => setActiveTab(key)}
+              className={cn(
+                'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
+                activeTab === key
+                  ? 'bg-brand-500 text-white shadow-lg shadow-brand-100'
+                  : 'text-slate-500 hover:text-slate-700'
+              )}
+            >
+              <Icon size={16} />
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* ── Overview ──────────────────────────────────────────────── */}
       {activeTab === 'overview' && (

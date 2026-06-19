@@ -36,7 +36,6 @@ import { cn, CLASSES, STUDENTS, Student, FeeHead, FeeFrequency } from '../../typ
 import { StatCard } from '../StatCard';
 import { FeeConfiguration } from './FeeConfiguration';
 import { StudentFeeDetail } from './StudentFeeDetail';
-import { PaymentModal } from './PaymentModal';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { Skeleton } from '../ui/Skeleton';
@@ -56,11 +55,13 @@ const statusData = [
   { name: 'Overdue', value: 5, color: '#ef4444' },
 ];
 
-export const FeeDashboard: React.FC = () => {
-  const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'students'>('overview');
+interface FeeDashboardProps {
+  view?: 'overview' | 'students' | 'config';
+}
+
+export const FeeDashboard: React.FC<FeeDashboardProps> = ({ view }) => {
+  const [activeTab, setActiveTab] = useState<'overview' | 'config' | 'students'>(view ?? 'overview');
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
-  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false);
-  const [paymentStudent, setPaymentStudent] = useState<Student | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
   const handleTabChange = (tab: 'overview' | 'config' | 'students') => {
@@ -190,23 +191,6 @@ export const FeeDashboard: React.FC = () => {
 
   const renderStudentList = () => (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Student Fee Records</h3>
-          <p className="text-slate-500 font-medium">Monitor and manage individual student fee statuses</p>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="px-6 py-4 rounded-2xl bg-white border border-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2">
-            <Download size={20} />
-            Export Defaulters
-          </button>
-          <button className="px-6 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2">
-            <Plus size={20} />
-            Bulk Generate Vouchers
-          </button>
-        </div>
-      </div>
-
       <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
         <div className="p-6 border-b border-slate-50 flex items-center justify-between gap-4">
           <div className="relative flex-1">
@@ -271,23 +255,12 @@ export const FeeDashboard: React.FC = () => {
                     </div>
                   </td>
                   <td className="px-8 py-5 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <button 
-                        onClick={() => {
-                          setPaymentStudent(s);
-                          setIsPaymentModalOpen(true);
-                        }}
-                        className="px-4 py-2 rounded-xl bg-brand-50 text-brand-600 text-xs font-bold hover:bg-brand-100 transition-all"
-                      >
-                        Collect
-                      </button>
-                      <button 
-                        onClick={() => setSelectedStudent(s)}
-                        className="p-2 text-slate-300 hover:text-brand-500 transition-colors"
-                      >
-                        <ChevronRight size={20} />
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => setSelectedStudent(s)}
+                      className="p-2 text-slate-300 hover:text-brand-500 transition-colors"
+                    >
+                      <ChevronRight size={20} />
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -300,38 +273,41 @@ export const FeeDashboard: React.FC = () => {
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
-        <button 
-          onClick={() => handleTabChange('overview')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
-            activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <TrendingUp size={18} />
-          Overview
-        </button>
-        <button 
-          onClick={() => handleTabChange('students')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
-            activeTab === 'students' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <CreditCard size={18} />
-          Student Fees
-        </button>
-        <button 
-          onClick={() => handleTabChange('config')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
-            activeTab === 'config' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Settings size={18} />
-          Fee Config
-        </button>
-      </div>
+      {/* Tab bar hidden when view is controlled externally via sidebar */}
+      {!view && (
+        <div className="flex items-center gap-4 mb-8 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
+          <button
+            onClick={() => handleTabChange('overview')}
+            className={cn(
+              "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+              activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
+            <TrendingUp size={18} />
+            Overview
+          </button>
+          <button
+            onClick={() => handleTabChange('students')}
+            className={cn(
+              "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+              activeTab === 'students' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
+            <CreditCard size={18} />
+            Student Fees
+          </button>
+          <button
+            onClick={() => handleTabChange('config')}
+            className={cn(
+              "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
+              activeTab === 'config' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
+            )}
+          >
+            <Settings size={18} />
+            Fee Config
+          </button>
+        </div>
+      )}
 
       <AnimatePresence mode="wait">
         {isLoading ? (
@@ -371,13 +347,9 @@ export const FeeDashboard: React.FC = () => {
                 exit={{ opacity: 0, y: -10 }}
               >
                 {selectedStudent ? (
-                  <StudentFeeDetail 
-                    student={selectedStudent} 
-                    onBack={() => setSelectedStudent(null)} 
-                    onCollect={() => {
-                      setPaymentStudent(selectedStudent);
-                      setIsPaymentModalOpen(true);
-                    }}
+                  <StudentFeeDetail
+                    student={selectedStudent}
+                    onBack={() => setSelectedStudent(null)}
                   />
                 ) : (
                   renderStudentList()
@@ -399,20 +371,6 @@ export const FeeDashboard: React.FC = () => {
         )}
       </AnimatePresence>
 
-      {isPaymentModalOpen && paymentStudent && (
-        <PaymentModal 
-          student={paymentStudent}
-          onClose={() => {
-            setIsPaymentModalOpen(false);
-            setPaymentStudent(null);
-          }}
-          onSave={(data) => {
-            console.log('Payment recorded:', data);
-            setIsPaymentModalOpen(false);
-            setPaymentStudent(null);
-          }}
-        />
-      )}
     </div>
   );
 };

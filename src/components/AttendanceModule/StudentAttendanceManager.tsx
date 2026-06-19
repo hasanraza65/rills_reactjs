@@ -30,11 +30,7 @@ export const StudentAttendanceManager: React.FC = () => {
 
   const [selectedClassId, setSelectedClassId] = useState('');
   const [selectedSectionId, setSelectedSectionId] = useState('');
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(1);
-    return d.toISOString().split('T')[0];
-  });
+  const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
   const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
   const [submitted, setSubmitted] = useState(false);
 
@@ -64,9 +60,7 @@ export const StudentAttendanceManager: React.FC = () => {
   const handleReset = () => {
     setSelectedClassId('');
     setSelectedSectionId('');
-    const d = new Date();
-    d.setDate(1);
-    setStartDate(d.toISOString().split('T')[0]);
+    setStartDate(new Date().toISOString().split('T')[0]);
     setEndDate(new Date().toISOString().split('T')[0]);
     setSubmitted(false);
   };
@@ -79,8 +73,6 @@ export const StudentAttendanceManager: React.FC = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight mb-6">Student Attendance Report</h2>
-
         <form onSubmit={handleSubmit} className="flex flex-wrap items-end gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
           {/* Class */}
           <div className="space-y-2 flex-1 min-w-[150px]">

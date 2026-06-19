@@ -41,6 +41,8 @@ import { FamilyManagement } from './FamilyManagement';
 import { FeeDashboard } from './FeeManagement/FeeDashboard';
 import { AttendanceDashboard } from './AttendanceModule/AttendanceDashboard';
 import { StudentAttendanceManager } from './AttendanceModule/StudentAttendanceManager';
+import { AdminAttendanceReports } from './AttendanceModule/AdminAttendanceReports';
+import { StaffAttendanceManager } from './AttendanceModule/StaffAttendanceManager';
 import { LessonPlanTeachers } from './LessonPlan/LessonPlanTeachers';
 import { AddLessonPlan } from './LessonPlan/AddLessonPlan';
 import { LessonPlanList } from './LessonPlan/LessonPlanList';
@@ -179,144 +181,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   const renderSuperAdmin = () => (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
-
-      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
-
-
-        <button 
-          onClick={() => onTabChange('overview')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LayoutDashboard size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Overview</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('schools')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'schools' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <School size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Manage Schools</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('branches')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'branches' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Building2 size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Branches</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('pricing')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'pricing' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Settings size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Pricing Config</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('syllabus')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Syllabus</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('library')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LibraryIcon size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Library</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('classes')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'classes' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Classes</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('sections')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'sections' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Layers size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Sections</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('class-subjects')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'class-subjects' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Subjects</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('what-i-learnt')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'what-i-learnt' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">What I have learnt</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('subjects')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'subjects' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Subjects</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('results')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'results' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <GraduationCap size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Results</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('class-syllabus')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'class-syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <FileText size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Class Syllabus</span>
-        </button>
-
-      </div>
-
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <motion.div
@@ -448,7 +312,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <AttendanceDashboard role={role} />
+            <AdminAttendanceReports view="overview" />
           </motion.div>
         )}
 
@@ -459,7 +323,18 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <StudentAttendanceManager />
+            <AdminAttendanceReports view="students" />
+          </motion.div>
+        )}
+
+        {activeTab === 'staff-attendance' && (
+          <motion.div
+            key="staff-attendance"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminAttendanceReports view="staff" />
           </motion.div>
         )}
 
@@ -629,122 +504,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
     return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
-      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
-
-
-        <button 
-          onClick={() => onTabChange('overview')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LayoutDashboard size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Overview</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('students')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'students' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <GraduationCap size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Students</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('families')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'families' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Users size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Parents</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('staff')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'staff' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Users size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Staff</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('admission-keys')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'admission-keys' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Key size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Admission Keys</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('fees')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'fees' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <CreditCard size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Fees</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('invoices')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'invoices' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <FileText size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Invoices</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('attendance')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'attendance' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Calendar size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Attendance</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('syllabus')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Syllabus</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('library')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LibraryIcon size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Library</span>
-        </button>
-        <button 
-          onClick={() => onTabChange('diary')}
-          className={cn(
-            "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-            activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <FileText size={18} className="shrink-0" />
-          <span className="whitespace-nowrap">Diary</span>
-        </button>
-
-      </div>
-
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <motion.div
@@ -1113,7 +872,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <FeeDashboard />
+            <FeeDashboard view="overview" />
+          </motion.div>
+        )}
+
+        {activeTab === 'fees-students' && (
+          <motion.div
+            key="fees-students"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <FeeDashboard view="students" />
+          </motion.div>
+        )}
+
+        {activeTab === 'fees-config' && (
+          <motion.div
+            key="fees-config"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <FeeDashboard view="config" />
           </motion.div>
         )}
 
@@ -1157,7 +938,29 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <AttendanceDashboard role={role} />
+            <AdminAttendanceReports view="overview" />
+          </motion.div>
+        )}
+
+        {activeTab === 'student-attendance' && (
+          <motion.div
+            key="student-attendance"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminAttendanceReports view="students" />
+          </motion.div>
+        )}
+
+        {activeTab === 'staff-attendance' && (
+          <motion.div
+            key="staff-attendance"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AdminAttendanceReports view="staff" />
           </motion.div>
         )}
 
@@ -1246,64 +1049,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   const renderTeacher = () => (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
-      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
-
-        <button 
-          onClick={() => onTabChange('overview')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LayoutDashboard size={18} />
-          Overview
-        </button>
-        <button 
-          onClick={() => onTabChange('attendance')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'attendance' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Calendar size={18} />
-          Attendance
-        </button>
-        <button 
-          onClick={() => onTabChange('diary')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <FileText size={18} />
-          Diary
-        </button>
-        <button 
-          onClick={() => onTabChange('syllabus')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} />
-          Syllabus
-        </button>
-        <button 
-          onClick={() => onTabChange('library')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LibraryIcon size={18} />
-          Library
-        </button>
-      </div>
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <motion.div
@@ -1429,75 +1174,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
 
   const renderParent = () => (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
-      <div className="flex items-center gap-1.5 mb-6 sm:mb-8 bg-white p-1.5 rounded-xl border border-slate-100 w-full overflow-x-auto no-scrollbar shadow-sm sm:w-fit sm:gap-4 sm:rounded-3xl">
-
-        <button 
-          onClick={() => onTabChange('overview')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'overview' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LayoutDashboard size={18} />
-          Overview
-        </button>
-        <button 
-          onClick={() => onTabChange('fees')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'fees' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <CreditCard size={18} />
-          Fees
-        </button>
-        <button 
-          onClick={() => onTabChange('attendance')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'attendance' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <Calendar size={18} />
-          Attendance
-        </button>
-        <button 
-          onClick={() => onTabChange('diary')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'diary' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <FileText size={18} />
-          Diary
-        </button>
-        <button 
-          onClick={() => onTabChange('syllabus')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'syllabus' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <BookOpen size={18} />
-          Syllabus
-        </button>
-        <button 
-          onClick={() => onTabChange('library')}
-          className={cn(
-            "px-4 py-2 sm:px-6 sm:py-3 rounded-lg sm:rounded-2xl text-xs sm:text-sm font-bold flex items-center gap-2 transition-all shrink-0",
-
-            activeTab === 'library' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-          )}
-        >
-          <LibraryIcon size={18} />
-          Library
-        </button>
-      </div>
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
           <motion.div
