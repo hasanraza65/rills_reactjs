@@ -13,6 +13,7 @@ import {
   AlertTriangle,
   BarChart2,
   Users,
+  ClipboardEdit,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../types';
@@ -26,6 +27,7 @@ import {
   useStaffAttendanceReport,
 } from '../../hooks/use-attendance';
 import { AttendanceStatusCode } from '../../types/api/attendance';
+import { StaffAttendanceForm } from './StaffAttendanceForm';
 
 const STATUS_ICONS: Record<AttendanceStatusCode, React.ElementType> = {
   P: CheckCircle2, A: XCircle, L: FileText, H: Clock,
@@ -51,7 +53,7 @@ const ROLE_MAP: Record<number, string> = {
   1: 'Super Admin', 2: 'School Admin', 3: 'Branch Admin', 4: 'Teacher', 6: 'Gate Keeper', 7: 'Librarian',
 };
 
-type ViewMode = 'mark' | 'report';
+type ViewMode = 'mark' | 'manual' | 'report';
 
 export const StaffAttendanceManager: React.FC = () => {
   const { selectedBranchId } = useBranchStore();
@@ -149,6 +151,16 @@ export const StaffAttendanceManager: React.FC = () => {
           >
             <Users size={16} />
             Mark Attendance
+          </button>
+          <button
+            onClick={() => setViewMode('manual')}
+            className={cn(
+              'flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-all',
+              viewMode === 'manual' ? 'bg-brand-500 text-white shadow-lg shadow-brand-100' : 'text-slate-500 hover:text-slate-700'
+            )}
+          >
+            <ClipboardEdit size={16} />
+            Manual Entry
           </button>
           <button
             onClick={() => setViewMode('report')}
@@ -313,6 +325,11 @@ export const StaffAttendanceManager: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Manual Entry Form ─────────────────────────────────────── */}
+      {viewMode === 'manual' && (
+        <StaffAttendanceForm onSuccess={() => setViewMode('mark')} />
       )}
 
       {/* ── Monthly Report View ────────────────────────────────────── */}

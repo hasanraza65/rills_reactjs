@@ -41,9 +41,9 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: LayoutDashboard, label: 'Overview', id: 'overview' },
     { icon: School, label: 'Schools', id: 'schools' },
     { icon: Building2, label: 'Branches', id: 'branches' },
-    { 
-      icon: BookOpen, 
-      label: 'Classes', 
+    {
+      icon: BookOpen,
+      label: 'Classes',
       id: 'classes',
       subItems: [
         { label: 'Management', id: 'classes' },
@@ -67,8 +67,9 @@ const menuItems: Record<UserRole, any[]> = {
       label: 'Attendance',
       id: 'attendance-menu',
       subItems: [
-        { label: 'Dashboard', id: 'attendance' },
+        { label: 'Overview', id: 'attendance' },
         { label: 'Student Attendance', id: 'student-attendance' },
+        { label: 'Staff Attendance', id: 'staff-attendance' },
       ]
     },
     {
@@ -94,8 +95,9 @@ const menuItems: Record<UserRole, any[]> = {
       label: 'Attendance',
       id: 'attendance-menu',
       subItems: [
-        { label: 'Dashboard', id: 'attendance' },
+        { label: 'Overview', id: 'attendance' },
         { label: 'Student Attendance', id: 'student-attendance' },
+        { label: 'Staff Attendance', id: 'staff-attendance' },
       ]
     },
     {
@@ -119,9 +121,27 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: Users, label: 'Parents', id: 'families' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
     { icon: Key, label: 'Admission Keys', id: 'admission-keys' },
-    { icon: CreditCard, label: 'Fees', id: 'fees' },
+    {
+      icon: CreditCard,
+      label: 'Fees',
+      id: 'fees-menu',
+      subItems: [
+        { label: 'Overview', id: 'fees' },
+        { label: 'Student Fees', id: 'fees-students' },
+        { label: 'Fee Config', id: 'fees-config' },
+      ],
+    },
     { icon: FileText, label: 'Invoices', id: 'invoices' },
-    { icon: Calendar, label: 'Attendance', id: 'attendance' },
+    {
+      icon: Calendar,
+      label: 'Attendance',
+      id: 'attendance-menu',
+      subItems: [
+        { label: 'Overview', id: 'attendance' },
+        { label: 'Student Report', id: 'student-attendance' },
+        { label: 'Staff Attendance', id: 'staff-attendance' },
+      ],
+    },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     { icon: FileText, label: 'Diary', id: 'diary' },
