@@ -90,11 +90,8 @@ export const BranchManagement: React.FC = () => {
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8"
     >
-      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div>
-          <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">Branch Directory</h3>
-          <p className="text-slate-500 font-medium">Manage and monitor all school branches across different cities</p>
-        </div>
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-end gap-4">
+       
         <button 
           onClick={handleAdd}
           className="px-6 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2"

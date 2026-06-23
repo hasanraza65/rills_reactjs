@@ -136,11 +136,8 @@ export const ClassSyllabusManager: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">Class Syllabus</h2>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">Manage syllabus content, pages, and links</p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-end justify-end gap-4">
+        
         <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
           <Button variant="outline" onClick={() => setIsDeadlineModalOpen(true)} leftIcon={<Calendar size={18} />}>
             Deadline

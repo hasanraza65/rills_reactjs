@@ -264,11 +264,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
             className="space-y-8"
           >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">School Directory</h3>
-                <p className="text-slate-500 font-medium">Manage all registered schools and their branches</p>
-              </div>
+            <div className="flex items-center justify-end">
+             
               <button className="px-6 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2">
                 <Plus size={20} />
                 Register New School

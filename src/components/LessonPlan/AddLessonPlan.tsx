@@ -100,12 +100,6 @@ export const AddLessonPlan: React.FC = () => {
 
   return (
     <div className="space-y-6 relative">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2">Lesson Plans</h2>
-          <p className="text-slate-500 font-medium">Manage topics, subjects, and lesson plan content.</p>
-        </div>
-      </div>
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">

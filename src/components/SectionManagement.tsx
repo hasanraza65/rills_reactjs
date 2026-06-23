@@ -94,11 +94,8 @@ export const SectionManagement: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">Sections</h2>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">Manage and organize class sections</p>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-end gap-4">
+       
         <div className="flex items-center justify-center sm:justify-end gap-3">
           <Button onClick={handleOpenAddForm} leftIcon={<Plus size={18} />} className="w-full sm:w-auto">
             Add Section

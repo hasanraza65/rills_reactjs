@@ -165,19 +165,13 @@ export const ResultsManager: React.FC = () => {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">Results</h2>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">Manage student exam results and grading</p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-end">
-          <Button variant="outline" leftIcon={<Download size={18} />}>
-            Export CSV
-          </Button>
-          <Button onClick={handleOpenAddModal} leftIcon={<Plus size={18} />}>
-            Add Result
-          </Button>
-        </div>
+      <div className="flex flex-wrap items-center gap-2 justify-end">
+        <Button variant="outline" leftIcon={<Download size={18} />}>
+          Export CSV
+        </Button>
+        <Button onClick={handleOpenAddModal} leftIcon={<Plus size={18} />}>
+          Add Result
+        </Button>
       </div>
 
       <Card padding="none" className="overflow-hidden">

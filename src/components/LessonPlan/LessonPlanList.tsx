@@ -70,10 +70,7 @@ export const LessonPlanList: React.FC = () => {
 
   return (
     <div className="space-y-6 relative">
-      <div>
-        <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2">Lesson Plans Status</h2>
-        <p className="text-slate-500 font-medium">View and update the status of lesson plans.</p>
-      </div>
+     
 
       {/* Filters */}
       <div className="flex flex-wrap items-end gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">

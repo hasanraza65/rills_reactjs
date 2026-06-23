@@ -543,17 +543,7 @@ export const SubjectModule: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">
-            Subjects
-          </h2>
-          <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">
-            Select a class section to view its subjects
-          </p>
-        </div>
-      </div>
+    
 
       <Card padding="none" className="overflow-hidden">
         {/* Search & Filter */}
