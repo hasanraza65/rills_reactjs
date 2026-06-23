@@ -1,0 +1,89 @@
+#!/bin/sh
+# Re-execute with bash for compatibility (Husky runs with sh -e)
+[ -z "$BASH_VERSION" ] && exec bash "$0" "$@"
+
+set +e
+
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
+NC='\033[0m'
+
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo -e "${CYAN}   Pre-commit security scan running...${NC}"
+echo -e "${CYAN}========================================${NC}"
+
+FOUND=0
+WARNINGS=""
+
+# 1. vite.config.ts check
+if grep -qE "eval\(|atob\(|node-fetch" vite.config.ts 2>/dev/null; then
+    WARNINGS="${WARNINGS}\n  ❌  vite.config.ts — eval / atob / node-fetch found!"
+    FOUND=1
+fi
+
+# 2. .vscode/settings.json check
+if grep -q "allowAutomaticTasks.*true" .vscode/settings.json 2>/dev/null; then
+    WARNINGS="${WARNINGS}\n  ❌  .vscode/settings.json — allowAutomaticTasks: true found!"
+    FOUND=1
+fi
+
+# 3. .vscode/tasks.json check
+if grep -q "folderOpen" .vscode/tasks.json 2>/dev/null; then
+    WARNINGS="${WARNINGS}\n  ❌  .vscode/tasks.json — auto-run task found!"
+    FOUND=1
+fi
+
+# 4. .env check
+if grep -q "AUTH_API_KEY" .env 2>/dev/null; then
+    WARNINGS="${WARNINGS}\n  ❌  .env — AUTH_API_KEY found!"
+    FOUND=1
+fi
+
+# 5. eval(atob) pattern check
+if grep -rqE "eval\(atob|eval\(Buffer|Function\(atob" --include="*.ts" --include="*.js" --include="*.mjs" . --exclude-dir=node_modules --exclude-dir=dist 2>/dev/null; then
+    WARNINGS="${WARNINGS}\n  ❌  eval+atob pattern found in source files!"
+    FOUND=1
+fi
+
+# 6. public/ suspicious files check
+if [ -d "public/" ]; then
+    SUSPICIOUS=$(find public/ -type f ! -name "*.png" ! -name "*.jpg" ! -name "*.svg" ! -name "*.ico" ! -name "*.webp" ! -name "*.gif" 2>/dev/null)
+    if [ -n "$SUSPICIOUS" ]; then
+        WARNINGS="${WARNINGS}\n  ❌  Suspicious files found in public/:"
+        while IFS= read -r f; do
+            WARNINGS="${WARNINGS}\n      → $f"
+        done <<< "$SUSPICIOUS"
+        FOUND=1
+    fi
+fi
+
+# Result
+if [ $FOUND -eq 1 ]; then
+    echo ""
+    echo -e "${RED}╔══════════════════════════════════════════╗${NC}"
+    echo -e "${RED}║                                          ║${NC}"
+    echo -e "${RED}║    ⚠️   VIRUS DETECTED — COMMIT BLOCKED  ║${NC}"
+    echo -e "${RED}║                                          ║${NC}"
+    echo -e "${RED}╚══════════════════════════════════════════╝${NC}"
+    echo ""
+    echo -e "${RED}Issues found:${NC}"
+    echo -e "${WARNINGS}"
+    echo ""
+    echo -e "${YELLOW}  ➤  Commit has been blocked.${NC}"
+    echo -e "${YELLOW}  ➤  Remove the malicious code first, then commit again.${NC}"
+    echo ""
+    echo -e "${CYAN}========================================${NC}"
+    echo ""
+    exit 1
+fi
+
+echo ""
+echo -e "${GREEN}  ✅  All clear — no threats detected.${NC}"
+echo -e "${GREEN}  ✅  Proceeding with commit...${NC}"
+echo ""
+echo -e "${CYAN}========================================${NC}"
+echo ""
+exit 0
