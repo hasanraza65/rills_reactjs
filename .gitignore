@@ -11,3 +11,4 @@ temp_interactive_push.bat
 .gitignore
 config.bat
 nul
+.env
