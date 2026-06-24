@@ -9,20 +9,21 @@ import {
   Menu
 } from 'lucide-react';
 
-import { Branch, User, ROLES } from '../types';
+import { User, ROLES } from '../types';
 import { cn } from '../types';
+import { Branch } from '../types/models/branch';
 
 interface HeaderProps {
   user: User;
-  currentBranch: Branch;
+  branches: Branch[];
+  currentBranch: Branch | null;
   onBranchChange: (branch: Branch) => void;
   onLogout: () => void;
   onMenuClick: () => void;
 }
 
 
-export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchChange, onLogout, onMenuClick }) => {
-  const branches = user?.branches || [];
+export const Header: React.FC<HeaderProps> = ({ user, branches, currentBranch, onBranchChange, onLogout, onMenuClick }) => {
 
   return (
     <header className={cn(
@@ -54,8 +55,8 @@ export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchCha
 
         <div className="flex items-center gap-2">
           <Globe size={18} className="text-slate-400" />
-            <select 
-              value={currentBranch?.id || ''}
+            <select
+              value={currentBranch?.id ?? ''}
               onChange={(e) => {
                 const b = branches.find(br => br.id === Number(e.target.value));
                 if (b) onBranchChange(b);
@@ -66,9 +67,9 @@ export const Header: React.FC<HeaderProps> = ({ user, currentBranch, onBranchCha
                 branches.map(b => (
                   <option key={b.id} value={b.id}>{b.branch_name}</option>
                 ))
-              ) : currentBranch ? (
-                <option value={currentBranch.id}>{currentBranch.branch_name}</option>
-              ) : null}
+              ) : (
+                <option value="">Loading...</option>
+              )}
             </select>
         </div>
       </div>

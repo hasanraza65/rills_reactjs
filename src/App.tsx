@@ -3,25 +3,27 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Auth/Login';
-import { Branch, BRANCHES, cn } from './types';
+import { cn } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from './store/use-auth-store';
 import { UserRole } from './types/models/user';
 import { useBranchStore } from './store/use-branch-store';
+import { useBranches } from './hooks/use-branch';
+import { Branch } from './types/models/branch';
 
 export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
-  const branches = user?.branches || [];
   const { selectedBranchId, setSelectedBranchId } = useBranchStore();
-  
+  const { data: branches = [] } = useBranches();
+
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Derived currentBranch object
   const currentBranch = React.useMemo(() => {
-    if (!branches || branches.length === 0) return BRANCHES[0];
+    if (!branches || branches.length === 0) return null;
     const found = branches.find((b: Branch) => b.id === selectedBranchId);
-    return found || branches[0] || BRANCHES[0];
+    return found || branches[0];
   }, [branches, selectedBranchId]);
 
   React.useEffect(() => {
@@ -83,10 +85,11 @@ export default function App() {
 
       
       <main className={cn("flex-1 pt-20 transition-all duration-300 overflow-x-hidden", role !== 'GATE_KEEPER' && "lg:ml-72")}>
-        <Header 
-          user={user as any} 
-          currentBranch={currentBranch} 
-          onBranchChange={handleBranchChange} 
+        <Header
+          user={user as any}
+          branches={branches}
+          currentBranch={currentBranch}
+          onBranchChange={handleBranchChange}
           onLogout={handleLogout}
           onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
         />
