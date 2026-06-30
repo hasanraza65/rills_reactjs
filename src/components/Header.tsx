@@ -7,10 +7,10 @@ import {
   LayoutGrid,
   LogOut,
   Menu,
-  Key
+  Key,
 } from 'lucide-react';
 
-import { Branch, User, ROLES } from '../types';
+import { Branch, User, ROLES, UserRole } from '../types';
 import { cn } from '../types';
 
 const TAB_LABELS: Record<string, string> = {
@@ -55,6 +55,8 @@ interface HeaderProps {
   onMenuClick: () => void;
   onNotificationClick: () => void;
   onAdmissionKeyClick?: () => void;
+  availableRoles?: UserRole[];
+  onRoleChange?: (role: UserRole) => void;
 }
 
 
@@ -67,9 +69,23 @@ export const Header: React.FC<HeaderProps> = ({
   onMenuClick,
   onNotificationClick,
   onAdmissionKeyClick,
+  availableRoles,
+  onRoleChange,
 }) => {
   const branches = user?.branches || [];
   const pageTitle = TAB_LABELS[activeTab] ?? activeTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+  const [isProfileOpen, setIsProfileOpen] = React.useState(false);
+  const profileRef = React.useRef<HTMLDivElement>(null);
+
+  React.useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   return (
     <header className={cn(
@@ -154,22 +170,73 @@ export const Header: React.FC<HeaderProps> = ({
 
             <div className="h-8 w-px bg-slate-200" />
 
-            <button className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl hover:bg-slate-50 transition-all group">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-none mb-1">{user.name}</p>
-                <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold text-white inline-block uppercase tracking-wider", ROLES[user.role].color)}>
-                  {ROLES[user.role].label}
+            {/* Profile dropdown */}
+            <div className="relative" ref={profileRef}>
+              <button
+                onClick={() => setIsProfileOpen(prev => !prev)}
+                className="flex items-center gap-3 pl-2 pr-1 py-1 rounded-2xl hover:bg-slate-50 transition-all group"
+              >
+                <div className="text-right hidden sm:block">
+                  <p className="text-sm font-bold text-slate-800 leading-none mb-1">{user.name}</p>
+                  <div className={cn("px-2 py-0.5 rounded-full text-[10px] font-bold text-white inline-block uppercase tracking-wider", ROLES[user.role].color)}>
+                    {ROLES[user.role].label}
+                  </div>
                 </div>
-              </div>
-              <div className="w-10 h-10 rounded-xl bg-brand-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
-                <img
-                  src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
-                  alt="Avatar"
-                  className="w-full h-full object-cover"
+                <div className="w-10 h-10 rounded-xl bg-brand-100 border-2 border-white shadow-sm flex items-center justify-center overflow-hidden">
+                  <img
+                    src={`https://api.dicebear.com/7.x/avataaars/svg?seed=${user.name}`}
+                    alt="Avatar"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <ChevronDown
+                  size={16}
+                  className={cn("text-slate-400 transition-transform duration-200", isProfileOpen && "rotate-180")}
                 />
-              </div>
-              <ChevronDown size={16} className="text-slate-400 group-hover:text-slate-600 transition-all" />
-            </button>
+              </button>
+
+              {/* Dropdown panel */}
+              {isProfileOpen && (
+                <div className="absolute right-0 top-full mt-3 w-60 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50">
+                  {/* Email only — name & role already visible in navbar */}
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-xs text-slate-400 truncate">{user.email || user.name}</p>
+                  </div>
+
+                  {/* Role switcher — only shown when user has multiple roles */}
+                  {availableRoles && availableRoles.length > 1 && onRoleChange && (
+                    <div className="px-3 py-3 border-b border-slate-100">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Switch Role</p>
+                      <div className="flex p-1 bg-slate-50 rounded-xl border border-slate-100">
+                        {availableRoles.map((r) => (
+                          <button
+                            key={r}
+                            onClick={() => { onRoleChange(r); setIsProfileOpen(false); }}
+                            className={cn(
+                              "flex-1 py-1.5 rounded-lg text-[10px] font-bold uppercase tracking-wider transition-all",
+                              user.role === r ? "text-brand-600 bg-white shadow-sm border border-brand-100" : "text-slate-400 hover:text-slate-600"
+                            )}
+                          >
+                            {r.replace('_', ' ')}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Logout */}
+                  <div className="px-2 py-2">
+                    <button
+                      onClick={() => { setIsProfileOpen(false); onLogout(); }}
+                      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-rose-500 hover:bg-rose-50 transition-all text-sm font-semibold"
+                    >
+                      <LogOut size={16} />
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           </>
         ) : (
           <button

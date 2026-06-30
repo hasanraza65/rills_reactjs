@@ -97,6 +97,8 @@ export default function App() {
           onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
           onNotificationClick={() => setIsNotificationOpen(true)}
           onAdmissionKeyClick={role === 'BRANCH_ADMIN' ? () => setIsAddKeyModalOpen(true) : undefined}
+          availableRoles={user.roles as any}
+          onRoleChange={handleRoleChange}
         />
 
         
