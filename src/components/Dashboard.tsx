@@ -1643,7 +1643,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
               {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
             </h1>
 
-            <p className="text-slate-500 font-medium mt-1">Welcome back to your EduFlow control center.</p>
+            <p className="text-slate-500 font-medium mt-1">Welcome back to your NSSE control center.</p>
           </div>
           <div className="flex items-center gap-4">
             {role === 'BRANCH_ADMIN' && (

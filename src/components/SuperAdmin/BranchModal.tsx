@@ -17,7 +17,7 @@ export const BranchModal: React.FC<BranchModalProps> = ({ isOpen, onClose, schoo
   const [generatedCreds, setGeneratedCreds] = useState<{ email: string; pass: string } | null>(null);
 
   const handleGenerate = () => {
-    const email = `${name.toLowerCase().replace(/\s+/g, '.')}.${schoolName.toLowerCase().split(' ')[0]}@eduflow.pk`;
+    const email = `${name.toLowerCase().replace(/\s+/g, '.')}.${schoolName.toLowerCase().split(' ')[0]}@nsse.edu.pk`;
     const pass = Math.random().toString(36).slice(-8).toUpperCase();
     setGeneratedCreds({ email, pass });
   };

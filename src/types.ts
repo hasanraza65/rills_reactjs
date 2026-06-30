@@ -352,7 +352,7 @@ export const STAFF_DATA: Staff[] = [
   {
     id: 'stf1',
     name: 'Sarah Johnson',
-    email: 'sarah.j@eduflow.com',
+    email: 'sarah.j@nsse.edu.pk',
     phone: '0300-1112223',
     cnic: '35201-1234567-3',
     role: 'TEACHER',
@@ -365,7 +365,7 @@ export const STAFF_DATA: Staff[] = [
   {
     id: 'stf2',
     name: 'Michael Chen',
-    email: 'm.chen@eduflow.com',
+    email: 'm.chen@nsse.edu.pk',
     phone: '0321-4445556',
     cnic: '35201-9876543-1',
     role: 'ADMIN',
