@@ -3,7 +3,6 @@ import { motion, AnimatePresence } from 'motion/react';
 
 import { 
   LayoutDashboard, 
-  School, 
   Users, 
   BookOpen, 
   Calendar, 
@@ -39,7 +38,6 @@ interface SidebarProps {
 const menuItems: Record<UserRole, any[]> = {
   SUPER_ADMIN: [
     { icon: LayoutDashboard, label: 'Overview', id: 'overview' },
-    { icon: School, label: 'Schools', id: 'schools' },
     { icon: Building2, label: 'Branches', id: 'branches' },
     {
       icon: BookOpen,

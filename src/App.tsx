@@ -3,11 +3,13 @@ import { Sidebar } from './components/Sidebar';
 import { Header } from './components/Header';
 import { Dashboard } from './components/Dashboard';
 import { Login } from './components/Auth/Login';
+import { AddAdmissionKeyModal } from './components/AddAdmissionKeyModal';
 import { Branch, BRANCHES, cn } from './types';
 import { motion, AnimatePresence } from 'motion/react';
 import { useAuthStore } from './store/use-auth-store';
 import { UserRole } from './types/models/user';
 import { useBranchStore } from './store/use-branch-store';
+import { useCreateAdmissionKey } from './hooks/use-admission-keys';
 
 export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
@@ -16,6 +18,9 @@ export default function App() {
   
   const [activeTab, setActiveTab] = useState<string>('overview');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
+  const [isAddKeyModalOpen, setIsAddKeyModalOpen] = useState(false);
+  const createKeyMutation = useCreateAdmissionKey();
 
   // Derived currentBranch object
   const currentBranch = React.useMemo(() => {
@@ -83,12 +88,15 @@ export default function App() {
 
       
       <main className={cn("flex-1 pt-20 transition-all duration-300 overflow-x-hidden", role !== 'GATE_KEEPER' && "lg:ml-72")}>
-        <Header 
-          user={user as any} 
-          currentBranch={currentBranch} 
-          onBranchChange={handleBranchChange} 
+        <Header
+          user={user as any}
+          currentBranch={currentBranch}
+          activeTab={activeTab}
+          onBranchChange={handleBranchChange}
           onLogout={handleLogout}
           onMenuClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          onNotificationClick={() => setIsNotificationOpen(true)}
+          onAdmissionKeyClick={role === 'BRANCH_ADMIN' ? () => setIsAddKeyModalOpen(true) : undefined}
         />
 
         
@@ -100,14 +108,31 @@ export default function App() {
             exit={{ opacity: 0, x: -20 }}
             transition={{ duration: 0.3 }}
           >
-            <Dashboard 
-              role={role} 
+            <Dashboard
+              role={role}
               activeTab={activeTab}
               onTabChange={setActiveTab}
+              isNotificationOpen={isNotificationOpen}
+              onNotificationClose={() => setIsNotificationOpen(false)}
             />
           </motion.div>
         </AnimatePresence>
       </main>
+
+      <AddAdmissionKeyModal
+        isOpen={isAddKeyModalOpen}
+        onClose={() => setIsAddKeyModalOpen(false)}
+        branchId={selectedBranchId || 1}
+        isLoading={createKeyMutation.isPending}
+        onConfirm={async (payload) => {
+          try {
+            await createKeyMutation.mutateAsync(payload);
+            setIsAddKeyModalOpen(false);
+          } catch (err) {
+            console.error('Failed to create key:', err);
+          }
+        }}
+      />
     </div>
   );
 }

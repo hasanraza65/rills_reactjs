@@ -15,7 +15,7 @@ import {
   X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import { cn, CLASSES, SYLLABUS_DATA, BRANCHES, SCHOOLS, UserRole, Syllabus } from '../../types';
+import { cn, CLASSES, SYLLABUS_DATA, BRANCHES, UserRole, Syllabus } from '../../types';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
@@ -194,30 +194,6 @@ export const SyllabusManager: React.FC<SyllabusManagerProps> = ({ role }) => {
               </div>
 
               <div className="p-6 sm:p-10 space-y-8 sm:space-y-10 max-h-[60vh] overflow-y-auto custom-scrollbar">
-                {role === 'SUPER_ADMIN' && (
-                  <div className="space-y-6">
-                    <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">
-                      <SchoolIcon size={14} />
-                      Assign to Schools
-                    </h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {SCHOOLS.map(school => (
-                        <button
-                          key={school.id}
-                          className={cn(
-                            "flex items-center justify-between p-5 rounded-2xl border-2 transition-all shadow-sm",
-                            activeSyllabus.assignedSchools.includes(school.id)
-                              ? "border-brand-500 bg-brand-50 text-brand-700"
-                              : "border-slate-50 hover:border-slate-100 text-slate-600 bg-white"
-                          )}
-                        >
-                          <span className="text-sm font-black">{school.name}</span>
-                          {activeSyllabus.assignedSchools.includes(school.id) && <CheckCircle2 size={20} className="text-brand-500" />}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="space-y-6">
                   <h4 className="text-xs font-black text-slate-400 uppercase tracking-[0.2em] flex items-center gap-2">

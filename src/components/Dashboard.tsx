@@ -9,7 +9,6 @@ import {
   ArrowUpRight,
   CheckCircle2,
   AlertCircle,
-  School,
   Plus,
   Settings,
   LayoutDashboard,
@@ -21,19 +20,16 @@ import {
   ShieldCheck,
   FileText,
   Library as LibraryIcon,
-  Bell,
   Book as BookIcon,
   Loader2,
   Trash2,
   Eye,
   Edit2,
-  Key,
   MoreHorizontal,
   Layers,
   Building2
 } from 'lucide-react';
 import { StatCard } from './StatCard';
-import { SchoolCard } from './SuperAdmin/SchoolCard';
 import { PricingConfig } from './SuperAdmin/PricingConfig';
 import { BranchManagement } from './SuperAdmin/BranchManagement';
 import { AddStudentForm } from './AddStudentForm';
@@ -62,10 +58,8 @@ import { SubjectModule } from './SubjectModule';
 import { AdmissionKeys } from './AdmissionKeys';
 import { InvoiceManagement } from './FeeManagement/InvoiceManagement';
 import { useStudents, useDeleteStudent } from '../hooks/use-student';
-import { useCreateAdmissionKey } from '../hooks/use-admission-keys';
 import { StudentDetailsModal } from './StudentDetailsModal';
 import { NotificationPanel } from './NotificationPanel';
-import { AddAdmissionKeyModal } from './AddAdmissionKeyModal';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
@@ -83,7 +77,7 @@ import {
   Cell
 } from 'recharts';
 import { motion, AnimatePresence } from 'motion/react';
-import { UserRole, cn, SCHOOLS, CLASSES } from '../types';
+import { UserRole, cn, CLASSES } from '../types';
 import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
 import { useAuthStore } from '../store/use-auth-store';
 import { useBranchStore } from '../store/use-branch-store';
@@ -110,32 +104,20 @@ interface DashboardProps {
   role: UserRole;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  isNotificationOpen?: boolean;
+  onNotificationClose?: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChange }) => {
+export const Dashboard: React.FC<DashboardProps> = ({
+  role,
+  activeTab,
+  onTabChange,
+  isNotificationOpen = false,
+  onNotificationClose,
+}) => {
   const { user } = useAuthStore();
   const { selectedBranchId } = useBranchStore();
-  const [isNotificationOpen, setIsNotificationOpen] = React.useState(false);
-  const [isAddKeyModalOpen, setIsAddKeyModalOpen] = React.useState(false);
 
-  const createKeyMutation = useCreateAdmissionKey();
-
-  const handleCreateKey = async (phoneNumber: string) => {
-    try {
-      await createKeyMutation.mutateAsync({
-        branch_id: selectedBranchId || 1, 
-        key: phoneNumber,
-        visitor_name: '',
-        address: '',
-        purpose: '',
-        remarks: '',
-        students: []
-      });
-      setIsAddKeyModalOpen(false);
-    } catch (err) {
-      console.error('Failed to create key:', err);
-    }
-  };
   const [isLoading, setIsLoading] = React.useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
   
@@ -190,15 +172,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
             exit={{ opacity: 0, y: -10 }}
             className="space-y-8"
           >
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              <StatCard title="Total Schools" value="124" change="12%" isPositive icon={GraduationCap} color="blue" delay={0.1} />
-              <StatCard title="Active Students" value="45,230" change="8%" isPositive icon={Users} color="emerald" delay={0.2} />
-              <StatCard title="Total Revenue" value="$1.2M" change="24%" isPositive icon={CreditCard} color="purple" delay={0.3} />
-              <StatCard title="System Health" value="99.9%" icon={TrendingUp} color="indigo" delay={0.4} />
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              <StatCard title="Active Students" value="45,230" change="8%" isPositive icon={Users} color="emerald" delay={0.1} />
+              <StatCard title="Total Revenue" value="$1.2M" change="24%" isPositive icon={CreditCard} color="purple" delay={0.2} />
+              <StatCard title="System Health" value="99.9%" icon={TrendingUp} color="indigo" delay={0.3} />
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 sm:gap-8">
-              <div className="lg:col-span-2 bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
+            <div className="grid grid-cols-1 gap-6 sm:gap-8">
+              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
 
                 <div className="flex items-center justify-between mb-8">
                   <div>
@@ -231,58 +212,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
                 </div>
               </div>
 
-              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
-
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Recent Schools</h3>
-                <div className="space-y-6">
-                  {[1, 2, 3, 4].map((i) => (
-                    <div key={i} className="flex items-center gap-4 group cursor-pointer">
-                      <div className="w-12 h-12 rounded-2xl bg-slate-50 flex items-center justify-center group-hover:bg-brand-50 transition-colors">
-                        <School className="text-slate-400 group-hover:text-brand-500" size={20} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm font-bold text-slate-800">Horizon Academy {i}</p>
-                        <p className="text-xs text-slate-500">Premium Plan • 1,200 Students</p>
-                      </div>
-                      <ArrowUpRight size={16} className="text-slate-300 group-hover:text-brand-500" />
-                    </div>
-                  ))}
-                </div>
-                <button className="w-full mt-8 py-3 rounded-2xl bg-slate-50 text-slate-600 text-sm font-bold hover:bg-slate-100 transition-all">
-                  View All Schools
-                </button>
-              </div>
             </div>
           </motion.div>
         )}
 
-        {activeTab === 'schools' && (
-          <motion.div
-            key="schools"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-8"
-          >
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">School Directory</h3>
-                <p className="text-slate-500 font-medium">Manage all registered schools and their branches</p>
-              </div>
-              <button className="px-6 py-4 rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center gap-2">
-                <Plus size={20} />
-                Register New School
-              </button>
-            </div>
-
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-              {SCHOOLS.map((school) => (
-                <SchoolCard key={school.id} school={school} />
-              ))}
-            </div>
-          </motion.div>
-        )}
-        
         {activeTab === 'branches' && (
           <motion.div
             key="branches"
@@ -1636,59 +1569,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ role, activeTab, onTabChan
       role !== 'GATE_KEEPER' ? "max-w-[1600px]" : "max-w-none"
     )}>
 
-      {role !== 'GATE_KEEPER' && (
-        <div className="flex items-center justify-between mb-10">
-          <div>
-            <h1 className="text-2xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">
-              {activeTab === 'overview' ? 'Dashboard' : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)}
-            </h1>
-
-            <p className="text-slate-500 font-medium mt-1">Welcome back to your NSSE control center.</p>
-          </div>
-          <div className="flex items-center gap-4">
-            {role === 'BRANCH_ADMIN' && (
-              <Button 
-                variant="outline" 
-                size="icon"
-                onClick={() => setIsAddKeyModalOpen(true)}
-                className="relative text-brand-600 border-brand-100 hover:bg-brand-50"
-                title="Generate Admission Key"
-              >
-                <Key size={18} />
-              </Button>
-            )}
-            <Button 
-              variant="outline" 
-              size="icon"
-              onClick={() => setIsNotificationOpen(true)}
-              className="relative"
-            >
-              <Bell size={20} />
-              <div className="absolute top-3 right-3 w-2 h-2 bg-rose-500 rounded-full border-2 border-white" />
-            </Button>
-            <div className="flex items-center gap-3 pl-4 border-l border-slate-200">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-bold text-slate-800 leading-tight">{user?.name || 'User'}</p>
-                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{role.replace('_', ' ')}</p>
-              </div>
-              <div className="w-12 h-12 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold shadow-inner border border-brand-100">
-                {user?.name ? user.name.split(' ').map(n => n[0]).join('').toUpperCase() : 'U'}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {renderContent()}
 
-      <NotificationPanel isOpen={isNotificationOpen} onClose={() => setIsNotificationOpen(false)} />
-      
-      <AddAdmissionKeyModal 
-        isOpen={isAddKeyModalOpen}
-        onClose={() => setIsAddKeyModalOpen(false)}
-        onConfirm={handleCreateKey}
-        isLoading={createKeyMutation.isPending}
-      />
+      <NotificationPanel isOpen={isNotificationOpen} onClose={() => onNotificationClose?.()} />
     </div>
   );
 };
