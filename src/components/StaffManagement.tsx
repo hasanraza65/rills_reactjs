@@ -494,9 +494,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
               <div className="p-8">
                 <div className="flex justify-between items-start mb-8">
                   <div className="flex items-center gap-3">
-                    <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center text-white font-black text-2xl">E</div>
+                    <img src="/logo.png" alt="Nawaz Sharif School of Eminence" className="h-12 w-auto object-contain" />
                     <div>
-                      <h2 className="text-xl font-bold text-gray-900">EduFlow Systems</h2>
                       <p className="text-xs text-gray-500">Official Salary Payslip</p>
                     </div>
                   </div>

@@ -330,11 +330,11 @@ export const Login: React.FC<LoginProps> = ({ onLogin }) => {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-brand-50 via-slate-50 to-white">
       <div className="w-full max-w-lg">
         <div className="text-center mb-12">
-          <div className="w-20 h-20 bg-brand-500 rounded-[2rem] flex items-center justify-center text-white mx-auto mb-6 shadow-2xl shadow-brand-200 rotate-3">
-            <School size={40} />
-          </div>
-          <h1 className="text-4xl font-black text-slate-900 tracking-tight mb-2">EduFlow</h1>
-          <p className="text-slate-500 font-medium">Smart School Management System</p>
+          <img
+            src="/logo.png"
+            alt="Nawaz Sharif School of Eminence"
+            className="h-20 w-auto object-contain mx-auto mb-4"
+          />
         </div>
 
         <div className="bg-white p-10 rounded-[3rem] shadow-2xl shadow-slate-200/50 border border-white relative overflow-hidden">

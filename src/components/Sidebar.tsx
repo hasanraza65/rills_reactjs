@@ -197,11 +197,12 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
       )}>
 
         <div className="p-8 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl gradient-primary flex items-center justify-center text-white shadow-lg shadow-brand-200">
-              <School size={24} />
-            </div>
-            <span className="text-xl font-bold tracking-tight text-slate-800">EduFlow</span>
+          <div className="flex items-center">
+            <img
+              src="/logo.png"
+              alt="Nawaz Sharif School of Eminence"
+              className="h-14 w-auto object-contain"
+            />
           </div>
           <button 
             onClick={onClose}
