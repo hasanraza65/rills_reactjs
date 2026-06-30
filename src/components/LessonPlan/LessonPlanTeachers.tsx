@@ -164,7 +164,7 @@ export const LessonPlanTeachers: React.FC = () => {
 
         {/* Pagination */}
         <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
-          <div className="px-4 py-2 rounded-lg bg-blue-50 text-brand-600 text-sm font-bold border border-blue-100">
+          <div className="px-4 py-2 rounded-lg bg-green-50 text-brand-600 text-sm font-bold border border-green-100">
             Showing page 1 of 3
           </div>
           <div className="flex items-center gap-2">

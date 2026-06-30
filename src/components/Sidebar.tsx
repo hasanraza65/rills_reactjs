@@ -193,7 +193,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
 
-        <div className="p-8 flex items-center justify-between">
+        <div className="px-4 py-4 flex items-center justify-between">
           <div className="flex items-center">
             <img
               src="/logo.png"

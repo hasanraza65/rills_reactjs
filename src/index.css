@@ -10,16 +10,16 @@
   --radius-3xl: 2rem;
   --radius-4xl: 3rem;
   
-  --color-brand-50: #f0f9ff;
-  --color-brand-100: #e0f2fe;
-  --color-brand-200: #bae6fd;
-  --color-brand-300: #7dd3fc;
-  --color-brand-400: #38bdf8;
-  --color-brand-500: #0ea5e9;
-  --color-brand-600: #0284c7;
-  --color-brand-700: #0369a1;
-  --color-brand-800: #075985;
-  --color-brand-900: #0c4a6e;
+  --color-brand-50: #f0fdf4;
+  --color-brand-100: #dcfce7;
+  --color-brand-200: #bbf7d0;
+  --color-brand-300: #4ade80;
+  --color-brand-400: #16a34a;
+  --color-brand-500: #15803d;
+  --color-brand-600: #166534;
+  --color-brand-700: #14532d;
+  --color-brand-800: #052e16;
+  --color-brand-900: #021a0b;
 
   --shadow-premium: 0 10px 30px -5px rgba(0, 0, 0, 0.04), 0 4px 10px -5px rgba(0, 0, 0, 0.02);
   --shadow-premium-hover: 0 20px 40px -5px rgba(0, 0, 0, 0.08), 0 8px 16px -5px rgba(0, 0, 0, 0.04);
@@ -54,7 +54,7 @@
 }
 
 .gradient-primary {
-  @apply bg-gradient-to-br from-brand-500 to-indigo-600;
+  @apply bg-gradient-to-br from-brand-500 to-brand-700;
 }
 
 .gradient-surface {

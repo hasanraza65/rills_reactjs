@@ -257,8 +257,8 @@ export const DIARY_ENTRIES: DiaryEntry[] = [
 
 export const ROLES: Record<UserRole, { label: string; color: string }> = {
   SUPER_ADMIN: { label: 'Super Admin', color: 'bg-purple-500' },
-  SCHOOL_ADMIN: { label: 'School Admin', color: 'bg-blue-500' },
-  BRANCH_ADMIN: { label: 'Branch Admin', color: 'bg-indigo-500' },
+  SCHOOL_ADMIN: { label: 'School Admin', color: 'bg-green-600' },
+  BRANCH_ADMIN: { label: 'Branch Admin', color: 'bg-brand-500' },
   TEACHER: { label: 'Teacher', color: 'bg-emerald-500' },
   PARENT: { label: 'Parent', color: 'bg-amber-500' },
   GATE_KEEPER: { label: 'Gate Keeper', color: 'bg-rose-500' },
