@@ -81,6 +81,8 @@ import { UserRole, cn, CLASSES } from '../types';
 import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
 import { useAuthStore } from '../store/use-auth-store';
 import { useBranchStore } from '../store/use-branch-store';
+import { useDashboardOverview } from '../hooks/use-dashboard';
+import type { BranchAdminOverview, SuperAdminOverview, TeacherOverview, ParentOverview } from '../lib/services/dashboard-service';
 
 const data = [
   { name: 'Mon', students: 400, revenue: 2400 },
@@ -117,6 +119,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const { user } = useAuthStore();
   const { selectedBranchId } = useBranchStore();
+  const { data: overviewResp, isLoading: isLoadingOverview } = useDashboardOverview(selectedBranchId);
 
   const [isLoading, setIsLoading] = React.useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
@@ -161,7 +164,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   }
 
-  const renderSuperAdmin = () => (
+  const renderSuperAdmin = () => {
+    const d = overviewResp?.data as SuperAdminOverview | undefined;
+    return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
@@ -173,9 +178,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className="space-y-8"
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard title="Active Students" value="45,230" change="8%" isPositive icon={Users} color="emerald" delay={0.1} />
-              <StatCard title="Total Revenue" value="$1.2M" change="24%" isPositive icon={CreditCard} color="purple" delay={0.2} />
-              <StatCard title="System Health" value="99.9%" icon={TrendingUp} color="indigo" delay={0.3} />
+              <StatCard
+                title="Active Students"
+                value={isLoadingOverview ? '...' : (d?.total_students ?? 0).toLocaleString()}
+                icon={Users} color="emerald" delay={0.1}
+              />
+              <StatCard
+                title="Fee Collection"
+                value={isLoadingOverview ? '...' : `${d?.fee_collection.percentage ?? 0}%`}
+                icon={CreditCard} color="purple" delay={0.2}
+              />
+              <StatCard
+                title="Attendance Today"
+                value={isLoadingOverview ? '...' : `${d?.attendance_today.percentage ?? 0}%`}
+                icon={TrendingUp} color="indigo" delay={0.3}
+              />
             </div>
 
             <div className="grid grid-cols-1 gap-6 sm:gap-8">
@@ -405,8 +422,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </AnimatePresence>
     </div>
   );
+  };
 
   const renderBranchAdmin = () => {
+    const bd = overviewResp?.data as BranchAdminOverview | undefined;
     const filteredStudents = students?.filter(s => {
       const query = studentSearchQuery.toLowerCase().trim();
       if (!query) return true;
@@ -447,10 +466,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className="space-y-8"
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-
-              <StatCard title="Total Students" value="1,240" change="5%" isPositive icon={Users} color="blue" delay={0.1} />
-              <StatCard title="Attendance Today" value="94%" change="2%" isPositive icon={Calendar} color="emerald" delay={0.2} />
-              <StatCard title="Fee Collection" value="82%" icon={CreditCard} color="purple" delay={0.3} />
+              <StatCard
+                title="Total Students"
+                value={isLoadingOverview ? '...' : (bd?.total_students ?? 0).toLocaleString()}
+                icon={Users} color="blue" delay={0.1}
+              />
+              <StatCard
+                title="Attendance Today"
+                value={isLoadingOverview ? '...' : `${bd?.attendance_today.percentage ?? 0}%`}
+                icon={Calendar} color="emerald" delay={0.2}
+              />
+              <StatCard
+                title="Fee Collection"
+                value={isLoadingOverview ? '...' : `${bd?.fee_collection.percentage ?? 0}%`}
+                icon={CreditCard} color="purple" delay={0.3}
+              />
             </div>
             
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
@@ -471,20 +501,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
               <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
                 <h3 className="text-xl font-bold text-slate-800 mb-6">Recent Admissions</h3>
                 <div className="space-y-4">
-                  {students?.slice(0, 4).map(s => (
-                    <div key={s.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
-                          <User size={20} />
-                        </div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                          <p className="text-xs text-slate-500">{s.class?.name || 'No Class'}</p>
+                  {isLoadingOverview ? (
+                    [1, 2, 3, 4].map(i => (
+                      <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 animate-pulse">
+                        <div className="w-10 h-10 rounded-xl bg-slate-200" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-3 bg-slate-200 rounded w-1/2" />
+                          <div className="h-2 bg-slate-100 rounded w-1/3" />
                         </div>
                       </div>
-                      <span className="text-xs font-bold text-slate-400">2h ago</span>
-                    </div>
-                  ))}
+                    ))
+                  ) : bd?.recent_admissions?.length ? (
+                    bd.recent_admissions.map(s => (
+                      <div key={s.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
+                            <User size={20} />
+                          </div>
+                          <div>
+                            <p className="text-sm font-bold text-slate-800">{s.name}</p>
+                            <p className="text-xs text-slate-500">{s.admission_no}</p>
+                          </div>
+                        </div>
+                        <span className="text-xs font-bold text-slate-400">
+                          {s.admission_date ?? '—'}
+                        </span>
+                      </div>
+                    ))
+                  ) : (
+                    <p className="text-sm text-slate-400 text-center py-6">No recent admissions</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -980,7 +1026,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
     );
   };
 
-  const renderTeacher = () => (
+  const renderTeacher = () => {
+    const td = overviewResp?.data as TeacherOverview | undefined;
+    return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
@@ -992,9 +1040,21 @@ export const Dashboard: React.FC<DashboardProps> = ({
             className="space-y-8"
           >
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard title="Today's Classes" value="4" icon={Calendar} color="blue" delay={0.1} />
-              <StatCard title="Total Students" value="142" icon={Users} color="emerald" delay={0.2} />
-              <StatCard title="Pending Assignments" value="12" icon={Clock} color="amber" delay={0.3} />
+              <StatCard
+                title="My Subjects"
+                value={isLoadingOverview ? '...' : String(td?.total_subjects ?? 0)}
+                icon={BookOpen} color="blue" delay={0.1}
+              />
+              <StatCard
+                title="Attendance Today"
+                value={isLoadingOverview ? '...' : `${td?.attendance_today.percentage ?? 0}%`}
+                icon={Calendar} color="emerald" delay={0.2}
+              />
+              <StatCard
+                title="Students Present"
+                value={isLoadingOverview ? '...' : String(td?.attendance_today.present ?? 0)}
+                icon={Users} color="amber" delay={0.3}
+              />
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -1104,8 +1164,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </AnimatePresence>
     </div>
   );
+  };
 
-  const renderParent = () => (
+  const renderParent = () => {
+    const pd = overviewResp?.data as ParentOverview | undefined;
+    return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
         {activeTab === 'overview' && (
@@ -1118,21 +1181,86 @@ export const Dashboard: React.FC<DashboardProps> = ({
           >
             <div className="bg-gradient-to-r from-brand-600 to-indigo-600 p-8 rounded-[2.5rem] text-white relative overflow-hidden shadow-xl shadow-brand-200">
               <div className="relative z-10">
-                <h2 className="text-3xl font-extrabold mb-2">Welcome back, Sarah!</h2>
-                <p className="text-brand-100 mb-6 max-w-md">Alex is doing great this week. He achieved 95% in his latest Math quiz!</p>
+                <h2 className="text-3xl font-extrabold mb-2">Welcome back, {user?.name}!</h2>
+                <p className="text-brand-100 mb-6 max-w-md">
+                  {pd?.total_children
+                    ? `You have ${pd.total_children} child${pd.total_children > 1 ? 'ren' : ''} enrolled.`
+                    : 'Track your children\'s progress, attendance and fees here.'}
+                </p>
                 <div className="flex gap-4">
-                  <button className="bg-white text-brand-600 px-6 py-3 rounded-2xl font-bold text-sm hover:bg-brand-50 transition-all">View Report Card</button>
-                  <button 
+                  <button
                     onClick={() => onTabChange('fees')}
-                    className="bg-brand-500/30 backdrop-blur-md text-white px-6 py-3 rounded-2xl font-bold text-sm border border-white/20 hover:bg-brand-500/40 transition-all"
+                    className="bg-white text-brand-600 px-6 py-3 rounded-2xl font-bold text-sm hover:bg-brand-50 transition-all"
                   >
                     Pay Fees
+                  </button>
+                  <button
+                    onClick={() => onTabChange('attendance')}
+                    className="bg-brand-500/30 backdrop-blur-md text-white px-6 py-3 rounded-2xl font-bold text-sm border border-white/20 hover:bg-brand-500/40 transition-all"
+                  >
+                    View Attendance
                   </button>
                 </div>
               </div>
               <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl" />
               <div className="absolute bottom-0 right-10 w-40 h-40 bg-indigo-400/20 rounded-full blur-2xl" />
             </div>
+
+            {/* Children overview cards */}
+            {(isLoadingOverview || (pd?.children?.length ?? 0) > 0) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {isLoadingOverview
+                  ? [1, 2].map(i => (
+                      <div key={i} className="bg-white rounded-3xl p-6 border border-slate-100 animate-pulse space-y-4">
+                        <div className="h-4 bg-slate-200 rounded w-1/2" />
+                        <div className="h-3 bg-slate-100 rounded w-1/3" />
+                        <div className="h-8 bg-slate-100 rounded-xl" />
+                      </div>
+                    ))
+                  : pd?.children?.map(child => {
+                      const statusMap: Record<string, { label: string; color: string }> = {
+                        P: { label: 'Present', color: 'text-emerald-600 bg-emerald-50' },
+                        A: { label: 'Absent', color: 'text-rose-600 bg-rose-50' },
+                        L: { label: 'Late', color: 'text-amber-600 bg-amber-50' },
+                        H: { label: 'Holiday', color: 'text-slate-600 bg-slate-100' },
+                      };
+                      const att = child.attendance_today ? statusMap[child.attendance_today] : null;
+                      return (
+                        <div key={child.id} className="bg-white rounded-3xl p-6 border border-slate-100 shadow-sm space-y-4">
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="font-extrabold text-slate-800">{child.name}</p>
+                              <p className="text-xs text-slate-400 font-medium">{child.admission_no}</p>
+                            </div>
+                            {att ? (
+                              <span className={cn('text-[10px] font-bold uppercase px-3 py-1 rounded-full', att.color)}>
+                                {att.label}
+                              </span>
+                            ) : (
+                              <span className="text-[10px] font-bold uppercase px-3 py-1 rounded-full text-slate-400 bg-slate-50">
+                                Not Marked
+                              </span>
+                            )}
+                          </div>
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="p-3 rounded-2xl bg-emerald-50">
+                              <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-0.5">Paid</p>
+                              <p className="text-base font-extrabold text-emerald-700">
+                                Rs. {child.fee_summary.total_paid.toLocaleString()}
+                              </p>
+                            </div>
+                            <div className="p-3 rounded-2xl bg-rose-50">
+                              <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-0.5">Pending</p>
+                              <p className="text-base font-extrabold text-rose-700">
+                                Rs. {child.fee_summary.pending.toLocaleString()}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+              </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
@@ -1316,6 +1444,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       </AnimatePresence>
     </div>
   );
+  };
 
   const renderGateKeeper = () => (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
