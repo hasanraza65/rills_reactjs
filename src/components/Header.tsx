@@ -13,39 +13,6 @@ import {
 import { Branch, User, ROLES, UserRole } from '../types';
 import { cn } from '../types';
 
-const TAB_LABELS: Record<string, string> = {
-  overview: 'Dashboard',
-  branches: 'Branch Management',
-  pricing: 'Pricing',
-  students: 'Students',
-  families: 'Families',
-  staff: 'Staff Management',
-  'admission-keys': 'Admission Keys',
-  fees: 'Fee Collection',
-  'fees-students': 'Student Fees',
-  'fees-config': 'Fee Configuration',
-  invoices: 'Invoices',
-  attendance: 'Attendance',
-  'student-attendance': 'Student Attendance',
-  'staff-attendance': 'Staff Attendance',
-  'lesson-plan': 'My Lesson Plan',
-  'lesson-plan-teachers': 'Lesson Plan Teachers',
-  'add-lesson-plan': 'Add Lesson Plan',
-  'lesson-plan-list': 'Lesson Plans',
-  syllabus: 'Syllabus',
-  diary: 'Class Diary',
-  library: 'Library',
-  classes: 'Classes',
-  sections: 'Sections',
-  'class-subjects': 'Class Subjects',
-  'what-i-learnt': 'What I Learned',
-  subjects: 'Subjects',
-  results: 'Results',
-  visitors: 'Visitor Log',
-  academics: 'Academics',
-  finance: 'Finance',
-};
-
 interface HeaderProps {
   user: User;
   currentBranch: Branch;
@@ -73,7 +40,6 @@ export const Header: React.FC<HeaderProps> = ({
   onRoleChange,
 }) => {
   const branches = user?.branches || [];
-  const pageTitle = TAB_LABELS[activeTab] ?? activeTab.replace(/-/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
   const [isProfileOpen, setIsProfileOpen] = React.useState(false);
   const profileRef = React.useRef<HTMLDivElement>(null);
 
@@ -93,6 +59,7 @@ export const Header: React.FC<HeaderProps> = ({
       user.role !== 'GATE_KEEPER' ? "lg:left-72 left-0" : "left-0"
     )}>
 
+      {/* LEFT: menu + search + branch */}
       <div className="flex items-center gap-3 sm:gap-6 flex-1 min-w-0">
         {user.role !== 'GATE_KEEPER' && (
           <button
@@ -102,14 +69,6 @@ export const Header: React.FC<HeaderProps> = ({
             <Menu size={24} />
           </button>
         )}
-
-        {/* Page title */}
-        <div className="shrink-0">
-          <h1 className="text-lg font-extrabold text-slate-900 leading-tight tracking-tight">{pageTitle}</h1>
-          <p className="text-[11px] text-slate-400 font-medium leading-tight hidden sm:block">Nawaz Sharif School of Eminence</p>
-        </div>
-
-        <div className="h-8 w-px bg-slate-200 shrink-0" />
 
         <div className="relative w-full max-w-72 group hidden md:block">
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-brand-500 transition-colors" size={16} />
@@ -124,25 +83,28 @@ export const Header: React.FC<HeaderProps> = ({
 
         <div className="flex items-center gap-2">
           <Globe size={16} className="text-slate-400 shrink-0" />
-          <select
-            value={currentBranch?.id || ''}
-            onChange={(e) => {
-              const b = branches.find(br => br.id === Number(e.target.value));
-              if (b) onBranchChange(b);
-            }}
-            className="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer outline-none max-w-[140px] truncate"
-          >
-            {branches.length > 0 ? (
-              branches.map(b => (
+          {user.role === 'SUPER_ADMIN' ? (
+            <select
+              value={currentBranch?.id || ''}
+              onChange={(e) => {
+                const b = branches.find(br => br.id === Number(e.target.value));
+                if (b) onBranchChange(b);
+              }}
+              className="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer outline-none max-w-[140px] truncate"
+            >
+              {branches.map(b => (
                 <option key={b.id} value={b.id}>{b.branch_name}</option>
-              ))
-            ) : currentBranch ? (
-              <option value={currentBranch.id}>{currentBranch.branch_name}</option>
-            ) : null}
-          </select>
+              ))}
+            </select>
+          ) : (
+            <span className="text-sm font-semibold text-slate-700 max-w-[140px] truncate">
+              {currentBranch?.branch_name ?? 'No Branch'}
+            </span>
+          )}
         </div>
       </div>
 
+      {/* RIGHT: actions + profile */}
       <div className="flex items-center gap-2 sm:gap-4 shrink-0">
         {user.role !== 'GATE_KEEPER' ? (
           <>
@@ -170,7 +132,6 @@ export const Header: React.FC<HeaderProps> = ({
 
             <div className="h-8 w-px bg-slate-200" />
 
-            {/* Profile dropdown */}
             <div className="relative" ref={profileRef}>
               <button
                 onClick={() => setIsProfileOpen(prev => !prev)}
@@ -195,15 +156,12 @@ export const Header: React.FC<HeaderProps> = ({
                 />
               </button>
 
-              {/* Dropdown panel */}
               {isProfileOpen && (
                 <div className="absolute right-0 top-full mt-3 w-60 bg-white rounded-2xl shadow-xl border border-slate-100 overflow-hidden z-50">
-                  {/* Email only — name & role already visible in navbar */}
                   <div className="px-4 py-3 border-b border-slate-100">
                     <p className="text-xs text-slate-400 truncate">{user.email || user.name}</p>
                   </div>
 
-                  {/* Role switcher — only shown when user has multiple roles */}
                   {availableRoles && availableRoles.length > 1 && onRoleChange && (
                     <div className="px-3 py-3 border-b border-slate-100">
                       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Switch Role</p>
@@ -224,7 +182,6 @@ export const Header: React.FC<HeaderProps> = ({
                     </div>
                   )}
 
-                  {/* Logout */}
                   <div className="px-2 py-2">
                     <button
                       onClick={() => { setIsProfileOpen(false); onLogout(); }}

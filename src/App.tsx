@@ -37,11 +37,13 @@ export default function App() {
     }
   }, [isAuthenticated, user]);
 
+  // Every time a different user logs in, reset to their first branch.
+  // This prevents the previous user's selected branch from leaking into the new session.
   React.useEffect(() => {
-    if (branches && branches.length > 0 && !selectedBranchId) {
+    if (branches && branches.length > 0) {
       setSelectedBranchId(branches[0].id);
     }
-  }, [branches, selectedBranchId, setSelectedBranchId]);
+  }, [user?.id]);
 
   const handleLogin = (userData: any) => {
     setActiveTab(userData.role === 'GATE_KEEPER' ? 'visitors' : 'overview');

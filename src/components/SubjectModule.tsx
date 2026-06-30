@@ -139,13 +139,6 @@ const SectionSubjectsView: React.FC<{
         </div>
 
         <div className="flex items-center gap-3">
-          {/* Breadcrumb */}
-          <div className="hidden sm:flex items-center gap-2 text-xs font-bold text-slate-400 uppercase tracking-widest mr-4">
-            <button onClick={onBack} className="hover:text-brand-500 transition-colors">Classes</button>
-            <ChevronRight size={12} />
-            <span className="text-brand-600">{classTitle} / {section.name}</span>
-          </div>
-          
           {/* Add Subject Button */}
           <Button 
             onClick={() => setIsAddModalOpen(true)} 
