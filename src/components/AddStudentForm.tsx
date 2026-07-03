@@ -17,6 +17,7 @@ import {
   Shield,
   FileText,
   DollarSign,
+  Pencil,
   X,
   Loader2,
   Layers,
@@ -264,11 +265,23 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, 5));
   const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
+  const [editingFeeId, setEditingFeeId] = useState<string | null>(null);
+  const [editingAmount, setEditingAmount] = useState<string>('');
+
   const toggleFeeHead = (id: string) => {
     setFormData(prev => ({
       ...prev,
-      feeHeads: prev.feeHeads.map(fh => 
+      feeHeads: prev.feeHeads.map(fh =>
         fh.id === id ? { ...fh, isEnabled: !fh.isEnabled } : fh
+      )
+    }));
+  };
+
+  const updateFeeHeadAmount = (id: string, amount: number) => {
+    setFormData(prev => ({
+      ...prev,
+      feeHeads: prev.feeHeads.map(fh =>
+        fh.id === id ? { ...fh, amount } : fh
       )
     }));
   };
@@ -1006,31 +1019,74 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Fee Heads Customization</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-3">
             {formData.feeHeads.map(fh => (
-              <div 
+              <div
                 key={fh.id}
-                onClick={() => toggleFeeHead(fh.id)}
                 className={cn(
-                  "p-3 sm:p-4 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between",
+                  "p-3 sm:p-4 rounded-2xl border-2 transition-all flex items-center justify-between",
                   fh.isEnabled ? "border-brand-100 bg-brand-50/30" : "border-slate-50 bg-slate-50/50 opacity-60"
                 )}
               >
-                <div className="flex items-center gap-3">
+                <div
+                  className="flex items-center gap-3 flex-1 min-w-0 cursor-pointer"
+                  onClick={() => toggleFeeHead(fh.id)}
+                >
                   <div className={cn(
                     "w-8 h-8 rounded-lg flex items-center justify-center shrink-0",
                     fh.isEnabled ? "bg-brand-100 text-brand-600" : "bg-slate-200 text-slate-400"
                   )}>
                     <DollarSign size={16} />
                   </div>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-sm font-bold text-slate-800 truncate">{fh.name}</p>
-                    <p className="text-[10px] sm:text-xs text-slate-500">PKR {fh.amount.toLocaleString()}</p>
+                    {editingFeeId === fh.id ? (
+                      <input
+                        type="number"
+                        className="text-xs font-semibold text-slate-700 border-b border-brand-500 outline-none bg-transparent w-24 mt-0.5"
+                        value={editingAmount}
+                        autoFocus
+                        onClick={(e) => e.stopPropagation()}
+                        onChange={(e) => setEditingAmount(e.target.value)}
+                        onBlur={() => {
+                          const val = parseFloat(editingAmount);
+                          if (!isNaN(val) && val >= 0) updateFeeHeadAmount(fh.id, val);
+                          setEditingFeeId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            const val = parseFloat(editingAmount);
+                            if (!isNaN(val) && val >= 0) updateFeeHeadAmount(fh.id, val);
+                            setEditingFeeId(null);
+                          }
+                          if (e.key === 'Escape') setEditingFeeId(null);
+                        }}
+                      />
+                    ) : (
+                      <p className="text-[10px] sm:text-xs text-slate-500">PKR {fh.amount.toLocaleString()}</p>
+                    )}
                   </div>
                 </div>
-                <div className={cn(
-                  "w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all shrink-0 ml-2",
-                  fh.isEnabled ? "border-brand-500 bg-brand-500 text-white" : "border-slate-300"
-                )}>
-                  {fh.isEnabled && <CheckCircle2 size={14} />}
+                <div className="flex items-center gap-2 shrink-0 ml-2">
+                  <button
+                    type="button"
+                    title="Edit amount"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setEditingFeeId(fh.id);
+                      setEditingAmount(fh.amount.toString());
+                    }}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-brand-600 transition-all"
+                  >
+                    <Pencil size={12} />
+                  </button>
+                  <div
+                    onClick={() => toggleFeeHead(fh.id)}
+                    className={cn(
+                      "w-5 h-5 sm:w-6 sm:h-6 rounded-full border-2 flex items-center justify-center transition-all cursor-pointer shrink-0",
+                      fh.isEnabled ? "border-brand-500 bg-brand-500 text-white" : "border-slate-300"
+                    )}
+                  >
+                    {fh.isEnabled && <CheckCircle2 size={14} />}
+                  </div>
                 </div>
               </div>
             ))}
