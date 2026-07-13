@@ -11,12 +11,24 @@ import { UserRole } from './types/models/user';
 import { useBranchStore } from './store/use-branch-store';
 import { useCreateAdmissionKey } from './hooks/use-admission-keys';
 
+/**
+ * The tab a role lands on after login. Only SUPER_ADMIN has an overview page,
+ * so every other role needs an explicit entry here.
+ */
+const DEFAULT_TAB: Partial<Record<UserRole, string>> = {
+  GATE_KEEPER: 'visitors',
+  BRANCH_ADMIN: 'students',
+  SCHOOL_ADMIN: 'staff',
+};
+
+const getDefaultTab = (role?: UserRole) => (role && DEFAULT_TAB[role]) || 'overview';
+
 export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
   const branches = user?.branches || [];
   const { selectedBranchId, setSelectedBranchId } = useBranchStore();
-  
-  const [activeTab, setActiveTab] = useState<string>('overview');
+
+  const [activeTab, setActiveTab] = useState<string>(() => getDefaultTab(user?.role));
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [isAddKeyModalOpen, setIsAddKeyModalOpen] = useState(false);
@@ -29,11 +41,11 @@ export default function App() {
     return found || branches[0] || BRANCHES[0];
   }, [branches, selectedBranchId]);
 
+  // A reload resets activeTab to its initial value, and a role switch can leave
+  // us on a tab the new role has no page for. Send them to their landing tab.
   React.useEffect(() => {
     if (isAuthenticated && user && activeTab === 'overview') {
-      if (user.role === 'GATE_KEEPER') {
-        setActiveTab('visitors');
-      }
+      setActiveTab(getDefaultTab(user.role));
     }
   }, [isAuthenticated, user]);
 
@@ -46,7 +58,7 @@ export default function App() {
   }, [user?.id]);
 
   const handleLogin = (userData: any) => {
-    setActiveTab(userData.role === 'GATE_KEEPER' ? 'visitors' : 'overview');
+    setActiveTab(getDefaultTab(userData.role));
   };
 
   const handleLogout = () => {
@@ -56,7 +68,7 @@ export default function App() {
   const handleRoleChange = (newRole: UserRole) => {
     if (user) {
       setAuth({ ...user, role: newRole }, user.token || '');
-      setActiveTab(newRole === 'GATE_KEEPER' ? 'visitors' : 'overview');
+      setActiveTab(getDefaultTab(newRole));
     }
   };
 

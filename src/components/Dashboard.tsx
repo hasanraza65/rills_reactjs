@@ -82,7 +82,7 @@ import { DeleteConfirmationModal } from './ui/DeleteConfirmationModal';
 import { useAuthStore } from '../store/use-auth-store';
 import { useBranchStore } from '../store/use-branch-store';
 import { useDashboardOverview } from '../hooks/use-dashboard';
-import type { BranchAdminOverview, SuperAdminOverview, TeacherOverview, ParentOverview } from '../lib/services/dashboard-service';
+import type { SuperAdminOverview, TeacherOverview, ParentOverview } from '../lib/services/dashboard-service';
 
 const data = [
   { name: 'Mon', students: 400, revenue: 2400 },
@@ -425,7 +425,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
   };
 
   const renderBranchAdmin = () => {
-    const bd = overviewResp?.data as BranchAdminOverview | undefined;
     const filteredStudents = students?.filter(s => {
       const query = studentSearchQuery.toLowerCase().trim();
       if (!query) return true;
@@ -457,86 +456,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
-        {activeTab === 'overview' && (
-          <motion.div
-            key="overview"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-8"
-          >
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <StatCard
-                title="Total Students"
-                value={isLoadingOverview ? '...' : (bd?.total_students ?? 0).toLocaleString()}
-                icon={Users} color="blue" delay={0.1}
-              />
-              <StatCard
-                title="Attendance Today"
-                value={isLoadingOverview ? '...' : `${bd?.attendance_today.percentage ?? 0}%`}
-                icon={Calendar} color="emerald" delay={0.2}
-              />
-              <StatCard
-                title="Fee Collection"
-                value={isLoadingOverview ? '...' : `${bd?.fee_collection.percentage ?? 0}%`}
-                icon={CreditCard} color="purple" delay={0.3}
-              />
-            </div>
-            
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 sm:gap-8">
-              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Attendance Trends</h3>
-                <div className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
-                    <BarChart data={attendanceData}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                      <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 12}} />
-                      <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{ borderRadius: '16px', border: 'none' }} />
-                      <Bar dataKey="present" fill="#10b981" radius={[4, 4, 0, 0]} barSize={30} />
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-              </div>
-              <div className="bg-white p-4 sm:p-8 rounded-2xl sm:rounded-3xl shadow-sm border border-slate-100">
-                <h3 className="text-xl font-bold text-slate-800 mb-6">Recent Admissions</h3>
-                <div className="space-y-4">
-                  {isLoadingOverview ? (
-                    [1, 2, 3, 4].map(i => (
-                      <div key={i} className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 animate-pulse">
-                        <div className="w-10 h-10 rounded-xl bg-slate-200" />
-                        <div className="flex-1 space-y-2">
-                          <div className="h-3 bg-slate-200 rounded w-1/2" />
-                          <div className="h-2 bg-slate-100 rounded w-1/3" />
-                        </div>
-                      </div>
-                    ))
-                  ) : bd?.recent_admissions?.length ? (
-                    bd.recent_admissions.map(s => (
-                      <div key={s.id} className="flex items-center justify-between p-4 rounded-2xl bg-slate-50">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-xl bg-white flex items-center justify-center text-slate-400">
-                            <User size={20} />
-                          </div>
-                          <div>
-                            <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                            <p className="text-xs text-slate-500">{s.admission_no}</p>
-                          </div>
-                        </div>
-                        <span className="text-xs font-bold text-slate-400">
-                          {s.admission_date ?? '—'}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-sm text-slate-400 text-center py-6">No recent admissions</p>
-                  )}
-                </div>
-              </div>
-            </div>
-          </motion.div>
-        )}
-
         {activeTab === 'branches' && (
           <motion.div
             key="branches"

@@ -84,7 +84,6 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: Settings, label: 'System Settings', id: 'settings' },
   ],
   SCHOOL_ADMIN: [
-    { icon: LayoutDashboard, label: 'Dashboard', id: 'overview' },
     { icon: Building2, label: 'My Branches', id: 'branches' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
     {
@@ -113,7 +112,6 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: CreditCard, label: 'Finance', id: 'finance' },
   ],
   BRANCH_ADMIN: [
-    { icon: LayoutDashboard, label: 'Branch Overview', id: 'overview' },
     { icon: GraduationCap, label: 'Students', id: 'students' },
     { icon: Users, label: 'Parents', id: 'families' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
