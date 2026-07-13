@@ -12,7 +12,7 @@ import {
   Copy,
   ChevronRight
 } from 'lucide-react';
-import { cn, CLASSES, FeeHead, FeeFrequency } from '../../types';
+import { cn, FeeHead, FeeFrequency } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
@@ -378,7 +378,7 @@ export const FeeConfiguration: React.FC = () => {
                               />
                             </div>
                             <div>
-                              <label className="saas-label mb-2 ml-1">Amount ($)</label>
+                              <label className="saas-label mb-2 ml-1">Amount (Rs.)</label>
                               <input
                                 type="number"
                                 value={head.amount}
@@ -449,7 +449,7 @@ export const FeeConfiguration: React.FC = () => {
                       </div>
                       <div>
                         <p className="text-xs font-black text-brand-100 uppercase tracking-widest">Estimated Annual Total</p>
-                        <p className="text-4xl font-black tracking-tighter mt-1">${calculateAnnualTotal().toLocaleString()}</p>
+                        <p className="text-4xl font-black tracking-tighter mt-1">Rs. {calculateAnnualTotal().toLocaleString()}</p>
                       </div>
                     </div>
                     <div className="flex items-center gap-3 px-5 py-3 bg-white/10 backdrop-blur-sm rounded-2xl border border-white/10">

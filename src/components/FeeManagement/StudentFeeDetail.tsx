@@ -1,275 +1,202 @@
-import React, { useState } from 'react';
-import { 
-  ArrowLeft, 
-  DollarSign, 
-  Calendar, 
-  Download, 
-  Printer, 
-  History, 
-  AlertCircle, 
-  CheckCircle2, 
+import React, { useMemo } from 'react';
+import {
+  ArrowLeft,
+  FileText,
+  Users,
+  AlertCircle,
+  CheckCircle2,
   Clock,
-  ChevronRight,
-  Plus,
-  Edit3,
-  CreditCard
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { cn, Student, CLASSES, StudentFeeStatus } from '../../types';
+import { motion } from 'motion/react';
+import { cn } from '../../types';
+import { Card } from '../ui/Card';
+import { Skeleton } from '../ui/Skeleton';
+import { EmptyState } from '../ui/EmptyState';
+import { useInvoices } from '../../hooks/use-invoice';
+import { useBranchStore } from '../../store/use-branch-store';
+import type { StudentData } from '../../types/api/student';
+import type { InvoiceData, InvoiceStatus } from '../../types/api/invoice';
 
 interface StudentFeeDetailProps {
-  student: Student;
+  student: StudentData;
   onBack: () => void;
 }
 
-// Mock data for a student's fee status
-const mockFeeStatus: StudentFeeStatus = {
-  studentId: 'st1',
-  totalAnnualFee: 132000,
-  totalPaid: 85000,
-  totalPending: 47000,
-  installments: [
-    { month: '2024-01', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-02', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-03', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-04', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-05', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-06', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-07', amount: 11000, paid: 11000, status: 'PAID' },
-    { month: '2024-08', amount: 11000, paid: 8000, status: 'PARTIAL' },
-    { month: '2024-09', amount: 11000, paid: 0, status: 'PENDING' },
-    { month: '2024-10', amount: 11000, paid: 0, status: 'PENDING' },
-    { month: '2024-11', amount: 11000, paid: 0, status: 'PENDING' },
-    { month: '2024-12', amount: 11000, paid: 0, status: 'PENDING' },
-  ]
+const rupees = (n: number) => `Rs. ${Math.round(n).toLocaleString()}`;
+
+const statusStyle: Record<InvoiceStatus, { label: string; className: string }> = {
+  paid: { label: 'Paid', className: 'bg-emerald-50 text-emerald-600' },
+  partial: { label: 'Partial', className: 'bg-amber-50 text-amber-600' },
+  unpaid: { label: 'Unpaid', className: 'bg-slate-100 text-slate-500' },
+  carried_forward: { label: 'Carried Forward', className: 'bg-indigo-50 text-indigo-600' },
 };
 
-const history = [
-  { id: '1', date: '2024-03-05', amount: 10000, method: 'Cash', ref: 'REC-9921', status: 'Success' },
-  { id: '2', date: '2024-02-04', amount: 10000, method: 'Bank Transfer', ref: 'TXN-8812', status: 'Success' },
-  { id: '3', date: '2024-01-02', amount: 10000, method: 'Cash', ref: 'REC-7734', status: 'Success' },
-];
-
 export const StudentFeeDetail: React.FC<StudentFeeDetailProps> = ({ student, onBack }) => {
-  const [activeView, setActiveView] = useState<'installments' | 'history' | 'customization'>('installments');
+  const { selectedBranchId } = useBranchStore();
+  const { data: invoices, isLoading } = useInvoices(selectedBranchId || 1);
 
-  const studentClass = CLASSES.find(c => c.id === student.classId);
+  /** Invoices that bill this student, either directly or as part of a family invoice. */
+  const studentInvoices = useMemo<InvoiceData[]>(() => {
+    return (invoices ?? []).filter(inv =>
+      inv.student_id === student.id ||
+      inv.items?.some(item => item.student_id === student.id)
+    );
+  }, [invoices, student.id]);
+
+  /** Only the line items billed to this student — the one per-student figure the list endpoint gives us. */
+  const totalInvoiced = useMemo(() => {
+    return studentInvoices.reduce((sum, inv) => {
+      const own = (inv.items ?? [])
+        .filter(item => (item.student_id ?? inv.student_id) === student.id)
+        .reduce((s, item) => s + (Number(item.amount) || 0), 0);
+      return sum + own;
+    }, 0);
+  }, [studentInvoices, student.id]);
+
+  const outstandingInvoices = studentInvoices.filter(inv => inv.status !== 'paid').length;
+  const overdueInvoices = studentInvoices.filter(inv => inv.is_overdue && inv.status !== 'paid').length;
 
   return (
     <div className="space-y-8">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={onBack}
-            className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-brand-500 hover:border-brand-100 transition-all shadow-sm"
-          >
-            <ArrowLeft size={20} />
-          </button>
-          <div>
-            <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">{student.name}'s Fee Profile</h3>
-            <p className="text-slate-500 font-medium">
-              Roll #{student.rollNumber} • {studentClass?.name} - {studentClass?.section}
-            </p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <button className="p-4 rounded-2xl bg-white border border-slate-100 text-slate-600 hover:bg-slate-50 transition-all shadow-sm">
-            <Printer size={20} />
-          </button>
+      <div className="flex items-center gap-4">
+        <button
+          onClick={onBack}
+          className="p-3 rounded-2xl bg-white border border-slate-100 text-slate-400 hover:text-brand-500 hover:border-brand-100 transition-all shadow-sm"
+        >
+          <ArrowLeft size={20} />
+        </button>
+        <div>
+          <h3 className="text-2xl font-extrabold text-slate-800 tracking-tight">{student.name}'s Fee Profile</h3>
+          <p className="text-slate-500 font-medium text-sm">
+            {student.admission_no}
+            {student.class?.name ? ` • ${student.class.name}` : ''}
+            {student.section?.name ? ` • Section ${student.section.name}` : ''}
+          </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-1 space-y-6">
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-6">Financial Summary</h4>
-            <div className="space-y-6">
-              <div className="p-6 rounded-3xl bg-slate-50 border border-slate-100">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Annual Total</p>
-                <p className="text-2xl font-extrabold text-slate-800">${mockFeeStatus.totalAnnualFee.toLocaleString()}</p>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-2xl bg-emerald-50 border border-emerald-100">
-                  <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-1">Total Paid</p>
-                  <p className="text-lg font-extrabold text-emerald-700">${mockFeeStatus.totalPaid.toLocaleString()}</p>
-                </div>
-                <div className="p-4 rounded-2xl bg-rose-50 border border-rose-100">
-                  <p className="text-[10px] font-bold text-rose-600 uppercase tracking-widest mb-1">Outstanding</p>
-                  <p className="text-lg font-extrabold text-rose-700">${mockFeeStatus.totalPending.toLocaleString()}</p>
-                </div>
-              </div>
-              <div className="pt-4 border-t border-slate-100">
-                <div className="flex items-center justify-between mb-2">
-                  <span className="text-xs font-bold text-slate-500">Payment Progress</span>
-                  <span className="text-xs font-extrabold text-brand-600">71%</span>
-                </div>
-                <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                  <div className="h-full bg-brand-500 rounded-full" style={{ width: '71%' }} />
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+        <Card>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Total Invoiced</p>
+          <p className="text-2xl font-extrabold text-slate-800">
+            {isLoading ? '—' : rupees(totalInvoiced)}
+          </p>
+        </Card>
+        <Card>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Outstanding Invoices</p>
+          <p className="text-2xl font-extrabold text-amber-600">
+            {isLoading ? '—' : outstandingInvoices}
+          </p>
+        </Card>
+        <Card>
+          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">Overdue</p>
+          <p className="text-2xl font-extrabold text-rose-600">
+            {isLoading ? '—' : overdueInvoices}
+          </p>
+        </Card>
+      </div>
 
-          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-            <div className="flex items-center justify-between mb-6">
-              <h4 className="text-sm font-bold text-slate-400 uppercase tracking-widest">Fee Heads</h4>
-              <button className="text-brand-600 text-xs font-bold flex items-center gap-1">
-                <Edit3 size={14} />
-                Customize
-              </button>
-            </div>
-            <div className="space-y-4">
-              {student.feeCustomization.map((head) => (
-                <div key={head.id} className="flex items-center justify-between p-3 rounded-xl bg-slate-50">
-                  <div className="flex items-center gap-3">
-                    <div className={cn(
-                      "w-2 h-2 rounded-full",
-                      head.isEnabled ? "bg-brand-500" : "bg-slate-300"
-                    )} />
-                    <span className="text-sm font-bold text-slate-700">{head.name}</span>
-                  </div>
-                  <span className="text-sm font-extrabold text-slate-800">${head.amount.toLocaleString()}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
+      <Card>
+        <h4 className="text-xl font-bold text-slate-800 mb-6">Invoices</h4>
 
-        <div className="lg:col-span-2 space-y-6">
-          <div className="flex items-center gap-4 bg-white p-2 rounded-3xl border border-slate-100 w-fit shadow-sm">
-            <button 
-              onClick={() => setActiveView('installments')}
-              className={cn(
-                "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
-                activeView === 'installments' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-              )}
-            >
-              <Calendar size={18} />
-              Installments
-            </button>
-            <button 
-              onClick={() => setActiveView('history')}
-              className={cn(
-                "px-6 py-3 rounded-2xl text-sm font-bold flex items-center gap-2 transition-all",
-                activeView === 'history' ? "bg-brand-500 text-white shadow-lg shadow-brand-100" : "text-slate-500 hover:bg-slate-50"
-              )}
-            >
-              <History size={18} />
-              Payment History
-            </button>
+        {isLoading ? (
+          <div className="space-y-3">
+            {[1, 2, 3].map(i => <Skeleton key={i} className="h-20 rounded-2xl" />)}
           </div>
+        ) : studentInvoices.length === 0 ? (
+          <EmptyState
+            icon={FileText}
+            title="No Invoices"
+            description="This student has not been invoiced yet."
+          />
+        ) : (
+          <div className="space-y-4">
+            {studentInvoices.map((inv, i) => {
+              const style = statusStyle[inv.status] ?? statusStyle.unpaid;
+              const isFamilyInvoice = inv.student_id === null;
 
-          <AnimatePresence mode="wait">
-            {activeView === 'installments' && (
-              <motion.div
-                key="installments"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="grid grid-cols-1 md:grid-cols-2 gap-4"
-              >
-                {mockFeeStatus.installments.map((inst, idx) => (
-                  <div 
-                    key={inst.month}
-                    className={cn(
-                      "p-6 rounded-3xl border transition-all",
-                      inst.status === 'PAID' ? "bg-white border-slate-100" : 
-                      inst.status === 'PARTIAL' ? "bg-amber-50 border-amber-100" : 
-                      "bg-white border-slate-100 border-dashed"
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center gap-2">
-                        <div className={cn(
-                          "w-8 h-8 rounded-xl flex items-center justify-center",
-                          inst.status === 'PAID' ? "bg-emerald-50 text-emerald-600" : 
-                          inst.status === 'PARTIAL' ? "bg-amber-100 text-amber-600" : 
-                          "bg-slate-50 text-slate-400"
-                        )}>
-                          {inst.status === 'PAID' ? <CheckCircle2 size={16} /> : 
-                           inst.status === 'PARTIAL' ? <Clock size={16} /> : 
-                           <AlertCircle size={16} />}
-                        </div>
-                        <span className="text-sm font-bold text-slate-800">
-                          {new Date(inst.month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+              return (
+                <motion.div
+                  key={inv.id}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.04 }}
+                  className="p-5 rounded-2xl bg-slate-50 border border-slate-100"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-4">
+                    <div>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-sm font-extrabold text-slate-800">{inv.invoice_no}</p>
+                        <span className={cn("px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider", style.className)}>
+                          {style.label}
                         </span>
+                        {inv.is_overdue && inv.status !== 'paid' && (
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-rose-50 text-rose-600 flex items-center gap-1">
+                            <AlertCircle size={10} /> Overdue
+                          </span>
+                        )}
+                        {isFamilyInvoice && (
+                          <span
+                            className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-slate-200 text-slate-600 flex items-center gap-1"
+                            title="Billed to the family — the amounts below cover every child on this invoice."
+                          >
+                            <Users size={10} /> Family
+                          </span>
+                        )}
                       </div>
-                      <span className={cn(
-                        "text-[10px] font-bold uppercase tracking-widest px-2 py-1 rounded-lg",
-                        inst.status === 'PAID' ? "bg-emerald-100 text-emerald-700" : 
-                        inst.status === 'PARTIAL' ? "bg-amber-200 text-amber-800" : 
-                        "bg-slate-100 text-slate-500"
-                      )}>
-                        {inst.status}
-                      </span>
+                      <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-1">
+                        <Clock size={12} />
+                        Issued {inv.issue_date}
+                        {inv.due_date ? ` • Due ${inv.due_date}` : ''}
+                      </p>
                     </div>
-                    <div className="flex items-center justify-between">
+
+                    <div className="flex items-center gap-6 text-right">
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount Due</p>
-                        <p className="text-lg font-extrabold text-slate-800">${inst.amount.toLocaleString()}</p>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Invoice Total</p>
+                        <p className="text-sm font-extrabold text-slate-800">{rupees(inv.total_amount)}</p>
                       </div>
-                      <div className="text-right">
+                      <div>
                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Paid</p>
-                        <p className={cn(
-                          "text-lg font-extrabold",
-                          inst.paid > 0 ? "text-emerald-600" : "text-slate-400"
-                        )}>${inst.paid.toLocaleString()}</p>
+                        <p className="text-sm font-extrabold text-emerald-600">{rupees(inv.total_paid)}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Remaining</p>
+                        <p className={cn("text-sm font-extrabold", inv.remaining > 0 ? "text-rose-500" : "text-slate-400")}>
+                          {rupees(inv.remaining)}
+                        </p>
                       </div>
                     </div>
                   </div>
-                ))}
-              </motion.div>
-            )}
 
-            {activeView === 'history' && (
-              <motion.div
-                key="history"
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -10 }}
-                className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden"
-              >
-                <table className="w-full text-left">
-                  <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Reference</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Method</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Amount</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {history.map(item => (
-                      <tr key={item.id} className="hover:bg-slate-50/50 transition-colors">
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-bold text-slate-800">{new Date(item.date).toLocaleDateString()}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-medium text-slate-600">{item.ref}</p>
-                        </td>
-                        <td className="px-8 py-5">
-                          <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
-                            {item.method}
+                  {/* This student's own line items on the invoice. */}
+                  <div className="mt-4 pt-4 border-t border-slate-200/70 space-y-1.5">
+                    {(inv.items ?? [])
+                      .filter(item => (item.student_id ?? inv.student_id) === student.id)
+                      .map(item => (
+                        <div key={item.id} className="flex items-center justify-between text-xs">
+                          <span className="font-bold text-slate-600">
+                            {item.head_name}
+                            <span className="text-slate-400 font-medium ml-2">{item.head_frequency}</span>
                           </span>
-                        </td>
-                        <td className="px-8 py-5">
-                          <p className="text-sm font-extrabold text-emerald-600">${item.amount.toLocaleString()}</p>
-                        </td>
-                        <td className="px-8 py-5 text-right">
-                          <button className="p-2 text-slate-300 hover:text-brand-500 transition-colors">
-                            <Download size={18} />
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
-      </div>
+                          <span className="font-extrabold text-slate-700">{rupees(Number(item.amount) || 0)}</span>
+                        </div>
+                      ))}
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        )}
+
+        {!isLoading && studentInvoices.some(inv => inv.student_id === null) && (
+          <p className="mt-6 text-xs text-slate-400 font-medium flex items-start gap-2">
+            <CheckCircle2 size={14} className="mt-0.5 shrink-0" />
+            Invoice totals on family invoices cover every child billed on them. The line items listed under each
+            invoice are the ones charged to {student.name}.
+          </p>
+        )}
+      </Card>
     </div>
   );
 };

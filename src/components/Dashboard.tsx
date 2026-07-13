@@ -862,7 +862,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {activeTab === 'syllabus' && (
+        {/* Branch Admin has no Syllabus tab; this renderer is shared with School Admin, which does. */}
+        {activeTab === 'syllabus' && role === 'SCHOOL_ADMIN' && (
           <motion.div
             key="syllabus"
             initial={{ opacity: 0, y: 10 }}

@@ -138,7 +138,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ student, onClose, on
                 <div className="relative z-10">
                   <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mb-2">Total Payable</p>
                   <div className="flex items-baseline gap-2">
-                    <span className="text-4xl font-extrabold">${amount.toLocaleString()}</span>
+                    <span className="text-4xl font-extrabold">Rs. {amount.toLocaleString()}</span>
                     <span className="text-slate-400 text-sm font-bold">USD</span>
                   </div>
                   <div className="mt-6 flex items-center gap-2 text-slate-400 text-xs">
@@ -181,7 +181,7 @@ export const PaymentModal: React.FC<PaymentModalProps> = ({ student, onClose, on
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Actual Amount ($)</label>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2 ml-1">Actual Amount (Rs.)</label>
                     <input 
                       type="number"
                       value={amount}
