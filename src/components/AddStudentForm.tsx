@@ -22,7 +22,8 @@ import {
   Loader2,
   Layers,
   Image,
-  Upload
+  Upload,
+  AlertCircle
 } from 'lucide-react';
 import { cn, FeeHead, FeeFrequency } from '../types';
 import { apiClient } from '../lib/api-client';
@@ -32,6 +33,8 @@ import { useParents, useCreateParent } from '../hooks/use-parent';
 import { useSections, useSectionsByClass } from '../hooks/use-section';
 import { useCreateStudent, useUpdateStudent } from '../hooks/use-student';
 import { StudentData } from '../types/api/student';
+import { isPkMobile, normalizePkMobile, PK_MOBILE_ERROR, PK_MOBILE_PLACEHOLDER } from '../lib/validations/phone';
+import { isCnic, normalizeCnic, CNIC_ERROR, CNIC_PLACEHOLDER } from '../lib/validations/cnic';
 
 interface AddStudentFormProps {
   onClose: () => void;
@@ -49,12 +52,34 @@ const STEPS = [
   { id: 5, title: 'Fees', icon: CreditCard },
 ];
 
+type Gender = 'MALE' | 'FEMALE';
+
+type FormErrors = Partial<Record<
+  | 'name' | 'gender' | 'address' | 'home_contact'
+  | 'selectedParentId'
+  | 'father_name' | 'father_cnic' | 'father_contact_no'
+  | 'mother_name' | 'mother_cnic' | 'mother_contact_no',
+  string
+>>;
+
+const PARENT_FIELDS = [
+  'selectedParentId',
+  'father_name', 'father_cnic', 'father_contact_no',
+  'mother_name', 'mother_cnic', 'mother_contact_no',
+] as const;
+const PERSONAL_FIELDS = ['name', 'gender', 'address', 'home_contact'] as const;
+
+const parentInputClass =
+  "w-full bg-slate-50 rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium border";
+const errorRing = "border-rose-400 bg-rose-50/50";
+
 import { useBranchStore } from '../store/use-branch-store';
 
 
 export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave, editingStudent, isPage }) => {
   const { selectedBranchId } = useBranchStore();
   const [currentStep, setCurrentStep] = useState(1);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isClassModalOpen, setIsClassModalOpen] = useState(false);
   const photoInputRef = useRef<HTMLInputElement>(null);
   const docInputRef = useRef<HTMLInputElement>(null);
@@ -64,7 +89,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const [formData, setFormData] = useState({
     name: editingStudent?.name || '',
     dob: editingStudent?.dob ? editingStudent.dob.split('T')[0] : '',
-    gender: (editingStudent?.gender?.toLowerCase() === 'male' ? 'MALE' : 'FEMALE') as 'MALE' | 'FEMALE',
+    // Left blank for new students so the user has to make an explicit choice.
+    gender: (editingStudent?.gender ? (editingStudent.gender.toLowerCase() === 'male' ? 'MALE' : 'FEMALE') : '') as Gender | '',
     branchId: editingStudent?.branch_id || selectedBranchId || 1,
     classId: editingStudent?.class_id?.toString() || '',
     sectionId: editingStudent?.section_id?.toString() || '',
@@ -262,7 +288,63 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       }, 0);
   }, [formData.feeHeads]);
 
-  const handleNext = () => setCurrentStep(prev => Math.min(prev + 1, 5));
+  /** Every validation rule in the form, regardless of which step owns it. */
+  const collectErrors = (): FormErrors => {
+    const found: FormErrors = {};
+
+    // Parent step.
+    if (formData.parentOption === 'EXISTING') {
+      if (!formData.selectedParentId) {
+        found.selectedParentId = 'Select a parent, or create a new one.';
+      }
+    } else {
+      const p = formData.newParent;
+
+      if (!p.father_name.trim()) found.father_name = "Father's name is required.";
+      if (!p.father_cnic.trim()) found.father_cnic = "Father's CNIC is required.";
+      else if (!isCnic(p.father_cnic)) found.father_cnic = CNIC_ERROR;
+      if (!p.father_contact_no.trim()) found.father_contact_no = "Father's contact number is required.";
+      else if (!isPkMobile(p.father_contact_no)) found.father_contact_no = PK_MOBILE_ERROR;
+
+      if (!p.mother_name.trim()) found.mother_name = "Mother's name is required.";
+      if (!p.mother_cnic.trim()) found.mother_cnic = "Mother's CNIC is required.";
+      else if (!isCnic(p.mother_cnic)) found.mother_cnic = CNIC_ERROR;
+      if (!p.mother_contact_no.trim()) found.mother_contact_no = "Mother's contact number is required.";
+      else if (!isPkMobile(p.mother_contact_no)) found.mother_contact_no = PK_MOBILE_ERROR;
+    }
+
+    // Personal step.
+    if (!formData.name.trim()) found.name = 'Full name is required.';
+    if (!formData.gender) found.gender = 'Gender is required.';
+    if (!formData.address.trim()) found.address = 'Residential address is required.';
+    if (!formData.home_contact.trim()) found.home_contact = 'WhatsApp contact is required.';
+    else if (!isPkMobile(formData.home_contact)) found.home_contact = PK_MOBILE_ERROR;
+
+    return found;
+  };
+
+  const clearError = (field: keyof FormErrors) => {
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+  };
+
+  /** Surfaces only the errors belonging to the given step, leaving others as they were. */
+  const validateStep = (step: number) => {
+    const fields = step === 1 ? PARENT_FIELDS : step === 2 ? PERSONAL_FIELDS : [];
+    if (fields.length === 0) return true;
+
+    const all = collectErrors();
+    setErrors(prev => {
+      const next = { ...prev };
+      fields.forEach(f => { next[f] = all[f]; });
+      return next;
+    });
+    return fields.every(f => !all[f]);
+  };
+
+  const handleNext = () => {
+    if (!validateStep(currentStep)) return;
+    setCurrentStep(prev => Math.min(prev + 1, 5));
+  };
   const handleBack = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const [editingFeeId, setEditingFeeId] = useState<string | null>(null);
@@ -369,16 +451,25 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
         <div className="w-full sm:flex-1 space-y-6 text-left">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Full Name</label>
+              <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                Full Name <span className="text-rose-500">*</span>
+              </label>
               <div className="relative">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                <input 
+                <input
                   value={formData.name}
-                  onChange={e => setFormData({...formData, name: e.target.value})}
+                  onChange={e => {
+                    setFormData({...formData, name: e.target.value});
+                    clearError('name');
+                  }}
                   placeholder="e.g. Ahmed Khan"
-                  className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+                  className={cn(
+                    "w-full bg-slate-50 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none border",
+                    errors.name ? "border-rose-400 bg-rose-50/50" : "border-transparent"
+                  )}
                 />
               </div>
+              {errors.name && <p className="text-xs font-bold text-rose-500">{errors.name}</p>}
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Date of Birth</label>
@@ -395,22 +486,32 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           </div>
           
           <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Gender</label>
+            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+              Gender <span className="text-rose-500">*</span>
+            </label>
             <div className="flex gap-4">
-              {['MALE', 'FEMALE'].map(g => (
+              {(['MALE', 'FEMALE'] as Gender[]).map(g => (
                 <button
                   key={g}
                   type="button"
-                  onClick={() => setFormData({...formData, gender: g as any})}
+                  onClick={() => {
+                    setFormData({...formData, gender: g});
+                    clearError('gender');
+                  }}
                   className={cn(
                     "flex-1 py-3 rounded-2xl border-2 transition-all font-bold text-xs uppercase tracking-wider",
-                    formData.gender === g ? "border-brand-500 bg-brand-50 text-brand-600" : "border-slate-100 text-slate-500 hover:border-slate-200"
+                    formData.gender === g
+                      ? "border-brand-500 bg-brand-50 text-brand-600"
+                      : errors.gender
+                        ? "border-rose-300 text-slate-500 hover:border-rose-400"
+                        : "border-slate-100 text-slate-500 hover:border-slate-200"
                   )}
                 >
                   {g}
                 </button>
               ))}
             </div>
+            {errors.gender && <p className="text-xs font-bold text-rose-500">{errors.gender}</p>}
           </div>
         </div>
       </div>
@@ -424,31 +525,52 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
           />
         </div>
         <div className="space-y-2">
-          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Home Contact</label>
+          <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+            WhatsApp Contact <span className="text-rose-500">*</span>
+          </label>
           <div className="relative">
             <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-            <input 
+            <input
               value={formData.home_contact}
-              onChange={e => setFormData({...formData, home_contact: e.target.value})}
-              placeholder="e.g. 03001234567"
-              className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
+              onChange={e => {
+                setFormData({...formData, home_contact: e.target.value});
+                clearError('home_contact');
+              }}
+              placeholder={`e.g. ${PK_MOBILE_PLACEHOLDER}`}
+              inputMode="tel"
+              className={cn(
+                "w-full bg-slate-50 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none border",
+                errors.home_contact ? "border-rose-400 bg-rose-50/50" : "border-transparent"
+              )}
             />
           </div>
+          {errors.home_contact && (
+            <p className="text-xs font-bold text-rose-500">{errors.home_contact}</p>
+          )}
         </div>
       </div>
 
       <div className="space-y-2">
-        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Residential Address</label>
+        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+          Residential Address <span className="text-rose-500">*</span>
+        </label>
         <div className="relative">
           <MapPin className="absolute left-4 top-4 text-slate-300" size={18} />
-          <textarea 
+          <textarea
             value={formData.address}
-            onChange={e => setFormData({...formData, address: e.target.value})}
+            onChange={e => {
+              setFormData({...formData, address: e.target.value});
+              clearError('address');
+            }}
             placeholder="Complete residential address..."
             rows={2}
-            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none resize-none"
+            className={cn(
+              "w-full bg-slate-50 rounded-2xl py-3.5 pl-12 pr-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none resize-none border",
+              errors.address ? "border-rose-400 bg-rose-50/50" : "border-transparent"
+            )}
           />
         </div>
+        {errors.address && <p className="text-xs font-bold text-rose-500">{errors.address}</p>}
       </div>
 
       <div className="space-y-4">
@@ -747,13 +869,19 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
 
       <AnimatePresence mode="wait">
         {formData.parentOption === 'EXISTING' ? (
-          <motion.div 
+          <motion.div
             key="existing"
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
             className="space-y-4"
           >
+            {errors.selectedParentId && (
+              <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200">
+                <AlertCircle className="text-rose-500 shrink-0" size={16} />
+                <p className="text-xs font-bold text-rose-600">{errors.selectedParentId}</p>
+              </div>
+            )}
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
               <input 
@@ -768,7 +896,10 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
                 <button
                   key={p.id}
                   type="button"
-                  onClick={() => setFormData({...formData, selectedParentId: p.id.toString()})}
+                  onClick={() => {
+                    setFormData({...formData, selectedParentId: p.id.toString()});
+                    clearError('selectedParentId');
+                  }}
                   className={cn(
                     "w-full p-3 sm:p-4 rounded-2xl border-2 text-left transition-all flex items-center justify-between",
                     formData.selectedParentId === p.id.toString() ? "border-brand-500 bg-brand-50" : "border-slate-50 hover:border-slate-100"
@@ -858,23 +989,34 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father Name</label>
-                  <input 
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Father Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
                     value={formData.newParent.father_name}
-                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_name: e.target.value}})}
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
-                    required
+                    onChange={e => {
+                      setFormData({...formData, newParent: {...formData.newParent, father_name: e.target.value}});
+                      clearError('father_name');
+                    }}
+                    className={cn(parentInputClass, errors.father_name ? errorRing : "border-transparent")}
                   />
+                  {errors.father_name && <p className="text-[10px] font-bold text-rose-500">{errors.father_name}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Father CNIC</label>
-                  <input 
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Father CNIC <span className="text-rose-500">*</span>
+                  </label>
+                  <input
                     value={formData.newParent.father_cnic}
-                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_cnic: e.target.value}})}
-                    placeholder="35201-XXXXXXX-X"
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
-                    required
+                    onChange={e => {
+                      setFormData({...formData, newParent: {...formData.newParent, father_cnic: e.target.value}});
+                      clearError('father_cnic');
+                    }}
+                    placeholder={CNIC_PLACEHOLDER}
+                    inputMode="numeric"
+                    className={cn(parentInputClass, errors.father_cnic ? errorRing : "border-transparent")}
                   />
+                  {errors.father_cnic && <p className="text-[10px] font-bold text-rose-500">{errors.father_cnic}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Education</label>
@@ -893,16 +1035,27 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Contact Number <span className="text-rose-500">*</span>
+                  </label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                    <input 
+                    <input
                       value={formData.newParent.father_contact_no}
-                      onChange={e => setFormData({...formData, newParent: {...formData.newParent, father_contact_no: e.target.value}})}
-                      className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
-                      required
+                      onChange={e => {
+                        setFormData({...formData, newParent: {...formData.newParent, father_contact_no: e.target.value}});
+                        clearError('father_contact_no');
+                      }}
+                      placeholder={`e.g. ${PK_MOBILE_PLACEHOLDER}`}
+                      className={cn(
+                        "w-full bg-slate-50 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium border",
+                        errors.father_contact_no ? "border-rose-400 bg-rose-50/50" : "border-transparent"
+                      )}
                     />
                   </div>
+                  {errors.father_contact_no && (
+                    <p className="text-[10px] font-bold text-rose-500">{errors.father_contact_no}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -917,23 +1070,34 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother Name</label>
-                  <input 
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Mother Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
                     value={formData.newParent.mother_name}
-                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_name: e.target.value}})}
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
-                    required
+                    onChange={e => {
+                      setFormData({...formData, newParent: {...formData.newParent, mother_name: e.target.value}});
+                      clearError('mother_name');
+                    }}
+                    className={cn(parentInputClass, errors.mother_name ? errorRing : "border-transparent")}
                   />
+                  {errors.mother_name && <p className="text-[10px] font-bold text-rose-500">{errors.mother_name}</p>}
                 </div>
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Mother CNIC</label>
-                  <input 
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Mother CNIC <span className="text-rose-500">*</span>
+                  </label>
+                  <input
                     value={formData.newParent.mother_cnic}
-                    onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_cnic: e.target.value}})}
-                    placeholder="35201-XXXXXXX-X"
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
-                    required
+                    onChange={e => {
+                      setFormData({...formData, newParent: {...formData.newParent, mother_cnic: e.target.value}});
+                      clearError('mother_cnic');
+                    }}
+                    placeholder={CNIC_PLACEHOLDER}
+                    inputMode="numeric"
+                    className={cn(parentInputClass, errors.mother_cnic ? errorRing : "border-transparent")}
                   />
+                  {errors.mother_cnic && <p className="text-[10px] font-bold text-rose-500">{errors.mother_cnic}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Education</label>
@@ -952,16 +1116,27 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
                   />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
+                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    Contact Number <span className="text-rose-500">*</span>
+                  </label>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={14} />
-                    <input 
+                    <input
                       value={formData.newParent.mother_contact_no}
-                      onChange={e => setFormData({...formData, newParent: {...formData.newParent, mother_contact_no: e.target.value}})}
-                      className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium"
-                      required
+                      onChange={e => {
+                        setFormData({...formData, newParent: {...formData.newParent, mother_contact_no: e.target.value}});
+                        clearError('mother_contact_no');
+                      }}
+                      placeholder={`e.g. ${PK_MOBILE_PLACEHOLDER}`}
+                      className={cn(
+                        "w-full bg-slate-50 rounded-xl py-2.5 pl-11 pr-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 transition-all font-medium border",
+                        errors.mother_contact_no ? "border-rose-400 bg-rose-50/50" : "border-transparent"
+                      )}
                     />
                   </div>
+                  {errors.mother_contact_no && (
+                    <p className="text-[10px] font-bold text-rose-500">{errors.mother_contact_no}</p>
+                  )}
                 </div>
               </div>
             </div>
@@ -1135,8 +1310,17 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   );
 
   const handleSave = async (data: any) => {
+    // "Update Now" can fire from any step, so re-check rather than trust step nav.
+    const found = collectErrors();
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      const onParentStep = PARENT_FIELDS.some(f => found[f]);
+      setCurrentStep(onParentStep ? 1 : 2);
+      return;
+    }
+
     const formDataObj = new FormData();
-    
+
     // Add simple fields
     formDataObj.append('name', data.name);
     formDataObj.append('dob', data.dob);
@@ -1145,8 +1329,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     formDataObj.append('class_id', data.classId.toString());
     formDataObj.append('section_id', data.sectionId.toString());
     formDataObj.append('nationality', data.nationality);
-    formDataObj.append('address', data.address || 'N/A');
-    formDataObj.append('home_contact', data.home_contact);
+    formDataObj.append('address', data.address);
+    formDataObj.append('home_contact', normalizePkMobile(data.home_contact)!);
     formDataObj.append('currently_studying', data.currently_studying);
     formDataObj.append('health_details', data.health_details);
     let finalParentId = data.selectedParentId;
@@ -1155,7 +1339,12 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       try {
         const parentResponse = await createParent.mutateAsync({
           branch_id: data.branchId,
-          ...data.newParent
+          ...data.newParent,
+          // Store phones and CNICs in one canonical shape, whatever the user typed.
+          father_contact_no: normalizePkMobile(data.newParent.father_contact_no)!,
+          mother_contact_no: normalizePkMobile(data.newParent.mother_contact_no)!,
+          father_cnic: normalizeCnic(data.newParent.father_cnic)!,
+          mother_cnic: normalizeCnic(data.newParent.mother_cnic)!,
         });
         // Assuming parentResponse.id exists
         finalParentId = parentResponse.id.toString();

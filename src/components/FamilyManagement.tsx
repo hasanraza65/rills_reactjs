@@ -25,6 +25,21 @@ import { EmptyState } from './ui/EmptyState';
 import { useParents, useParent, useCreateParent, useUpdateParent, useDeleteParent } from '../hooks/use-parent';
 import { ParentData, CreateParentInput } from '../types/api/parent';
 import { useBranchStore } from '../store/use-branch-store';
+import { cn } from '../types';
+import { isPkMobile, normalizePkMobile, PK_MOBILE_ERROR, PK_MOBILE_PLACEHOLDER } from '../lib/validations/phone';
+import { isCnic, normalizeCnic, CNIC_ERROR, CNIC_PLACEHOLDER } from '../lib/validations/cnic';
+
+type ParentField =
+  | 'father_name' | 'father_cnic' | 'father_education' | 'father_occupation' | 'father_contact_no'
+  | 'mother_name' | 'mother_cnic' | 'mother_education' | 'mother_occupation' | 'mother_contact_no'
+  | 'address'
+  | 'guardian_name' | 'guardian_cnic' | 'guardian_contact_no';
+
+type ParentFormErrors = Partial<Record<ParentField, string>>;
+
+const inputClass =
+  "w-full px-4 py-3 bg-slate-50 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm border";
+const errorRing = "border-rose-400 bg-rose-50/50";
 
 export const FamilyManagement: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +52,7 @@ export const FamilyManagement: React.FC = () => {
   
   const [isGuardianTypeDropdownOpen, setIsGuardianTypeDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const [errors, setErrors] = useState<ParentFormErrors>({});
 
   // Form State
   const [formData, setFormData] = useState<CreateParentInput>({
@@ -98,6 +114,7 @@ export const FamilyManagement: React.FC = () => {
 
   const handleOpenAddForm = () => {
     setEditingParent(null);
+    setErrors({});
     setFormData({
       branch_id: selectedBranchId || 1,
       father_name: '',
@@ -123,6 +140,7 @@ export const FamilyManagement: React.FC = () => {
 
   const handleOpenEditForm = (p: ParentData) => {
     setEditingParent(p);
+    setErrors({});
     setFormData({
       branch_id: p.branch_id,
       father_name: p.father_name || '',
@@ -151,24 +169,86 @@ export const FamilyManagement: React.FC = () => {
     setIsDetailsOpen(true);
   };
 
+  const collectErrors = (): ParentFormErrors => {
+    const found: ParentFormErrors = {};
+    const require = (field: ParentField, label: string) => {
+      if (!formData[field]?.trim()) found[field] = `${label} is required.`;
+    };
+
+    (['father', 'mother'] as const).forEach(side => {
+      const who = side === 'father' ? "Father's" : "Mother's";
+
+      require(`${side}_name`, `${who} name`);
+      require(`${side}_education`, `${who} education`);
+      require(`${side}_occupation`, `${who} occupation`);
+
+      const cnic = formData[`${side}_cnic`];
+      if (!cnic?.trim()) found[`${side}_cnic`] = `${who} CNIC is required.`;
+      else if (!isCnic(cnic)) found[`${side}_cnic`] = CNIC_ERROR;
+
+      const contact = formData[`${side}_contact_no`];
+      if (!contact?.trim()) found[`${side}_contact_no`] = `${who} contact number is required.`;
+      else if (!isPkMobile(contact)) found[`${side}_contact_no`] = PK_MOBILE_ERROR;
+    });
+
+    require('address', 'Residential address');
+
+    // A nominated "other" guardian carries their own details.
+    if (formData.guardian_type === 'other') {
+      require('guardian_name', "Guardian's name");
+
+      const cnic = formData.guardian_cnic;
+      if (!cnic?.trim()) found.guardian_cnic = "Guardian's CNIC is required.";
+      else if (!isCnic(cnic)) found.guardian_cnic = CNIC_ERROR;
+
+      const contact = formData.guardian_contact_no;
+      if (contact?.trim() && !isPkMobile(contact)) found.guardian_contact_no = PK_MOBILE_ERROR;
+    }
+
+    return found;
+  };
+
+  const clearError = (field: ParentField) => {
+    if (errors[field]) setErrors(prev => ({ ...prev, [field]: undefined }));
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    
-    // Prepare payload based on guardian type
-    const payload: CreateParentInput = { ...formData };
-    
-    if (formData.guardian_type === 'father') {
-      payload.guardian_name = formData.father_name;
-      payload.guardian_cnic = formData.father_cnic;
-      payload.guardian_education = formData.father_education;
-      payload.guardian_occupation = formData.father_occupation;
-      payload.guardian_contact_no = formData.father_contact_no;
-    } else if (formData.guardian_type === 'mother') {
-      payload.guardian_name = formData.mother_name;
-      payload.guardian_cnic = formData.mother_cnic;
-      payload.guardian_education = formData.mother_education;
-      payload.guardian_occupation = formData.mother_occupation;
-      payload.guardian_contact_no = formData.mother_contact_no;
+
+    const found = collectErrors();
+    if (Object.keys(found).length > 0) {
+      setErrors(found);
+      return;
+    }
+    setErrors({});
+
+    // Store phones and CNICs in one canonical shape, whatever the user typed.
+    const payload: CreateParentInput = {
+      ...formData,
+      father_cnic: normalizeCnic(formData.father_cnic)!,
+      mother_cnic: normalizeCnic(formData.mother_cnic)!,
+      father_contact_no: normalizePkMobile(formData.father_contact_no)!,
+      mother_contact_no: normalizePkMobile(formData.mother_contact_no)!,
+    };
+
+    // Guardian fields mirror whichever parent was nominated — copy the normalized values.
+    if (payload.guardian_type === 'father') {
+      payload.guardian_name = payload.father_name;
+      payload.guardian_cnic = payload.father_cnic;
+      payload.guardian_education = payload.father_education;
+      payload.guardian_occupation = payload.father_occupation;
+      payload.guardian_contact_no = payload.father_contact_no;
+    } else if (payload.guardian_type === 'mother') {
+      payload.guardian_name = payload.mother_name;
+      payload.guardian_cnic = payload.mother_cnic;
+      payload.guardian_education = payload.mother_education;
+      payload.guardian_occupation = payload.mother_occupation;
+      payload.guardian_contact_no = payload.mother_contact_no;
+    } else if (payload.guardian_type === 'other') {
+      payload.guardian_cnic = normalizeCnic(formData.guardian_cnic)!;
+      if (formData.guardian_contact_no?.trim()) {
+        payload.guardian_contact_no = normalizePkMobile(formData.guardian_contact_no)!;
+      }
     }
 
     if (editingParent) {
@@ -419,7 +499,7 @@ export const FamilyManagement: React.FC = () => {
                   </button>
                 </div>
 
-              <form onSubmit={handleSubmit}>
+              <form onSubmit={handleSubmit} noValidate>
                 <div className="p-5 sm:p-8 space-y-8 sm:space-y-10 overflow-y-auto max-h-[70vh] custom-scrollbar">
 
                   {/* Father Details */}
@@ -432,58 +512,86 @@ export const FamilyManagement: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Father Name</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Father Name <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.father_name}
-                          onChange={(e) => setFormData({...formData, father_name: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, father_name: e.target.value});
+                            clearError('father_name');
+                          }}
+                          className={cn(inputClass, errors.father_name ? errorRing : "border-transparent")}
                         />
+                        {errors.father_name && <p className="text-xs font-bold text-rose-500">{errors.father_name}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Father CNIC</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Father CNIC <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
-                          placeholder="35201-XXXXXXX-X"
+                          placeholder={CNIC_PLACEHOLDER}
+                          inputMode="numeric"
                           value={formData.father_cnic}
-                          onChange={(e) => setFormData({...formData, father_cnic: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, father_cnic: e.target.value});
+                            clearError('father_cnic');
+                          }}
+                          className={cn(inputClass, errors.father_cnic ? errorRing : "border-transparent")}
                         />
+                        {errors.father_cnic && <p className="text-xs font-bold text-rose-500">{errors.father_cnic}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Education</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Education <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.father_education}
-                          onChange={(e) => setFormData({...formData, father_education: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, father_education: e.target.value});
+                            clearError('father_education');
+                          }}
+                          className={cn(inputClass, errors.father_education ? errorRing : "border-transparent")}
                         />
+                        {errors.father_education && <p className="text-xs font-bold text-rose-500">{errors.father_education}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Occupation</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Occupation <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.father_occupation}
-                          onChange={(e) => setFormData({...formData, father_occupation: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, father_occupation: e.target.value});
+                            clearError('father_occupation');
+                          }}
+                          className={cn(inputClass, errors.father_occupation ? errorRing : "border-transparent")}
                         />
+                        {errors.father_occupation && <p className="text-xs font-bold text-rose-500">{errors.father_occupation}</p>}
                       </div>
                       <div className="space-y-2 sm:col-span-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Contact Number <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                           <input
                             type="text"
+                            placeholder={`e.g. ${PK_MOBILE_PLACEHOLDER}`}
+                            inputMode="tel"
                             value={formData.father_contact_no}
-                            onChange={(e) => setFormData({...formData, father_contact_no: e.target.value})}
-                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                            required
+                            onChange={(e) => {
+                              setFormData({...formData, father_contact_no: e.target.value});
+                              clearError('father_contact_no');
+                            }}
+                            className={cn(inputClass, "pl-12", errors.father_contact_no ? errorRing : "border-transparent")}
                           />
                         </div>
+                        {errors.father_contact_no && <p className="text-xs font-bold text-rose-500">{errors.father_contact_no}</p>}
                       </div>
                     </div>
                   </div>
@@ -498,58 +606,86 @@ export const FamilyManagement: React.FC = () => {
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mother Name</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Mother Name <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.mother_name}
-                          onChange={(e) => setFormData({...formData, mother_name: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, mother_name: e.target.value});
+                            clearError('mother_name');
+                          }}
+                          className={cn(inputClass, errors.mother_name ? errorRing : "border-transparent")}
                         />
+                        {errors.mother_name && <p className="text-xs font-bold text-rose-500">{errors.mother_name}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Mother CNIC</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Mother CNIC <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
-                          placeholder="35201-XXXXXXX-X"
+                          placeholder={CNIC_PLACEHOLDER}
+                          inputMode="numeric"
                           value={formData.mother_cnic}
-                          onChange={(e) => setFormData({...formData, mother_cnic: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, mother_cnic: e.target.value});
+                            clearError('mother_cnic');
+                          }}
+                          className={cn(inputClass, errors.mother_cnic ? errorRing : "border-transparent")}
                         />
+                        {errors.mother_cnic && <p className="text-xs font-bold text-rose-500">{errors.mother_cnic}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Education</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Education <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.mother_education}
-                          onChange={(e) => setFormData({...formData, mother_education: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, mother_education: e.target.value});
+                            clearError('mother_education');
+                          }}
+                          className={cn(inputClass, errors.mother_education ? errorRing : "border-transparent")}
                         />
+                        {errors.mother_education && <p className="text-xs font-bold text-rose-500">{errors.mother_education}</p>}
                       </div>
                       <div className="space-y-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Occupation</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Occupation <span className="text-rose-500">*</span>
+                        </label>
                         <input
                           type="text"
                           value={formData.mother_occupation}
-                          onChange={(e) => setFormData({...formData, mother_occupation: e.target.value})}
-                          className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                          required
+                          onChange={(e) => {
+                            setFormData({...formData, mother_occupation: e.target.value});
+                            clearError('mother_occupation');
+                          }}
+                          className={cn(inputClass, errors.mother_occupation ? errorRing : "border-transparent")}
                         />
+                        {errors.mother_occupation && <p className="text-xs font-bold text-rose-500">{errors.mother_occupation}</p>}
                       </div>
                       <div className="space-y-2 sm:col-span-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Contact Number</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Contact Number <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
                           <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                           <input
                             type="text"
+                            placeholder={`e.g. ${PK_MOBILE_PLACEHOLDER}`}
+                            inputMode="tel"
                             value={formData.mother_contact_no}
-                            onChange={(e) => setFormData({...formData, mother_contact_no: e.target.value})}
-                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                            required
+                            onChange={(e) => {
+                              setFormData({...formData, mother_contact_no: e.target.value});
+                              clearError('mother_contact_no');
+                            }}
+                            className={cn(inputClass, "pl-12", errors.mother_contact_no ? errorRing : "border-transparent")}
                           />
                         </div>
+                        {errors.mother_contact_no && <p className="text-xs font-bold text-rose-500">{errors.mother_contact_no}</p>}
                       </div>
                     </div>
                   </div>
@@ -609,17 +745,22 @@ export const FamilyManagement: React.FC = () => {
                       </div>
 
                       <div className="space-y-2 sm:col-span-2">
-                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Residential Address</label>
+                        <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                          Residential Address <span className="text-rose-500">*</span>
+                        </label>
                         <div className="relative">
                           <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                           <input
                             type="text"
                             value={formData.address}
-                            onChange={(e) => setFormData({...formData, address: e.target.value})}
-                            className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                            required
+                            onChange={(e) => {
+                              setFormData({...formData, address: e.target.value});
+                              clearError('address');
+                            }}
+                            className={cn(inputClass, "pl-12", errors.address ? errorRing : "border-transparent")}
                           />
                         </div>
+                        {errors.address && <p className="text-xs font-bold text-rose-500">{errors.address}</p>}
                       </div>
                     </div>
                   </div>
@@ -641,25 +782,36 @@ export const FamilyManagement: React.FC = () => {
                         </div>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Guardian Name</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                              Guardian Name <span className="text-rose-500">*</span>
+                            </label>
                             <input
                               type="text"
                               value={formData.guardian_name}
-                              onChange={(e) => setFormData({...formData, guardian_name: e.target.value})}
-                              className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                              required={formData.guardian_type === 'other'}
+                              onChange={(e) => {
+                                setFormData({...formData, guardian_name: e.target.value});
+                                clearError('guardian_name');
+                              }}
+                              className={cn(inputClass, errors.guardian_name ? errorRing : "border-transparent")}
                             />
+                            {errors.guardian_name && <p className="text-xs font-bold text-rose-500">{errors.guardian_name}</p>}
                           </div>
                           <div className="space-y-2">
-                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Guardian CNIC</label>
+                            <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">
+                              Guardian CNIC <span className="text-rose-500">*</span>
+                            </label>
                             <input
                               type="text"
-                              placeholder="35201-XXXXXXX-X"
+                              placeholder={CNIC_PLACEHOLDER}
+                              inputMode="numeric"
                               value={formData.guardian_cnic}
-                              onChange={(e) => setFormData({...formData, guardian_cnic: e.target.value})}
-                              className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
-                              required={formData.guardian_type === 'other'}
+                              onChange={(e) => {
+                                setFormData({...formData, guardian_cnic: e.target.value});
+                                clearError('guardian_cnic');
+                              }}
+                              className={cn(inputClass, errors.guardian_cnic ? errorRing : "border-transparent")}
                             />
+                            {errors.guardian_cnic && <p className="text-xs font-bold text-rose-500">{errors.guardian_cnic}</p>}
                           </div>
                           <div className="space-y-2">
                             <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Education</label>
@@ -685,11 +837,17 @@ export const FamilyManagement: React.FC = () => {
                               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                               <input
                                 type="text"
+                                placeholder={`e.g. ${PK_MOBILE_PLACEHOLDER}`}
+                                inputMode="tel"
                                 value={formData.guardian_contact_no}
-                                onChange={(e) => setFormData({...formData, guardian_contact_no: e.target.value})}
-                                className="w-full px-4 py-3 bg-slate-50 border-none rounded-xl pl-12 focus:ring-2 focus:ring-brand-500/20 outline-none font-medium text-sm"
+                                onChange={(e) => {
+                                  setFormData({...formData, guardian_contact_no: e.target.value});
+                                  clearError('guardian_contact_no');
+                                }}
+                                className={cn(inputClass, "pl-12", errors.guardian_contact_no ? errorRing : "border-transparent")}
                               />
                             </div>
+                            {errors.guardian_contact_no && <p className="text-xs font-bold text-rose-500">{errors.guardian_contact_no}</p>}
                           </div>
                         </div>
                       </motion.div>

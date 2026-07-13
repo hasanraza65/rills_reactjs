@@ -150,7 +150,7 @@ export const StudentDetailsModal: React.FC<StudentDetailsModalProps> = ({
                         <p className="text-sm font-bold text-slate-800">{student?.nationality || 'N/A'}</p>
                       </div>
                       <div>
-                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">Contact</p>
+                        <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest mb-1">WhatsApp</p>
                         <p className="text-sm font-bold text-slate-800">{student?.home_contact || 'N/A'}</p>
                       </div>
                     </div>
