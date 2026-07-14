@@ -23,11 +23,13 @@ import { EmptyState } from '../ui/EmptyState';
 import { classSubjectService } from '../../lib/services/class-subject-service';
 import { ClassSubjectData } from '../../types/api/class-subject';
 import { diaryService } from '../../lib/services/diary-service';
-import { DiaryData } from '../../types/api/diary';
+import { DiaryData, DiaryStatus } from '../../types/api/diary';
 import { sectionService } from '../../lib/services/section-service';
 import { SectionData } from '../../types/api/section';
 import { classService } from '../../lib/services/class-service';
 import { ClassData } from '../../types/api/class';
+import { useBranchStore } from '../../store/use-branch-store';
+import { isUrl, normalizeUrl, URL_ERROR, URL_PLACEHOLDER } from '../../lib/validations/url';
 
 interface DiaryRow {
   id: number;
@@ -108,7 +110,7 @@ const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ 
              {[
                { label: 'Subject', value: diaryDetail.class_subject?.subject_name ?? '-', isLink: false },
                { label: 'Topic', value: diaryDetail.topic ?? '-', isLink: false },
-               { label: 'Description', value: diaryDetail.description ?? '-', isLink: false },
+               { label: 'Activity', value: diaryDetail.activity ?? '-', isLink: false },
                { label: 'Page Number', value: diaryDetail.page_number ?? '-', isLink: false },
                { label: 'Resources', value: diaryDetail.resources ?? '-', isLink: false },
                { label: 'Link', value: diaryDetail.link ?? '-', isLink: !!diaryDetail.link },
@@ -180,15 +182,29 @@ const DiaryDetailView: React.FC<{ section: DiaryRow, onBack: () => void }> = ({ 
   );
 };
 
-interface EditDiaryForm { topic: string; description: string; date: string; status: string; }
+/** Every editable field. Anything omitted here is silently dropped on save. */
+interface EditDiaryForm {
+  topic: string;
+  activity: string;
+  page_number: string;
+  resources: string;
+  link: string;
+  home_work: string;
+  date: string;
+  status: DiaryStatus;
+}
 
 // ─── Edit Modal ──────────────────────────────────────────────────────────────
 const EditDiaryModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuccess: () => void }> = ({ diary, onClose, onSuccess }) => {
   const [form, setForm] = useState<EditDiaryForm>({
     topic: diary.raw.topic ?? '',
-    description: diary.raw.description ?? '',
+    activity: diary.raw.activity ?? '',
+    page_number: diary.raw.page_number ?? '',
+    resources: diary.raw.resources ?? '',
+    link: diary.raw.link ?? '',
+    home_work: diary.raw.home_work ?? '',
     date: diary.raw.date ?? '',
-    status: diary.raw.status ?? 'Pending',
+    status: (diary.raw.status ?? 'Pending') as DiaryStatus,
   });
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
@@ -200,14 +216,24 @@ const EditDiaryModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuccess
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (form.link.trim() && !isUrl(form.link)) {
+      setSubmitError(URL_ERROR);
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
     try {
-      await diaryService.updateDiary(diary.raw.id, { ...form, _method: 'PUT' });
+      await diaryService.updateDiary(diary.raw.id, {
+        ...form,
+        link: form.link.trim() ? normalizeUrl(form.link)! : '',
+        _method: 'PUT',
+      });
       onSuccess();
       onClose();
-    } catch {
-      setSubmitError('Failed to update diary. Please try again.');
+    } catch (err: any) {
+      setSubmitError(err?.response?.data?.message ?? 'Failed to update diary. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -237,9 +263,31 @@ const EditDiaryModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuccess
               <input type="text" name="topic" value={form.topic} onChange={handleChange} required
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm" />
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Page Number</label>
+                <input type="text" name="page_number" value={form.page_number} onChange={handleChange} placeholder="e.g 1-3"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm" />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Resources</label>
+                <input type="text" name="resources" value={form.resources} onChange={handleChange} placeholder="e.g Book"
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm" />
+              </div>
+            </div>
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Description</label>
-              <textarea name="description" value={form.description} onChange={handleChange} rows={3}
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Link</label>
+              <input type="text" name="link" value={form.link} onChange={handleChange} placeholder={URL_PLACEHOLDER}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Activity</label>
+              <textarea name="activity" value={form.activity} onChange={handleChange} rows={3}
+                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none" />
+            </div>
+            <div className="space-y-1.5">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Home Work</label>
+              <textarea name="home_work" value={form.home_work} onChange={handleChange} rows={3}
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm resize-none" />
             </div>
             <div className="grid grid-cols-2 gap-4">
@@ -338,6 +386,9 @@ interface AddDiaryStep2Form {
 }
 
 const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = ({ onClose, onSuccess }) => {
+  const { selectedBranchId } = useBranchStore();
+  const branchId = selectedBranchId ?? 1;
+
   const [step, setStep] = useState<1 | 2>(1);
 
   // Step 1 — cascading selects
@@ -360,7 +411,7 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
 
   // Load classes on mount
   useEffect(() => {
-    classService.getClasses(1)
+    classService.getClasses(branchId)
       .then(res => setClasses(res ?? []))
       .catch(() => setClasses([]))
       .finally(() => setLoadingClasses(false));
@@ -386,11 +437,11 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
     setLoadingSubjects(true);
     setSubjects([]);
     setSelectedSubjectId('');
-    classSubjectService.getSubjectsBySection(Number(selectedSectionId), 1)
+    classSubjectService.getSubjectsBySection(Number(selectedSectionId), branchId)
       .then(res => setSubjects(res.data ?? []))
       .catch(() => setSubjects([]))
       .finally(() => setLoadingSubjects(false));
-  }, [selectedSectionId]);
+  }, [selectedSectionId, branchId]);
 
   const handleFormChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -399,25 +450,33 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (form.link.trim() && !isUrl(form.link)) {
+      setSubmitError(URL_ERROR);
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
     try {
+      // branch_id is derived server-side from the chosen subject — don't send one.
       await diaryService.createDiary({
         class_subject_id: Number(selectedSubjectId),
         topic: form.topic,
-        description: form.activity,
+        activity: form.activity,
         page_number: form.page_number,
         resources: form.resources,
-        link: form.link,
+        link: form.link.trim() ? normalizeUrl(form.link)! : '',
         home_work: form.home_work,
         date: form.date,
         status: 'Pending',
-        branch_id: 1,
       });
       onSuccess();
       onClose();
-    } catch {
-      setSubmitError('Failed to create diary. Please try again.');
+    } catch (err: any) {
+      // A duplicate diary comes back as a 422 with a message — surface it rather
+      // than swallowing it behind a generic string.
+      setSubmitError(err?.response?.data?.message ?? 'Failed to create diary. Please try again.');
     } finally {
       setSubmitting(false);
     }
@@ -627,14 +686,17 @@ export const DiariesManager: React.FC = () => {
   const [editTarget, setEditTarget] = useState<DiaryRow | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<DiaryRow | null>(null);
 
+  const { selectedBranchId } = useBranchStore();
+  const branchId = selectedBranchId ?? 1;
+
   const loadDiaries = async () => {
     try {
       setLoading(true);
       setFetchError(null);
       const [diariesRes, sectionsRes, classesRes] = await Promise.all([
-        diaryService.getDiaries(1),
-        sectionService.getSections(1),
-        classService.getClasses(1),
+        diaryService.getDiaries({ branch_id: branchId }),
+        sectionService.getSections(branchId),
+        classService.getClasses(branchId),
       ]);
       const sectionMap = new Map((sectionsRes ?? []).map(s => [s.id, s.name]));
       const classMap = new Map((classesRes ?? []).map(c => [c.id, c.name]));

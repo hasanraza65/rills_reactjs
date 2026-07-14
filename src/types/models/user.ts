@@ -29,6 +29,8 @@ export interface User {
   cnic?: string | null;
   token?: string;
   branches?: Branch[];
+  /** The user's own branch. Teachers and parents get no `branches` list, so this is their only branch context. */
+  branchId?: number | null;
 }
 
 /**

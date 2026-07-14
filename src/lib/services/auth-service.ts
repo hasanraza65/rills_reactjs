@@ -20,6 +20,7 @@ const mapApiUserToUser = (response: LoginResponse): User => {
     cnic: user.cnic,
     token: token,
     branches: user.branches,
+    branchId: user.branch_id ?? null,
   };
 };
 

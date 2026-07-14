@@ -21,7 +21,10 @@ export interface ApiUser {
   is_active: number;
   created_at: string;
   updated_at: string;
+  /** Only Super Admin and Branch Admin get a populated `branches` list. */
   branches?: Branch[];
+  /** The user's own branch. Roles without a `branches` list still need this. */
+  branch_id: number | null;
 }
 
 /**

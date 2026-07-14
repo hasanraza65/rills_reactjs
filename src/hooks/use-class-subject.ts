@@ -18,6 +18,17 @@ export const useClassSubjects = (sectionId: number | null) => {
 };
 
 /**
+ * Hook to fetch the subjects the signed-in teacher is assigned to.
+ */
+export const useMySubjects = (enabled = true) => {
+  return useQuery({
+    queryKey: ['class-subjects', 'mine'],
+    queryFn: () => classSubjectService.getMySubjects(),
+    enabled,
+  });
+};
+
+/**
  * Hook to create a new class subject.
  */
 export const useCreateClassSubject = () => {

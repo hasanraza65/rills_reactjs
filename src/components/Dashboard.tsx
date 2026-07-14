@@ -63,7 +63,6 @@ import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
-import { Skeleton, SkeletonCard } from './ui/Skeleton';
 import { 
   AreaChart, 
   Area, 
@@ -119,11 +118,16 @@ export const Dashboard: React.FC<DashboardProps> = ({
 }) => {
   const { user } = useAuthStore();
   const { selectedBranchId } = useBranchStore();
-  const { data: overviewResp, isLoading: isLoadingOverview } = useDashboardOverview(selectedBranchId);
+  // Branch Admin's overview requires a branch_id server-side and 422s without one.
+  // selectedBranchId starts null until the branch-selection effect in App.tsx runs,
+  // so gate the query rather than firing a request guaranteed to fail.
+  const { data: overviewResp, isLoading: isLoadingOverview } = useDashboardOverview(
+    selectedBranchId,
+    role !== 'BRANCH_ADMIN' || !!selectedBranchId
+  );
 
-  const [isLoading, setIsLoading] = React.useState(true);
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
-  
+
   // Student CRUD State
   const [viewingStudent, setViewingStudent] = React.useState<any | null>(null);
   const [editingStudent, setEditingStudent] = React.useState<any | null>(null);
@@ -132,44 +136,22 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(selectedBranchId || 1);
   const deleteStudentMutation = useDeleteStudent();
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => setIsLoading(false), 1000);
-    return () => clearTimeout(timer);
-  }, [activeTab, role]);
-
-  if (isLoading) {
-    return (
-      <div className="p-4 sm:p-8 max-w-[1600px] mx-auto space-y-8">
-
-        <div className="flex justify-between items-center mb-10">
-          <div className="space-y-2">
-            <Skeleton className="h-10 w-48" />
-            <Skeleton className="h-4 w-64" />
-          </div>
-          <div className="flex gap-4">
-            <Skeleton className="h-12 w-12 rounded-2xl" />
-            <Skeleton className="h-12 w-32 rounded-2xl" />
-          </div>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Skeleton className="h-32 rounded-3xl" />
-          <Skeleton className="h-32 rounded-3xl" />
-          <Skeleton className="h-32 rounded-3xl" />
-        </div>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <SkeletonCard />
-          <SkeletonCard />
-        </div>
-      </div>
-    );
-  }
-
   const renderSuperAdmin = () => {
     const d = overviewResp?.data as SuperAdminOverview | undefined;
+    // Tabs with their own block below. Anything else (e.g. the not-yet-built
+    // "Subscriptions" and "System Settings" items) falls back to the overview
+    // instead of rendering a blank page.
+    const HANDLED_TABS = [
+      'branches', 'pricing', 'attendance', 'student-attendance', 'staff-attendance',
+      'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
+      'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
+      'subjects', 'results', 'class-syllabus',
+    ];
+    const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
-        {activeTab === 'overview' && (
+        {showOverview && (
           <motion.div
             key="overview"
             initial={{ opacity: 0, y: 10 }}

@@ -191,16 +191,6 @@ export interface Syllabus {
   createdAt: string;
 }
 
-export interface DiaryEntry {
-  id: string;
-  classId: string;
-  teacherId: string;
-  subject: string;
-  content: string;
-  date: string;
-  attachments?: { name: string; url: string }[];
-}
-
 export const SYLLABUS_DATA: Syllabus[] = [
   {
     id: 'syl1',
@@ -223,35 +213,6 @@ export const SYLLABUS_DATA: Syllabus[] = [
     assignedBranches: ['b1'],
     assignedSchools: ['s1'],
     createdAt: '2024-01-20',
-  }
-];
-
-export const DIARY_ENTRIES: DiaryEntry[] = [
-  {
-    id: 'd1',
-    classId: 'c1',
-    teacherId: 't1',
-    subject: 'Mathematics',
-    content: 'Completed Chapter 3: Addition up to 100. Homework: Exercise 3.2, Questions 1-5.',
-    date: '2024-03-02',
-    attachments: [{ name: 'Math_HW_Sheet.pdf', url: '#' }]
-  },
-  {
-    id: 'd2',
-    classId: 'c1',
-    teacherId: 't1',
-    subject: 'English',
-    content: 'Read "The Little Red Hen". Students practiced identifying the main character and setting.',
-    date: '2024-03-02',
-  },
-  {
-    id: 'd3',
-    classId: 'c1',
-    teacherId: 't1',
-    subject: 'Science',
-    content: 'Introduction to Plants. Discussed parts of a plant (roots, stem, leaves).',
-    date: '2024-03-01',
-    attachments: [{ name: 'Plant_Diagram.jpg', url: '#' }]
   }
 ];
 

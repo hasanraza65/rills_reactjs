@@ -27,6 +27,19 @@ export const classSubjectService = {
   },
 
   /**
+   * Fetches the subjects the authenticated teacher is assigned to.
+   *
+   * Deliberately sends no branch_id: teacher accounts have no branch on their user
+   * row, and the endpoint would filter on a null branch and return nothing.
+   */
+  getMySubjects: async (): Promise<ClassSubjectsResponse> => {
+    const response = await apiClient.get<ClassSubjectsResponse>('/class-subjects', {
+      params: { mine: 1 }
+    });
+    return response.data;
+  },
+
+  /**
    * Creates a new subject for a class section.
    */
   createSubject: async (data: CreateClassSubjectInput): Promise<any> => {
