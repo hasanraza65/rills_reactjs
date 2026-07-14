@@ -85,27 +85,29 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
   const docInputRef = useRef<HTMLInputElement>(null);
   const [activeDocKey, setActiveDocKey] = useState<string | null>(null);
   
-  // Form State
+  // Form State — defaults for a new admission. When editing, the effect below
+  // re-seeds every field from `editingStudent` once it's available, rather than
+  // relying on it being present at the exact instant this state is constructed.
   const [formData, setFormData] = useState({
-    name: editingStudent?.name || '',
-    dob: editingStudent?.dob ? editingStudent.dob.split('T')[0] : '',
+    name: '',
+    dob: '',
     // Left blank for new students so the user has to make an explicit choice.
-    gender: (editingStudent?.gender ? (editingStudent.gender.toLowerCase() === 'male' ? 'MALE' : 'FEMALE') : '') as Gender | '',
-    branchId: editingStudent?.branch_id || selectedBranchId || 1,
-    classId: editingStudent?.class_id?.toString() || '',
-    sectionId: editingStudent?.section_id?.toString() || '',
-    nationality: editingStudent?.nationality || 'Pakistani',
-    address: editingStudent?.address || '',
-    home_contact: editingStudent?.home_contact || '',
-    currently_studying: editingStudent?.currently_studying || '',
-    health_details: editingStudent?.health_details || '',
-    previous_schools: editingStudent?.previous_schools || [],
-    health_issues: editingStudent?.health_issues || [],
-    source: editingStudent?.source || '',
-    photo: (editingStudent?.photo || '') as string | File,
-    attachments: (editingStudent?.attachments || []) as (string | File)[],
+    gender: '' as Gender | '',
+    branchId: selectedBranchId || 1,
+    classId: '',
+    sectionId: '',
+    nationality: 'Pakistani',
+    address: '',
+    home_contact: '',
+    currently_studying: '',
+    health_details: '',
+    previous_schools: [] as string[],
+    health_issues: [] as string[],
+    source: '',
+    photo: '' as string | File,
+    attachments: [] as (string | File)[],
     parentOption: 'EXISTING' as 'EXISTING' | 'NEW',
-    selectedParentId: editingStudent?.parent_id?.toString() || '',
+    selectedParentId: '',
     newParent: {
       father_name: '',
       father_cnic: '',
@@ -128,6 +130,40 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
       { id: 'fh4', name: 'Library Fee', amount: 500, isEnabled: true },
     ] as FeeHead[],
   });
+
+  // Re-seed the whole form whenever the student being edited changes. A plain
+  // useState(initialValue) only runs once at construction time, so it can miss
+  // editingStudent if it isn't present at that exact instant — this effect
+  // reacts to the prop directly instead of depending on mount timing.
+  useEffect(() => {
+    if (!editingStudent) return;
+
+    setFormData(prev => ({
+      ...prev,
+      name: editingStudent.name || '',
+      dob: editingStudent.dob ? editingStudent.dob.split('T')[0] : '',
+      gender: (editingStudent.gender
+        ? (editingStudent.gender.toLowerCase() === 'male' ? 'MALE' : 'FEMALE')
+        : '') as Gender | '',
+      branchId: editingStudent.branch_id || selectedBranchId || 1,
+      classId: editingStudent.class_id?.toString() || '',
+      sectionId: editingStudent.section_id?.toString() || '',
+      nationality: editingStudent.nationality || 'Pakistani',
+      address: editingStudent.address || '',
+      home_contact: editingStudent.home_contact || '',
+      currently_studying: editingStudent.currently_studying || '',
+      health_details: editingStudent.health_details || '',
+      previous_schools: editingStudent.previous_schools || [],
+      health_issues: editingStudent.health_issues || [],
+      source: editingStudent.source || '',
+      photo: (editingStudent.photo || '') as string | File,
+      attachments: (editingStudent.attachments || []) as (string | File)[],
+      parentOption: 'EXISTING',
+      selectedParentId: editingStudent.parent_id?.toString() || '',
+    }));
+    setCurrentStep(1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingStudent?.id]);
 
   // Sync branchId from store if not editing
   useEffect(() => {
