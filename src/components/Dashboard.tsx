@@ -399,7 +399,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -10 }}
           >
-            <ClassSyllabusManager />
+            <ClassSyllabusManager role={role} />
           </motion.div>
         )}
 
@@ -868,6 +868,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
+        {/* class-syllabus is the real CRUD screen, shared by Branch Admin and School Admin. */}
+        {activeTab === 'class-syllabus' && (
+          <motion.div
+            key="class-syllabus"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassSyllabusManager role={role} />
+          </motion.div>
+        )}
+
         {activeTab === 'diary' && (
           <motion.div
             key="diary"
@@ -1050,6 +1062,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
+        {activeTab === 'class-syllabus' && (
+          <motion.div
+            key="class-syllabus"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassSyllabusManager role={role} />
+          </motion.div>
+        )}
+
         {activeTab === 'syllabus' && (
           <motion.div
             key="syllabus"
@@ -1083,7 +1106,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {!['overview', 'attendance', 'diary', 'syllabus', 'library', 'lesson-plan-list'].includes(activeTab) && (
+        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list'].includes(activeTab) && (
           <motion.div
             key="placeholder"
             initial={{ opacity: 0 }}
@@ -1306,6 +1329,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <StudentDiary role={role} />
+          </motion.div>
+        )}
+
+        {activeTab === 'class-syllabus' && (
+          <motion.div
+            key="class-syllabus"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ClassSyllabusManager role={role} />
           </motion.div>
         )}
 

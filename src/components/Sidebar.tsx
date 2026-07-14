@@ -111,6 +111,7 @@ const menuItems: Record<UserRole, any[]> = {
       ]
     },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
+    { icon: BookOpen, label: 'Class Syllabus', id: 'class-syllabus' },
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     { icon: GraduationCap, label: 'Academic Years', id: 'academics' },
@@ -121,6 +122,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: Users, label: 'Parents', id: 'families' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
     { icon: Key, label: 'Admission Keys', id: 'admission-keys' },
+    { icon: BookOpen, label: 'Syllabus', id: 'class-syllabus' },
     {
       icon: CreditCard,
       label: 'Fees',
@@ -148,7 +150,7 @@ const menuItems: Record<UserRole, any[]> = {
   ],
   TEACHER: [
     { icon: LayoutDashboard, label: 'My Classes', id: 'overview' },
-    { icon: BookOpen, label: 'Curriculum', id: 'curriculum' },
+    { icon: BookOpen, label: 'Curriculum', id: 'class-syllabus' },
     { icon: FileText, label: 'Lesson Plan', id: 'lesson-plan-list' },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: FileText, label: 'Daily Diary', id: 'diary' },
@@ -158,6 +160,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: LayoutDashboard, label: 'Child Progress', id: 'overview' },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: FileText, label: 'Daily Diary', id: 'diary' },
+    { icon: BookOpen, label: 'Syllabus', id: 'class-syllabus' },
     { icon: Bell, label: 'Notices', id: 'notices' },
     { icon: CreditCard, label: 'Fees', id: 'fees' },
     { icon: MessageSquare, label: 'Teacher Chat', id: 'chat' },
