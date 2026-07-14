@@ -11,6 +11,7 @@ interface FlatRow {
   topic: string;
   subject: string;
   className: string;
+  sectionName: string;
   isDone: boolean;
   completedDate: string | null;
 }
@@ -32,8 +33,9 @@ export const LessonPlanList: React.FC = () => {
           topicId: t.id,
           subjectId: s.id,
           topic: t.name,
-          subject: s.name,
-          className: s.school_class?.name ?? '—',
+          subject: s.subject_name,
+          className: s.class?.name ?? '—',
+          sectionName: s.section?.name ?? '',
           isDone: !!t.is_done,
           completedDate: t.completed_date ?? null,
         });
@@ -44,7 +46,7 @@ export const LessonPlanList: React.FC = () => {
 
   const filtered = useMemo(() => {
     const q = search.toLowerCase().trim();
-    return rows.filter((r) => !q || r.topic.toLowerCase().includes(q) || r.subject.toLowerCase().includes(q) || r.className.toLowerCase().includes(q));
+    return rows.filter((r) => !q || r.topic.toLowerCase().includes(q) || r.subject.toLowerCase().includes(q) || r.className.toLowerCase().includes(q) || r.sectionName.toLowerCase().includes(q));
   }, [rows, search]);
 
   const doneCount = rows.filter((r) => r.isDone).length;
@@ -106,7 +108,9 @@ export const LessonPlanList: React.FC = () => {
                   <tr key={r.topicId} className="hover:bg-slate-50/50 transition-colors">
                     <td className="px-6 py-4 text-sm font-bold text-slate-700">{r.topic}</td>
                     <td className="px-6 py-4 text-sm text-slate-600 font-medium">{r.subject}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 font-medium">{r.className}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600 font-medium">
+                      {r.sectionName ? `${r.className} / ${r.sectionName}` : r.className}
+                    </td>
                     <td className="px-6 py-4 text-center">
                       {r.isDone ? (
                         <button

@@ -8,11 +8,15 @@ import { CreateClassSubjectInput, UpdateClassSubjectInput } from '../types/api/c
 
 /**
  * Hook to fetch subjects for a specific section.
+ *
+ * branchId defaults to 1 in the service layer if omitted — always pass the
+ * real selected branch, otherwise this silently queries branch 1 regardless
+ * of which branch the section actually belongs to.
  */
-export const useClassSubjects = (sectionId: number | null) => {
+export const useClassSubjects = (sectionId: number | null, branchId?: number | null) => {
   return useQuery({
-    queryKey: ['class-subjects', sectionId],
-    queryFn: () => classSubjectService.getSubjectsBySection(sectionId!),
+    queryKey: ['class-subjects', sectionId, branchId ?? 'default'],
+    queryFn: () => classSubjectService.getSubjectsBySection(sectionId!, branchId ?? undefined),
     enabled: !!sectionId,
   });
 };

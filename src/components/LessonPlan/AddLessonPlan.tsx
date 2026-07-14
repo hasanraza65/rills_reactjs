@@ -5,12 +5,14 @@ import {
 } from 'lucide-react';
 import { cn } from '../../types';
 import { useClasses } from '../../hooks/use-class';
+import { useSectionsByClass } from '../../hooks/use-section';
+import { useClassSubjects, useCreateClassSubject, useDeleteClassSubject } from '../../hooks/use-class-subject';
+import { useLessonPlanTeachers } from '../../hooks/use-lesson-plan';
 import { useBranchStore } from '../../store/use-branch-store';
 import {
-  useSubjects, useCreateSubject, useDeleteSubject,
   useTopics, useCreateTopics, useDeleteTopic, useUpdateLessonPlan,
 } from '../../hooks/use-lesson-plan';
-import type { QbTopic } from '../../types/api/lesson-plan';
+import type { QbTopic, LessonPlanTeacher } from '../../types/api/lesson-plan';
 
 const API_ORIGIN = (import.meta.env.VITE_API_URL ?? '').replace(/\/api\/?$/, '');
 
@@ -21,16 +23,20 @@ export const AddLessonPlan: React.FC = () => {
   const { data: classes } = useClasses(selectedBranchId ?? 1);
 
   const [classId, setClassId] = useState<number | ''>('');
+  const [sectionId, setSectionId] = useState<number | ''>('');
   const [subjectId, setSubjectId] = useState<number | ''>('');
 
-  const { data: subjects } = useSubjects(selectedBranchId, classId === '' ? undefined : classId);
+  const { data: sections } = useSectionsByClass(classId === '' ? null : classId);
+  const { data: subjectsResp } = useClassSubjects(sectionId === '' ? null : sectionId, selectedBranchId);
+  const subjects = subjectsResp?.data ?? [];
+  const { data: teachers } = useLessonPlanTeachers(selectedBranchId);
   const { data: topics, isLoading: topicsLoading } = useTopics(
     { subject_id: subjectId === '' ? undefined : subjectId, branch_id: selectedBranchId },
     subjectId !== ''
   );
 
-  const createSubject = useCreateSubject();
-  const deleteSubject = useDeleteSubject();
+  const createSubject = useCreateClassSubject();
+  const deleteSubject = useDeleteClassSubject();
   const createTopics = useCreateTopics();
   const deleteTopic = useDeleteTopic();
 
@@ -40,15 +46,17 @@ export const AddLessonPlan: React.FC = () => {
   const [deletingTopicId, setDeletingTopicId] = useState<number | null>(null);
   const [search, setSearch] = useState('');
 
-  // Reset subject when class changes
-  useEffect(() => { setSubjectId(''); }, [classId]);
+  // Reset section (and therefore subject) when class changes
+  useEffect(() => { setSectionId(''); }, [classId]);
+  // Reset subject when section changes
+  useEffect(() => { setSubjectId(''); }, [sectionId]);
 
   const filteredTopics = useMemo(() => {
     const q = search.toLowerCase().trim();
     return (topics ?? []).filter((t) => !q || t.name.toLowerCase().includes(q));
   }, [topics, search]);
 
-  const selectedSubject = subjects?.find((s) => s.id === subjectId);
+  const selectedSubject = subjects.find((s) => s.id === subjectId);
 
   return (
     <div className="space-y-6">
@@ -67,16 +75,23 @@ export const AddLessonPlan: React.FC = () => {
           </select>
         </div>
         <div className="space-y-2 flex-1">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Section</label>
+          <select className={inputCls} value={sectionId} onChange={(e) => setSectionId(e.target.value === '' ? '' : Number(e.target.value))} disabled={classId === ''}>
+            <option value="">{classId === '' ? 'Select a class first' : 'Select section'}</option>
+            {sections?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div className="space-y-2 flex-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
-          <select className={inputCls} value={subjectId} onChange={(e) => setSubjectId(e.target.value === '' ? '' : Number(e.target.value))} disabled={classId === ''}>
-            <option value="">{classId === '' ? 'Select a class first' : 'Select subject'}</option>
-            {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          <select className={inputCls} value={subjectId} onChange={(e) => setSubjectId(e.target.value === '' ? '' : Number(e.target.value))} disabled={sectionId === ''}>
+            <option value="">{sectionId === '' ? 'Select a section first' : 'Select subject'}</option>
+            {subjects.map((s) => <option key={s.id} value={s.id}>{s.subject_name}</option>)}
           </select>
         </div>
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowAddSubject(true)}
-            disabled={classId === ''}
+            disabled={sectionId === ''}
             className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
           >
             <BookOpen size={16} /> Add Subject
@@ -104,7 +119,7 @@ export const AddLessonPlan: React.FC = () => {
       {subjectId === '' ? (
         <div className="bg-white rounded-2xl border border-slate-100 p-16 text-center text-slate-400">
           <Layers size={44} strokeWidth={1.5} className="mx-auto mb-4" />
-          <p className="font-bold text-slate-600">Select a class and subject to manage topics</p>
+          <p className="font-bold text-slate-600">Select a class, section and subject to manage topics</p>
         </div>
       ) : (
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
@@ -155,14 +170,21 @@ export const AddLessonPlan: React.FC = () => {
 
       {/* Add Subject modal */}
       <AnimatePresence>
-        {showAddSubject && classId !== '' && (
+        {showAddSubject && classId !== '' && sectionId !== '' && (
           <AddSubjectModal
             classId={classId}
-            branchId={selectedBranchId}
+            sectionId={sectionId}
+            teachers={teachers ?? []}
             isPending={createSubject.isPending}
             onClose={() => setShowAddSubject(false)}
-            onSubmit={async (name) => {
-              await createSubject.mutateAsync({ name, class_id: classId, branch_id: selectedBranchId });
+            onSubmit={async (subjectName, teacherId) => {
+              await createSubject.mutateAsync({
+                subject_name: subjectName,
+                class_id: classId,
+                section_id: sectionId,
+                teacher_id: teacherId,
+                branch_id: selectedBranchId ?? 1,
+              });
               setShowAddSubject(false);
             }}
           />
@@ -198,8 +220,8 @@ export const AddLessonPlan: React.FC = () => {
             isPending={deletingTopicId === -1 ? deleteSubject.isPending : deleteTopic.isPending}
             onCancel={() => setDeletingTopicId(null)}
             onConfirm={async () => {
-              if (deletingTopicId === -1 && subjectId !== '') {
-                await deleteSubject.mutateAsync(subjectId);
+              if (deletingTopicId === -1 && subjectId !== '' && sectionId !== '') {
+                await deleteSubject.mutateAsync({ id: subjectId, sectionId });
                 setSubjectId('');
               } else if (deletingTopicId > 0) {
                 await deleteTopic.mutateAsync(deletingTopicId);
@@ -215,18 +237,34 @@ export const AddLessonPlan: React.FC = () => {
 
 // ── Add Subject ─────────────────────────────────────────────────────────────────
 const AddSubjectModal: React.FC<{
-  classId: number; branchId: number | null; isPending: boolean;
-  onClose: () => void; onSubmit: (name: string) => void;
-}> = ({ isPending, onClose, onSubmit }) => {
+  classId: number; sectionId: number; teachers: LessonPlanTeacher[]; isPending: boolean;
+  onClose: () => void; onSubmit: (name: string, teacherId: number) => void;
+}> = ({ teachers, isPending, onClose, onSubmit }) => {
   const [name, setName] = useState('');
+  const [teacherId, setTeacherId] = useState<number | ''>('');
+  const canSubmit = name.trim() !== '' && teacherId !== '';
+
   return (
     <ModalShell title="Add Subject" onClose={onClose}>
       <div className="space-y-4">
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject Name</label>
-          <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mathematics" onKeyDown={(e) => e.key === 'Enter' && name.trim() && onSubmit(name.trim())} />
+          <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mathematics" />
         </div>
-        <ModalActions isPending={isPending} disabled={!name.trim()} onCancel={onClose} onConfirm={() => onSubmit(name.trim())} confirmLabel="Create Subject" />
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Teacher</label>
+          <select className={inputCls} value={teacherId} onChange={(e) => setTeacherId(e.target.value === '' ? '' : Number(e.target.value))}>
+            <option value="">{teachers.length === 0 ? 'No teachers in this branch' : 'Select teacher'}</option>
+            {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
+          </select>
+        </div>
+        <ModalActions
+          isPending={isPending}
+          disabled={!canSubmit}
+          onCancel={onClose}
+          onConfirm={() => canSubmit && onSubmit(name.trim(), teacherId as number)}
+          confirmLabel="Create Subject"
+        />
       </div>
     </ModalShell>
   );
@@ -303,7 +341,7 @@ const LessonPlanEditor: React.FC<{ topic: QbTopic; onClose: () => void }> = ({ t
   };
 
   return (
-    <ModalShell title="Lesson Plan" subtitle={`${topic.school_class?.name ?? ''} / ${topic.subject?.name ?? ''} / ${topic.name}`} onClose={onClose} wide>
+    <ModalShell title="Lesson Plan" subtitle={`${topic.school_class?.name ?? ''} / ${topic.subject?.subject_name ?? ''} / ${topic.name}`} onClose={onClose} wide>
       <div className="space-y-5">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="space-y-2">

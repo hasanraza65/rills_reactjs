@@ -1,30 +1,14 @@
+import type { ClassSubjectData } from './class-subject';
+
 // ── Shared refs ────────────────────────────────────────────────────────────────
 export interface ClassRef {
   id: number;
   name: string;
 }
 
-export interface SubjectRef {
-  id: number;
-  name: string;
-  class_id?: number;
-  school_class?: ClassRef | null;
-}
-
-// ── Subjects ────────────────────────────────────────────────────────────────────
-export interface QbSubject {
-  id: number;
-  branch_id: number | null;
-  class_id: number;
-  name: string;
-  school_class?: ClassRef | null;
-}
-
-export interface CreateSubjectInput {
-  name: string;
-  class_id: number;
-  branch_id?: number | null;
-}
+// Subjects are reused from /class-subjects (see types/api/class-subject.ts)
+// rather than a separate lesson-plan-only type — one subject entity across
+// Diary, Syllabus, and Lesson Plan.
 
 // ── Topics ──────────────────────────────────────────────────────────────────────
 export interface TopicObjective {
@@ -50,7 +34,7 @@ export interface QbTopic {
   methodology: string | null;
   resources: string | null;
   duration_minutes: number | null;
-  subject?: SubjectRef | null;
+  subject?: ClassSubjectData | null;
   school_class?: ClassRef | null;
   objectives?: TopicObjective[];
   attachments?: TopicAttachment[];
@@ -92,21 +76,17 @@ export interface AssignedSubject {
   user_id: number;
   subject_id: number;
   branch_id: number | null;
-  subject?: SubjectRef | null;
+  subject?: ClassSubjectData | null;
 }
 
 export interface TeacherSubjectsData {
   teacher: { id: number; name: string; email: string; phone: string | null };
   assigned_subjects: AssignedSubject[];
-  all_subjects: QbSubject[];
+  all_subjects: ClassSubjectData[];
 }
 
 /** A subject with its topics and completion progress (teacher-topics / my). */
-export interface LessonPlanSubjectProgress {
-  id: number;
-  name: string;
-  class_id: number;
-  school_class?: ClassRef | null;
+export interface LessonPlanSubjectProgress extends ClassSubjectData {
   topics: QbTopic[];
   total_topics: number;
   done_topics: number;

@@ -34,7 +34,8 @@ const SectionSubjectsView: React.FC<{
   className: string; 
   onBack: () => void;
 }> = ({ section, className: classTitle, onBack }) => {
-  const { data: subjectsResponse, isLoading, error } = useClassSubjects(section.id);
+  const { selectedBranchId } = useBranchStore();
+  const { data: subjectsResponse, isLoading, error } = useClassSubjects(section.id, selectedBranchId);
   const createMutation = useCreateClassSubject();
   const updateMutation = useUpdateClassSubject();
   const deleteMutation = useDeleteClassSubject();

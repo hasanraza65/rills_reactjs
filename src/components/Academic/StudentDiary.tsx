@@ -101,7 +101,7 @@ const DiaryFormModal: React.FC<{
 
   const { data: classes } = useClasses(branchId);
   const { data: sections } = useSectionsByClass(classId);
-  const { data: sectionSubjectsResp } = useClassSubjects(isTeacher ? null : sectionId);
+  const { data: sectionSubjectsResp } = useClassSubjects(isTeacher ? null : sectionId, branchId);
   const sectionSubjects = sectionSubjectsResp?.data ?? [];
 
   const clearError = (field: string) =>

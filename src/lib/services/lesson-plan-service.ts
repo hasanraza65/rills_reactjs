@@ -1,7 +1,5 @@
 import { apiClient } from '../api-client';
 import type {
-  QbSubject,
-  CreateSubjectInput,
   QbTopic,
   CreateTopicsInput,
   UpdateLessonPlanInput,
@@ -15,20 +13,10 @@ import type {
 /** Backend wraps most responses as { success, data }. */
 const unwrap = <T>(res: { data: { data: T } }) => res.data.data;
 
+// Subjects are managed via classSubjectService (/class-subjects) — see
+// hooks/use-class-subject.ts — not a separate lesson-plan-only endpoint.
+
 export const lessonPlanService = {
-  // ── Subjects ──────────────────────────────────────────────────────────
-  getSubjects: (params?: { branch_id?: number | null; class_id?: number }) =>
-    apiClient.get<{ data: QbSubject[] }>('/qb-subjects', { params }).then(unwrap),
-
-  createSubject: (payload: CreateSubjectInput) =>
-    apiClient.post<{ data: QbSubject }>('/qb-subjects', payload).then(unwrap),
-
-  updateSubject: (id: number, payload: Partial<CreateSubjectInput>) =>
-    apiClient.put<{ data: QbSubject }>(`/qb-subjects/${id}`, payload).then(unwrap),
-
-  deleteSubject: (id: number) =>
-    apiClient.delete<{ message: string }>(`/qb-subjects/${id}`).then((r) => r.data),
-
   // ── Topics ────────────────────────────────────────────────────────────
   getTopics: (params?: { subject_id?: number; class_id?: number; branch_id?: number | null }) =>
     apiClient.get<{ data: QbTopic[] }>('/qb-topics', { params }).then(unwrap),

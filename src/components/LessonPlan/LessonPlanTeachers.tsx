@@ -112,7 +112,7 @@ const AssignSubjectsModal: React.FC<{ teacher: LessonPlanTeacher; branchId: numb
 
   const filtered = (data?.all_subjects ?? []).filter((s) => {
     const q = search.toLowerCase().trim();
-    return !q || s.name.toLowerCase().includes(q) || (s.school_class?.name ?? '').toLowerCase().includes(q);
+    return !q || s.subject_name.toLowerCase().includes(q) || (s.class?.name ?? '').toLowerCase().includes(q);
   });
 
   const save = async () => {
@@ -147,8 +147,12 @@ const AssignSubjectsModal: React.FC<{ teacher: LessonPlanTeacher; branchId: numb
               return (
                 <button key={s.id} onClick={() => toggle(s.id)} className={cn('w-full flex items-center justify-between p-3 rounded-xl border transition-all text-left', on ? 'bg-brand-50 border-brand-200' : 'bg-white border-slate-100 hover:border-slate-200')}>
                   <div>
-                    <p className="text-sm font-bold text-slate-700">{s.name}</p>
-                    {s.school_class?.name && <p className="text-[11px] text-slate-400 font-medium">{s.school_class.name}</p>}
+                    <p className="text-sm font-bold text-slate-700">{s.subject_name}</p>
+                    {(s.class?.name || s.section?.name) && (
+                      <p className="text-[11px] text-slate-400 font-medium">
+                        {[s.class?.name, s.section?.name].filter(Boolean).join(' / ')}
+                      </p>
+                    )}
                   </div>
                   <div className={cn('w-6 h-6 rounded-md border-2 flex items-center justify-center', on ? 'bg-brand-500 border-brand-500 text-white' : 'border-slate-200')}>
                     {on && <Check size={14} strokeWidth={3} />}
@@ -196,8 +200,12 @@ const TeacherTopicsModal: React.FC<{ teacher: LessonPlanTeacher; onClose: () => 
                 <div key={subject.id} className="border border-slate-100 rounded-2xl overflow-hidden">
                   <div className="px-5 py-3 bg-slate-50/70 flex items-center justify-between">
                     <div>
-                      <p className="text-sm font-bold text-slate-700">{subject.name}</p>
-                      {subject.school_class?.name && <p className="text-[11px] text-slate-400 font-medium">{subject.school_class.name}</p>}
+                      <p className="text-sm font-bold text-slate-700">{subject.subject_name}</p>
+                      {(subject.class?.name || subject.section?.name) && (
+                        <p className="text-[11px] text-slate-400 font-medium">
+                          {[subject.class?.name, subject.section?.name].filter(Boolean).join(' / ')}
+                        </p>
+                      )}
                     </div>
                     <span className="text-xs font-black text-slate-600">{subject.done_topics}/{subject.total_topics} · {pct}%</span>
                   </div>
