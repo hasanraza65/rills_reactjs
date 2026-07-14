@@ -149,6 +149,7 @@ const menuItems: Record<UserRole, any[]> = {
   TEACHER: [
     { icon: LayoutDashboard, label: 'My Classes', id: 'overview' },
     { icon: BookOpen, label: 'Curriculum', id: 'curriculum' },
+    { icon: FileText, label: 'Lesson Plan', id: 'lesson-plan-list' },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: FileText, label: 'Daily Diary', id: 'diary' },
     { icon: MessageSquare, label: 'Messages', id: 'messages' },

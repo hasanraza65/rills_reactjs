@@ -1,380 +1,418 @@
-import React, { useState } from 'react';
-import { Card } from '../ui/Card';
-import { ChevronLeft, ChevronRight, X, Plus, Paperclip, FileText } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import {
+  X, Plus, FileText, Loader2, Trash2, BookOpen, Layers, Paperclip, Check, AlertCircle, ExternalLink,
+} from 'lucide-react';
+import { cn } from '../../types';
+import { useClasses } from '../../hooks/use-class';
+import { useBranchStore } from '../../store/use-branch-store';
+import {
+  useSubjects, useCreateSubject, useDeleteSubject,
+  useTopics, useCreateTopics, useDeleteTopic, useUpdateLessonPlan,
+} from '../../hooks/use-lesson-plan';
+import type { QbTopic } from '../../types/api/lesson-plan';
 
-interface LessonPlanRecord {
-  id: number;
-  topic: string;
-  subjectName: string;
-  className: string;
-  worksheets: number;
-  objectives: number;
-}
+const API_ORIGIN = (import.meta.env.VITE_API_URL ?? '').replace(/\/api\/?$/, '');
 
-const INITIAL_MOCK_LESSON_PLANS: LessonPlanRecord[] = [
-  { id: 1, topic: 'TEST22', subjectName: 'English', className: 'Level 1', worksheets: 4, objectives: 3 },
-  { id: 2, topic: 'TEST2 74', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 2, objectives: 0 },
-  { id: 3, topic: 'Mirza galib', subjectName: 'Urdu', className: 'Level 3', worksheets: 0, objectives: 0 },
-  { id: 4, topic: 'Ch1', subjectName: 'Urdu', className: 'Level 3', worksheets: 0, objectives: 0 },
-  { id: 5, topic: 'One', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 0, objectives: 0 },
-  { id: 6, topic: 'Two', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 0, objectives: 0 },
-  { id: 7, topic: 'Three', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 1, objectives: 0 },
-];
+const inputCls = 'w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-300 transition-all';
 
 export const AddLessonPlan: React.FC = () => {
-  const [plans, setPlans] = useState<LessonPlanRecord[]>(INITIAL_MOCK_LESSON_PLANS);
+  const { selectedBranchId } = useBranchStore();
+  const { data: classes } = useClasses(selectedBranchId ?? 1);
 
-  const [searchId, setSearchId] = useState('');
-  const [searchTopic, setSearchTopic] = useState('');
-  const [searchSubject, setSearchSubject] = useState('');
-  const [searchClass, setSearchClass] = useState('');
-  const [searchWorksheets, setSearchWorksheets] = useState('');
-  const [searchObjectives, setSearchObjectives] = useState('');
+  const [classId, setClassId] = useState<number | ''>('');
+  const [subjectId, setSubjectId] = useState<number | ''>('');
 
-  // Modal State
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedPlan, setSelectedPlan] = useState<LessonPlanRecord | null>(null);
+  const { data: subjects } = useSubjects(selectedBranchId, classId === '' ? undefined : classId);
+  const { data: topics, isLoading: topicsLoading } = useTopics(
+    { subject_id: subjectId === '' ? undefined : subjectId, branch_id: selectedBranchId },
+    subjectId !== ''
+  );
 
-  // Modal Form State
-  const [videoLink, setVideoLink] = useState('');
-  const [lessonPlanText, setLessonPlanText] = useState('');
-  const [objectivesList, setObjectivesList] = useState<string[]>([]);
-  const [newObjective, setNewObjective] = useState('');
+  const createSubject = useCreateSubject();
+  const deleteSubject = useDeleteSubject();
+  const createTopics = useCreateTopics();
+  const deleteTopic = useDeleteTopic();
 
-  // Filter logic
-  const filteredPlans = plans.filter(plan => {
-    return (
-      (searchId === '' || plan.id.toString().includes(searchId)) &&
-      (searchTopic === '' || plan.topic.toLowerCase().includes(searchTopic.toLowerCase())) &&
-      (searchSubject === '' || plan.subjectName.toLowerCase().includes(searchSubject.toLowerCase())) &&
-      (searchClass === '' || plan.className.toLowerCase().includes(searchClass.toLowerCase())) &&
-      (searchWorksheets === '' || plan.worksheets.toString().includes(searchWorksheets)) &&
-      (searchObjectives === '' || plan.objectives.toString().includes(searchObjectives))
-    );
-  });
+  const [showAddSubject, setShowAddSubject] = useState(false);
+  const [showAddTopics, setShowAddTopics] = useState(false);
+  const [editingTopic, setEditingTopic] = useState<QbTopic | null>(null);
+  const [deletingTopicId, setDeletingTopicId] = useState<number | null>(null);
+  const [search, setSearch] = useState('');
 
-  const handleReset = () => {
-    setSearchId('');
-    setSearchTopic('');
-    setSearchSubject('');
-    setSearchClass('');
-    setSearchWorksheets('');
-    setSearchObjectives('');
-  };
+  // Reset subject when class changes
+  useEffect(() => { setSubjectId(''); }, [classId]);
 
-  const handleOpenModal = (plan: LessonPlanRecord) => {
-    setSelectedPlan(plan);
-    setVideoLink('TEST LINK'); // from screenshot
-    setLessonPlanText('TEST FOR LESSON PLAN NOW AND GO OOON'); // from screenshot
-    // generate some mock objectives based on the current count
-    const mockObjectives = Array.from({ length: plan.objectives }, (_, i) => `Objective ${i + 1}`);
-    setObjectivesList(mockObjectives.length ? mockObjectives : ['o1', 'new']); // default some to show the UI
-    setIsModalOpen(true);
-  };
+  const filteredTopics = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return (topics ?? []).filter((t) => !q || t.name.toLowerCase().includes(q));
+  }, [topics, search]);
 
-  const handleAddObjective = () => {
-    if (newObjective.trim()) {
-      setObjectivesList([...objectivesList, newObjective.trim()]);
-      setNewObjective('');
-    }
-  };
+  const selectedSubject = subjects?.find((s) => s.id === subjectId);
 
-  const handleRemoveObjective = (index: number) => {
-    setObjectivesList(objectivesList.filter((_, i) => i !== index));
-  };
+  return (
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">Lesson Plans</h2>
+        <p className="text-slate-500 font-medium">Manage subjects, topics and lesson-plan content.</p>
+      </div>
 
-  const handleObjectiveChange = (index: number, value: string) => {
-    const updatedList = [...objectivesList];
-    updatedList[index] = value;
-    setObjectivesList(updatedList);
-  };
+      {/* Controls */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col lg:flex-row lg:items-end gap-4">
+        <div className="space-y-2 flex-1">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Class</label>
+          <select className={inputCls} value={classId} onChange={(e) => setClassId(e.target.value === '' ? '' : Number(e.target.value))}>
+            <option value="">Select class</option>
+            {classes?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+        </div>
+        <div className="space-y-2 flex-1">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
+          <select className={inputCls} value={subjectId} onChange={(e) => setSubjectId(e.target.value === '' ? '' : Number(e.target.value))} disabled={classId === ''}>
+            <option value="">{classId === '' ? 'Select a class first' : 'Select subject'}</option>
+            {subjects?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
+          </select>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAddSubject(true)}
+            disabled={classId === ''}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-slate-100 text-slate-700 text-sm font-bold hover:bg-slate-200 transition-all disabled:opacity-50"
+          >
+            <BookOpen size={16} /> Add Subject
+          </button>
+          <button
+            onClick={() => setShowAddTopics(true)}
+            disabled={subjectId === ''}
+            className="flex items-center gap-2 px-4 py-3 rounded-xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 disabled:opacity-50"
+          >
+            <Plus size={16} /> Add Topics
+          </button>
+          {selectedSubject && (
+            <button
+              onClick={() => setDeletingTopicId(-1)} /* -1 => delete subject sentinel */
+              className="p-3 rounded-xl text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-all"
+              title="Delete this subject"
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+      </div>
 
-  const handleSubmitLessonPlan = () => {
-    if (selectedPlan) {
-      setPlans(prev => prev.map(p => 
-        p.id === selectedPlan.id ? { ...p, objectives: objectivesList.length } : p
-      ));
-      setIsModalOpen(false);
+      {/* Topics table */}
+      {subjectId === '' ? (
+        <div className="bg-white rounded-2xl border border-slate-100 p-16 text-center text-slate-400">
+          <Layers size={44} strokeWidth={1.5} className="mx-auto mb-4" />
+          <p className="font-bold text-slate-600">Select a class and subject to manage topics</p>
+        </div>
+      ) : (
+        <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+          <div className="p-4 border-b border-slate-50">
+            <input placeholder="Search topics..." value={search} onChange={(e) => setSearch(e.target.value)} className={cn(inputCls, 'max-w-sm')} />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-slate-50/60">
+                  {['Topic', 'Objectives', 'Duration', 'Attachments', 'Action'].map((h, i) => (
+                    <th key={h} className={cn('px-6 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest', i >= 1 && 'text-center', i === 4 && 'text-right')}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {topicsLoading ? (
+                  <tr><td colSpan={5} className="px-6 py-14 text-center"><Loader2 className="w-6 h-6 animate-spin text-brand-500 mx-auto" /></td></tr>
+                ) : filteredTopics.length === 0 ? (
+                  <tr><td colSpan={5} className="px-6 py-14 text-center text-slate-400 font-bold">No topics yet. Click “Add Topics” to create some.</td></tr>
+                ) : (
+                  filteredTopics.map((t) => (
+                    <tr key={t.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4 text-sm font-bold text-slate-700">{t.name}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-bold">{t.objectives?.length ?? 0}</span>
+                      </td>
+                      <td className="px-6 py-4 text-center text-sm text-slate-500 font-medium">{t.duration_minutes ? `${t.duration_minutes} min` : '—'}</td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="px-2.5 py-1 rounded-md bg-slate-100 text-slate-600 text-xs font-bold">{t.attachments?.length ?? 0}</span>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-end gap-2">
+                          <button onClick={() => setEditingTopic(t)} className="flex items-center gap-1.5 px-4 py-2 bg-brand-50 hover:bg-brand-500 text-brand-600 hover:text-white transition-all font-bold rounded-lg text-xs">
+                            <FileText size={14} /> Lesson Plan
+                          </button>
+                          <button onClick={() => setDeletingTopicId(t.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-all"><Trash2 size={15} /></button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Add Subject modal */}
+      <AnimatePresence>
+        {showAddSubject && classId !== '' && (
+          <AddSubjectModal
+            classId={classId}
+            branchId={selectedBranchId}
+            isPending={createSubject.isPending}
+            onClose={() => setShowAddSubject(false)}
+            onSubmit={async (name) => {
+              await createSubject.mutateAsync({ name, class_id: classId, branch_id: selectedBranchId });
+              setShowAddSubject(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Add Topics modal */}
+      <AnimatePresence>
+        {showAddTopics && subjectId !== '' && classId !== '' && (
+          <AddTopicsModal
+            isPending={createTopics.isPending}
+            onClose={() => setShowAddTopics(false)}
+            onSubmit={async (names) => {
+              await createTopics.mutateAsync({ class_id: classId, subject_id: subjectId, branch_id: selectedBranchId, topic_names: names });
+              setShowAddTopics(false);
+            }}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Lesson plan editor */}
+      <AnimatePresence>
+        {editingTopic && (
+          <LessonPlanEditor topic={editingTopic} onClose={() => setEditingTopic(null)} />
+        )}
+      </AnimatePresence>
+
+      {/* Delete confirm (topic or subject) */}
+      <AnimatePresence>
+        {deletingTopicId != null && (
+          <ConfirmDelete
+            label={deletingTopicId === -1 ? 'subject and all its topics' : 'topic'}
+            isPending={deletingTopicId === -1 ? deleteSubject.isPending : deleteTopic.isPending}
+            onCancel={() => setDeletingTopicId(null)}
+            onConfirm={async () => {
+              if (deletingTopicId === -1 && subjectId !== '') {
+                await deleteSubject.mutateAsync(subjectId);
+                setSubjectId('');
+              } else if (deletingTopicId > 0) {
+                await deleteTopic.mutateAsync(deletingTopicId);
+              }
+              setDeletingTopicId(null);
+            }}
+          />
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+// ── Add Subject ─────────────────────────────────────────────────────────────────
+const AddSubjectModal: React.FC<{
+  classId: number; branchId: number | null; isPending: boolean;
+  onClose: () => void; onSubmit: (name: string) => void;
+}> = ({ isPending, onClose, onSubmit }) => {
+  const [name, setName] = useState('');
+  return (
+    <ModalShell title="Add Subject" onClose={onClose}>
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject Name</label>
+          <input autoFocus className={inputCls} value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Mathematics" onKeyDown={(e) => e.key === 'Enter' && name.trim() && onSubmit(name.trim())} />
+        </div>
+        <ModalActions isPending={isPending} disabled={!name.trim()} onCancel={onClose} onConfirm={() => onSubmit(name.trim())} confirmLabel="Create Subject" />
+      </div>
+    </ModalShell>
+  );
+};
+
+// ── Add Topics (bulk) ────────────────────────────────────────────────────────────
+const AddTopicsModal: React.FC<{
+  isPending: boolean; onClose: () => void; onSubmit: (names: string[]) => void;
+}> = ({ isPending, onClose, onSubmit }) => {
+  const [rows, setRows] = useState<string[]>(['']);
+  const valid = rows.map((r) => r.trim()).filter(Boolean);
+
+  return (
+    <ModalShell title="Add Topics" onClose={onClose}>
+      <div className="space-y-4">
+        <p className="text-xs text-slate-400 font-medium">Add one or more topics for this subject.</p>
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {rows.map((val, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <input
+                className={inputCls}
+                value={val}
+                autoFocus={i === rows.length - 1}
+                placeholder={`Topic ${i + 1}`}
+                onChange={(e) => setRows((r) => r.map((x, idx) => (idx === i ? e.target.value : x)))}
+                onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); setRows((r) => [...r, '']); } }}
+              />
+              {rows.length > 1 && (
+                <button onClick={() => setRows((r) => r.filter((_, idx) => idx !== i))} className="p-2.5 rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50"><X size={16} /></button>
+              )}
+            </div>
+          ))}
+        </div>
+        <button onClick={() => setRows((r) => [...r, ''])} className="flex items-center gap-1.5 text-xs font-bold text-brand-600 hover:text-brand-700">
+          <Plus size={14} /> Add another
+        </button>
+        <ModalActions isPending={isPending} disabled={valid.length === 0} onCancel={onClose} onConfirm={() => onSubmit(valid)} confirmLabel={`Create ${valid.length || ''} Topic${valid.length !== 1 ? 's' : ''}`} />
+      </div>
+    </ModalShell>
+  );
+};
+
+// ── Lesson Plan editor ────────────────────────────────────────────────────────────
+const LessonPlanEditor: React.FC<{ topic: QbTopic; onClose: () => void }> = ({ topic, onClose }) => {
+  const updatePlan = useUpdateLessonPlan();
+  const [description, setDescription] = useState(topic.description ?? '');
+  const [methodology, setMethodology] = useState(topic.methodology ?? '');
+  const [resources, setResources] = useState(topic.resources ?? '');
+  const [duration, setDuration] = useState(topic.duration_minutes != null ? String(topic.duration_minutes) : '');
+  const [objectives, setObjectives] = useState<string[]>((topic.objectives ?? []).map((o) => o.objective));
+  const [newObj, setNewObj] = useState('');
+  const [files, setFiles] = useState<File[]>([]);
+  const [error, setError] = useState('');
+
+  const addObjective = () => { if (newObj.trim()) { setObjectives((o) => [...o, newObj.trim()]); setNewObj(''); } };
+
+  const save = async () => {
+    setError('');
+    try {
+      await updatePlan.mutateAsync({
+        id: topic.id,
+        payload: {
+          name: topic.name,
+          description, methodology, resources,
+          duration_minutes: duration,
+          objectives,
+          attachments: files,
+        },
+      });
+      onClose();
+    } catch (e: any) {
+      setError(e?.response?.data?.message ?? 'Failed to save lesson plan.');
     }
   };
 
   return (
-    <div className="space-y-6 relative">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2">Lesson Plans</h2>
-          <p className="text-slate-500 font-medium">Manage topics, subjects, and lesson plan content.</p>
+    <ModalShell title="Lesson Plan" subtitle={`${topic.school_class?.name ?? ''} / ${topic.subject?.name ?? ''} / ${topic.name}`} onClose={onClose} wide>
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Resources / Video Link</label>
+            <input className={inputCls} value={resources} onChange={(e) => setResources(e.target.value)} placeholder="Paste a link or resource reference" />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Duration (minutes)</label>
+            <input type="number" min={0} className={inputCls} value={duration} onChange={(e) => setDuration(e.target.value)} placeholder="e.g. 40" />
+          </div>
         </div>
-      </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-end gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-        <div className="space-y-2 flex-1 min-w-[120px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Search ID</label>
-          <input 
-            type="text" 
-            placeholder="ID..." 
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Lesson Plan Details</label>
+          <textarea rows={3} className={cn(inputCls, 'resize-none')} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe the lesson plan..." />
         </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Topic</label>
-          <input 
-            type="text" 
-            placeholder="Search topic..." 
-            value={searchTopic}
-            onChange={(e) => setSearchTopic(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Subject</label>
-          <input 
-            type="text" 
-            placeholder="Search subject..." 
-            value={searchSubject}
-            onChange={(e) => setSearchSubject(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Class Name</label>
-          <input 
-            type="text" 
-            placeholder="Search class..." 
-            value={searchClass}
-            onChange={(e) => setSearchClass(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Work Sheets</label>
-          <input 
-            type="text" 
-            placeholder="Count..." 
-            value={searchWorksheets}
-            onChange={(e) => setSearchWorksheets(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Objectives</label>
-          <input 
-            type="text" 
-            placeholder="Count..." 
-            value={searchObjectives}
-            onChange={(e) => setSearchObjectives(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            type="button" 
-            onClick={handleReset}
-            className="px-6 h-12 rounded-xl font-bold transition-all text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent"
-          >
-            Reset
-          </button>
-        </div>
-      </div>
 
-      <Card padding="none" className="overflow-hidden bg-white shadow-sm border border-slate-100">
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider w-20 text-center">ID</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Topic</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Subject Name</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Class Name</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Work Sheets</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Objectives</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filteredPlans.map((plan) => (
-                <tr key={plan.id} className="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600 text-center">{plan.id}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600">{plan.topic}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600">{plan.subjectName}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600">{plan.className}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md text-sm font-bold">
-                      {plan.worksheets}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md text-sm font-bold">
-                      {plan.objectives}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button 
-                      onClick={() => handleOpenModal(plan)}
-                      className="px-5 py-2.5 bg-brand-50 hover:bg-brand-500 text-brand-600 hover:text-white transition-all font-bold rounded-xl border border-brand-100 hover:border-brand-500 hover:shadow-lg hover:shadow-brand-200 hover:-translate-y-0.5 flex items-center gap-2 mx-auto"
-                    >
-                      <FileText size={16} />
-                      Lesson Plan
-                    </button>
-                  </td>
-                </tr>
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Methodology</label>
+          <textarea rows={2} className={cn(inputCls, 'resize-none')} value={methodology} onChange={(e) => setMethodology(e.target.value)} placeholder="Teaching methodology..." />
+        </div>
+
+        {/* Objectives */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Objectives</label>
+          <div className="bg-slate-50 rounded-xl border border-slate-100 divide-y divide-slate-100">
+            {objectives.map((obj, i) => (
+              <div key={i} className="flex items-center gap-3 p-3">
+                <input className={cn(inputCls, 'bg-white')} value={obj} onChange={(e) => setObjectives((o) => o.map((x, idx) => (idx === i ? e.target.value : x)))} />
+                <button onClick={() => setObjectives((o) => o.filter((_, idx) => idx !== i))} className="p-2.5 rounded-lg bg-rose-500 text-white hover:bg-rose-600"><X size={16} /></button>
+              </div>
+            ))}
+            <div className="flex items-center gap-3 p-3">
+              <input className={cn(inputCls, 'bg-white')} value={newObj} onChange={(e) => setNewObj(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addObjective())} placeholder="Add an objective" />
+              <button onClick={addObjective} disabled={!newObj.trim()} className="p-2.5 rounded-lg bg-amber-400 text-white hover:bg-amber-500 disabled:opacity-50"><Plus size={16} /></button>
+            </div>
+          </div>
+        </div>
+
+        {/* Attachments */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Attachments</label>
+          {(topic.attachments?.length ?? 0) > 0 && files.length === 0 && (
+            <div className="flex flex-wrap gap-2">
+              {topic.attachments!.map((a) => (
+                <a key={a.id} href={`${API_ORIGIN}/storage/${a.file_path}`} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-100 rounded-lg text-xs font-bold text-slate-600 hover:bg-slate-200">
+                  <Paperclip size={12} /> {a.file_name} <ExternalLink size={11} />
+                </a>
               ))}
-              {filteredPlans.length === 0 && (
-                <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 font-medium">
-                    No lesson plans found matching your filters.
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
+            </div>
+          )}
+          <label className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-slate-200 rounded-xl text-sm font-bold text-slate-500 hover:border-brand-300 hover:text-brand-600 cursor-pointer transition-all w-fit">
+            <Paperclip size={16} />
+            {files.length > 0 ? `${files.length} file(s) selected` : 'Attach files'}
+            <input type="file" multiple className="hidden" onChange={(e) => setFiles(Array.from(e.target.files ?? []))} />
+          </label>
+          {files.length > 0 && (
+            <p className="text-[11px] text-amber-600 font-medium">Uploading new files will replace the existing attachments.</p>
+          )}
         </div>
 
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
-          <div className="px-4 py-2 rounded-lg bg-green-50 text-brand-600 text-sm font-bold border border-green-100">
-            Showing page 1 of 3
-          </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-brand-500 text-white font-bold flex items-center justify-center shadow-sm shadow-brand-200">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-50 font-bold flex items-center justify-center transition-colors">
-              2
-            </button>
-            <button className="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-50 font-bold flex items-center justify-center transition-colors">
-              3
-            </button>
-            <button className="p-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
-      </Card>
-
-      {/* Lesson Plan Modal */}
-      {isModalOpen && selectedPlan && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-200">
-            {/* Modal Header */}
-            <div className="px-8 py-6 border-b border-slate-100 flex items-center justify-between bg-white">
-              <div>
-                <h3 className="text-2xl font-extrabold text-slate-800">Lesson Plan</h3>
-                <p className="text-sm font-bold text-slate-400 mt-1 uppercase tracking-wider">
-                  {selectedPlan.className} / {selectedPlan.subjectName} / {selectedPlan.topic}
-                </p>
-              </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="w-10 h-10 rounded-full bg-slate-50 flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            {/* Modal Body */}
-            <div className="p-8 overflow-y-auto space-y-8 flex-1 bg-slate-50/50">
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-slate-600">Video Link</label>
-                <input 
-                  type="text" 
-                  value={videoLink}
-                  onChange={(e) => setVideoLink(e.target.value)}
-                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 shadow-sm"
-                  placeholder="Paste video link here..."
-                />
-              </div>
-
-              <div className="space-y-3">
-                <label className="text-sm font-bold text-slate-600">Lesson Plan</label>
-                <textarea 
-                  value={lessonPlanText}
-                  onChange={(e) => setLessonPlanText(e.target.value)}
-                  rows={3}
-                  className="w-full px-5 py-4 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 shadow-sm resize-none"
-                  placeholder="Enter lesson plan details..."
-                />
-              </div>
-
-              <div className="space-y-4">
-                <label className="text-sm font-bold text-slate-600">Objectives</label>
-                <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                  {objectivesList.map((obj, idx) => (
-                    <div key={idx} className="flex items-center gap-4 p-4 border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors group">
-                      <input 
-                        type="text" 
-                        value={obj}
-                        onChange={(e) => handleObjectiveChange(idx, e.target.value)}
-                        className="flex-1 px-4 py-3 bg-transparent border border-slate-200 rounded-lg outline-none focus:border-brand-500 focus:ring-1 focus:ring-brand-500 font-medium text-slate-600 transition-all"
-                      />
-                      <button 
-                        onClick={() => handleRemoveObjective(idx)}
-                        className="w-12 h-12 rounded-xl bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition-colors shadow-sm shadow-rose-200 shrink-0"
-                      >
-                        <X size={20} strokeWidth={3} />
-                      </button>
-                    </div>
-                  ))}
-                  
-                  {/* Add New Objective Row */}
-                  <div className="flex items-center gap-4 p-4 bg-slate-50/50">
-                    <input 
-                      type="text" 
-                      value={newObjective}
-                      onChange={(e) => setNewObjective(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleAddObjective()}
-                      placeholder="Topic Objective"
-                      className="flex-1 px-4 py-3 bg-white border border-slate-200 rounded-lg outline-none focus:border-amber-400 focus:ring-1 focus:ring-amber-400 font-medium text-slate-600 transition-all shadow-sm"
-                    />
-                    <button 
-                      onClick={handleAddObjective}
-                      disabled={!newObjective.trim()}
-                      className="w-12 h-12 rounded-xl bg-amber-400 hover:bg-amber-500 disabled:opacity-50 disabled:hover:bg-amber-400 text-white flex items-center justify-center transition-colors shadow-sm shadow-amber-200 shrink-0"
-                    >
-                      <Plus size={24} strokeWidth={3} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Modal Footer */}
-            <div className="px-8 py-6 border-t border-slate-100 bg-white flex items-center justify-between">
-              <div className="flex items-center gap-4">
-                <p className="text-sm font-bold text-slate-400">Selected Files</p>
-                <div className="w-6 h-6 rounded-md bg-brand-500 text-white text-xs font-bold flex items-center justify-center">
-                  4
-                </div>
-                <button className="px-4 py-2 ml-2 rounded-lg border-2 border-amber-200 text-amber-500 font-bold text-sm hover:bg-amber-50 transition-colors flex items-center gap-2">
-                  <Paperclip size={16} />
-                  Attach Files
-                </button>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <button 
-                  onClick={() => setIsModalOpen(false)}
-                  className="px-6 py-3 rounded-xl font-bold text-slate-500 hover:bg-slate-100 transition-colors"
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleSubmitLessonPlan}
-                  className="px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-xl shadow-lg shadow-emerald-200 transition-all hover:-translate-y-0.5"
-                >
-                  Submit
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+        {error && <p className="flex items-center gap-2 text-sm text-rose-600 font-medium"><AlertCircle size={16} /> {error}</p>}
+        <ModalActions isPending={updatePlan.isPending} onCancel={onClose} onConfirm={save} confirmLabel="Save Lesson Plan" />
+      </div>
+    </ModalShell>
   );
 };
+
+// ── Shared modal primitives ───────────────────────────────────────────────────────
+const ModalShell: React.FC<{ title: string; subtitle?: string; wide?: boolean; onClose: () => void; children: React.ReactNode }> = ({ title, subtitle, wide, onClose, children }) => (
+  <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    <motion.div
+      initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }}
+      className={cn('bg-white w-full rounded-[2rem] overflow-hidden shadow-2xl flex flex-col max-h-[90vh]', wide ? 'max-w-3xl' : 'max-w-md')}
+    >
+      <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between shrink-0">
+        <div>
+          <h3 className="text-lg font-extrabold text-slate-800">{title}</h3>
+          {subtitle && <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">{subtitle}</p>}
+        </div>
+        <button onClick={onClose} className="p-2 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-50"><X size={20} /></button>
+      </div>
+      <div className="p-8 overflow-y-auto">{children}</div>
+    </motion.div>
+  </div>
+);
+
+const ModalActions: React.FC<{ isPending: boolean; disabled?: boolean; confirmLabel: string; onCancel: () => void; onConfirm: () => void }> = ({ isPending, disabled, confirmLabel, onCancel, onConfirm }) => (
+  <div className="flex justify-end gap-3 pt-2">
+    <button onClick={onCancel} className="px-6 py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">Cancel</button>
+    <button onClick={onConfirm} disabled={isPending || disabled} className="px-6 py-3 rounded-xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 disabled:opacity-50 flex items-center gap-2 shadow-lg shadow-brand-100">
+      {isPending ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
+      {confirmLabel}
+    </button>
+  </div>
+);
+
+const ConfirmDelete: React.FC<{ label: string; isPending: boolean; onCancel: () => void; onConfirm: () => void }> = ({ label, isPending, onCancel, onConfirm }) => (
+  <div className="fixed inset-0 z-[75] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+    <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 text-center">
+      <div className="w-16 h-16 rounded-2xl bg-rose-50 text-rose-500 flex items-center justify-center mx-auto mb-4"><Trash2 size={28} /></div>
+      <h4 className="text-lg font-extrabold text-slate-800 mb-2">Delete {label}?</h4>
+      <p className="text-slate-500 text-sm mb-6">This action cannot be undone.</p>
+      <div className="flex gap-3">
+        <button onClick={onCancel} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">Cancel</button>
+        <button onClick={onConfirm} disabled={isPending} className="flex-1 py-3 rounded-xl bg-rose-500 text-white text-sm font-bold hover:bg-rose-600 disabled:opacity-60 flex items-center justify-center gap-2">
+          {isPending ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />} Delete
+        </button>
+      </div>
+    </motion.div>
+  </div>
+);

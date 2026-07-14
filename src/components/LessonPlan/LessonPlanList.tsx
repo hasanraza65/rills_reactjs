@@ -1,254 +1,158 @@
-import React, { useState } from 'react';
-import { Card } from '../ui/Card';
-import { ChevronLeft, ChevronRight, Eye, AlertCircle } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { Search, Loader2, CheckCircle2, BookOpen } from 'lucide-react';
+import { cn } from '../../types';
+import { useBranchStore } from '../../store/use-branch-store';
+import { useMyLessonPlan, useSetTopicStatus } from '../../hooks/use-lesson-plan';
 
-interface LessonPlanStatusRecord {
-  id: number;
+interface FlatRow {
+  topicId: number;
+  subjectId: number;
   topic: string;
-  subjectName: string;
+  subject: string;
   className: string;
-  worksheets: number;
-  status: 'Pending' | 'Done';
+  isDone: boolean;
+  completedDate: string | null;
 }
 
-const INITIAL_DATA: LessonPlanStatusRecord[] = [
-  { id: 1, topic: 'TEST22', subjectName: 'English', className: 'Level 1', worksheets: 5, status: 'Done' },
-  { id: 2, topic: 'TEST2 74', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 2, status: 'Pending' },
-  { id: 3, topic: 'Mirza galib', subjectName: 'Urdu', className: 'Level 3', worksheets: 0, status: 'Pending' },
-  { id: 4, topic: 'Ch1', subjectName: 'Urdu', className: 'Level 3', worksheets: 0, status: 'Pending' },
-  { id: 5, topic: 'One', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 0, status: 'Pending' },
-  { id: 6, topic: 'Two', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 0, status: 'Pending' },
-  { id: 7, topic: 'Three', subjectName: 'Danish TEST', className: 'Level 2', worksheets: 1, status: 'Pending' },
-];
-
 export const LessonPlanList: React.FC = () => {
-  const [plans, setPlans] = useState<LessonPlanStatusRecord[]>(INITIAL_DATA);
+  const { selectedBranchId } = useBranchStore();
+  const { data: subjects, isLoading } = useMyLessonPlan();
+  const setStatus = useSetTopicStatus();
 
-  // Filters
-  const [searchId, setSearchId] = useState('');
-  const [searchTopic, setSearchTopic] = useState('');
-  const [searchSubject, setSearchSubject] = useState('');
-  const [searchClass, setSearchClass] = useState('');
-  const [searchWorksheets, setSearchWorksheets] = useState('');
+  const [search, setSearch] = useState('');
+  const [confirming, setConfirming] = useState<FlatRow | null>(null);
+  const [busyTopicId, setBusyTopicId] = useState<number | null>(null);
 
-  // Modal State
-  const [confirmModalOpen, setConfirmModalOpen] = useState(false);
-  const [selectedId, setSelectedId] = useState<number | null>(null);
+  const rows: FlatRow[] = useMemo(() => {
+    const out: FlatRow[] = [];
+    (subjects ?? []).forEach((s) => {
+      s.topics.forEach((t) => {
+        out.push({
+          topicId: t.id,
+          subjectId: s.id,
+          topic: t.name,
+          subject: s.name,
+          className: s.school_class?.name ?? '—',
+          isDone: !!t.is_done,
+          completedDate: t.completed_date ?? null,
+        });
+      });
+    });
+    return out;
+  }, [subjects]);
 
-  const filteredPlans = plans.filter(plan => {
-    return (
-      (searchId === '' || plan.id.toString().includes(searchId)) &&
-      (searchTopic === '' || plan.topic.toLowerCase().includes(searchTopic.toLowerCase())) &&
-      (searchSubject === '' || plan.subjectName.toLowerCase().includes(searchSubject.toLowerCase())) &&
-      (searchClass === '' || plan.className.toLowerCase().includes(searchClass.toLowerCase())) &&
-      (searchWorksheets === '' || plan.worksheets.toString().includes(searchWorksheets))
-    );
-  });
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    return rows.filter((r) => !q || r.topic.toLowerCase().includes(q) || r.subject.toLowerCase().includes(q) || r.className.toLowerCase().includes(q));
+  }, [rows, search]);
 
-  const handleReset = () => {
-    setSearchId('');
-    setSearchTopic('');
-    setSearchSubject('');
-    setSearchClass('');
-    setSearchWorksheets('');
-  };
+  const doneCount = rows.filter((r) => r.isDone).length;
 
-  const handlePendingClick = (id: number) => {
-    setSelectedId(id);
-    setConfirmModalOpen(true);
-  };
-
-  const handleConfirmSubmit = () => {
-    if (selectedId !== null) {
-      setPlans(prev => prev.map(p => 
-        p.id === selectedId ? { ...p, status: 'Done' } : p
-      ));
-      setConfirmModalOpen(false);
-      setSelectedId(null);
+  const mark = async (row: FlatRow, status: 'done' | 'undone') => {
+    setBusyTopicId(row.topicId);
+    try {
+      await setStatus.mutateAsync({ topicId: row.topicId, subjectId: row.subjectId, status, branchId: selectedBranchId });
+    } finally {
+      setBusyTopicId(null);
+      setConfirming(null);
     }
   };
 
   return (
-    <div className="space-y-6 relative">
-      <div>
-        <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight mb-2">Lesson Plans Status</h2>
-        <p className="text-slate-500 font-medium">View and update the status of lesson plans.</p>
+    <div className="space-y-6">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-extrabold text-slate-800 tracking-tight">My Lesson Plan</h2>
+          <p className="text-slate-500 font-medium">Track and update your topic completion status.</p>
+        </div>
+        {rows.length > 0 && (
+          <div className="flex items-center gap-2 px-4 py-2 bg-white rounded-xl border border-slate-100 shadow-sm">
+            <span className="text-sm font-bold text-slate-700">{doneCount}/{rows.length}</span>
+            <span className="text-xs text-slate-400 font-medium uppercase tracking-wider">topics done</span>
+          </div>
+        )}
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap items-end gap-4 bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
-        <div className="space-y-2 flex-1 min-w-[120px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Search ID</label>
-          <input 
-            type="text" 
-            placeholder="ID..." 
-            value={searchId}
-            onChange={(e) => setSearchId(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Topic</label>
-          <input 
-            type="text" 
-            placeholder="Search topic..." 
-            value={searchTopic}
-            onChange={(e) => setSearchTopic(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Subject</label>
-          <input 
-            type="text" 
-            placeholder="Search subject..." 
-            value={searchSubject}
-            onChange={(e) => setSearchSubject(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Class Name</label>
-          <input 
-            type="text" 
-            placeholder="Search class..." 
-            value={searchClass}
-            onChange={(e) => setSearchClass(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="space-y-2 flex-1 min-w-[150px]">
-          <label className="text-xs font-bold text-slate-500 uppercase">Work Sheets</label>
-          <input 
-            type="text" 
-            placeholder="Count..." 
-            value={searchWorksheets}
-            onChange={(e) => setSearchWorksheets(e.target.value)}
-            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
-          />
-        </div>
-        <div className="flex items-center gap-3">
-          <button 
-            type="button" 
-            onClick={handleReset}
-            className="px-6 h-12 rounded-xl font-bold transition-all text-slate-500 hover:text-slate-700 hover:bg-slate-100 border border-transparent"
-          >
-            Reset
-          </button>
-        </div>
+      <div className="relative max-w-md">
+        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+        <input placeholder="Search topics, subjects or classes..." value={search} onChange={(e) => setSearch(e.target.value)} className="w-full bg-white border border-slate-100 rounded-xl py-3 pl-12 pr-4 text-sm outline-none font-medium shadow-sm" />
       </div>
 
-      <Card padding="none" className="overflow-hidden bg-white shadow-sm border border-slate-100">
+      <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead>
-              <tr className="bg-slate-50 border-b border-slate-100">
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider w-20 text-center">ID</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Topic</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Subject Name</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider">Class Name</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Work Sheets</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Status</th>
-                <th className="px-6 py-4 text-xs font-extrabold text-slate-500 uppercase tracking-wider text-center">Action</th>
+              <tr className="bg-slate-50/60">
+                {['Topic', 'Subject', 'Class', 'Status'].map((h, i) => (
+                  <th key={h} className={cn('px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest', i === 3 && 'text-center')}>{h}</th>
+                ))}
               </tr>
             </thead>
-            <tbody>
-              {filteredPlans.map((plan) => (
-                <tr key={plan.id} className="hover:bg-slate-50 border-b border-slate-100 transition-colors">
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600 text-center">{plan.id}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600">{plan.topic}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600">{plan.subjectName}</td>
-                  <td className="px-6 py-4 text-sm font-bold text-slate-600">{plan.className}</td>
-                  <td className="px-6 py-4 text-center">
-                    <span className="px-3 py-1 bg-slate-100 text-slate-600 rounded-md text-sm font-bold">
-                      {plan.worksheets}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    {plan.status === 'Done' ? (
-                      <span className="px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold rounded-xl inline-flex items-center justify-center w-28 text-sm shadow-sm">
-                        Done
-                      </span>
-                    ) : (
-                      <button 
-                        onClick={() => handlePendingClick(plan.id)}
-                        className="px-4 py-2 bg-amber-50 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-200 hover:border-amber-500 transition-all font-bold rounded-xl inline-flex items-center justify-center w-28 text-sm hover:-translate-y-0.5 hover:shadow-lg hover:shadow-amber-200"
-                      >
-                        Pending
-                      </button>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 text-center">
-                    <button className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors mx-auto flex items-center justify-center">
-                      <Eye size={20} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-              {filteredPlans.length === 0 && (
+            <tbody className="divide-y divide-slate-50">
+              {isLoading ? (
+                <tr><td colSpan={4} className="px-6 py-16 text-center"><Loader2 className="w-6 h-6 animate-spin text-brand-500 mx-auto" /></td></tr>
+              ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-12 text-center text-slate-500 font-medium">
-                    No lesson plans found matching your filters.
+                  <td colSpan={4} className="px-6 py-16 text-center">
+                    <BookOpen size={40} strokeWidth={1.5} className="mx-auto mb-3 text-slate-300" />
+                    <p className="text-slate-400 font-bold text-sm">
+                      {rows.length === 0 ? 'No subjects assigned to you yet.' : 'No topics match your search.'}
+                    </p>
                   </td>
                 </tr>
+              ) : (
+                filtered.map((r) => (
+                  <tr key={r.topicId} className="hover:bg-slate-50/50 transition-colors">
+                    <td className="px-6 py-4 text-sm font-bold text-slate-700">{r.topic}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600 font-medium">{r.subject}</td>
+                    <td className="px-6 py-4 text-sm text-slate-600 font-medium">{r.className}</td>
+                    <td className="px-6 py-4 text-center">
+                      {r.isDone ? (
+                        <button
+                          onClick={() => mark(r, 'undone')}
+                          disabled={busyTopicId === r.topicId}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-emerald-50 text-emerald-600 border border-emerald-200 font-bold rounded-xl text-xs hover:bg-emerald-100 transition-all min-w-28 justify-center"
+                          title="Click to mark as pending"
+                        >
+                          {busyTopicId === r.topicId ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Done
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => setConfirming(r)}
+                          disabled={busyTopicId === r.topicId}
+                          className="inline-flex items-center gap-1.5 px-4 py-2 bg-amber-50 hover:bg-amber-500 text-amber-600 hover:text-white border border-amber-200 hover:border-amber-500 transition-all font-bold rounded-xl text-xs min-w-28 justify-center"
+                        >
+                          {busyTopicId === r.topicId ? <Loader2 size={14} className="animate-spin" /> : 'Pending'}
+                        </button>
+                      )}
+                    </td>
+                  </tr>
+                ))
               )}
             </tbody>
           </table>
         </div>
+      </div>
 
-        {/* Pagination */}
-        <div className="px-6 py-4 border-t border-slate-100 flex items-center justify-between bg-white">
-          <div className="px-4 py-2 rounded-lg bg-green-50 text-brand-600 text-sm font-bold border border-green-100">
-            Showing page 1 of 3
+      {/* Confirm mark-done */}
+      <AnimatePresence>
+        {confirming && (
+          <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div initial={{ opacity: 0, scale: 0.96 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.96 }} className="bg-white rounded-[2rem] shadow-2xl w-full max-w-sm p-8 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-500 flex items-center justify-center mx-auto mb-4"><CheckCircle2 size={28} /></div>
+              <h3 className="text-lg font-extrabold text-slate-800 mb-1">Mark as done?</h3>
+              <p className="text-slate-500 text-sm mb-6">“{confirming.topic}” will be marked completed today.</p>
+              <div className="flex gap-3">
+                <button onClick={() => setConfirming(null)} className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 text-sm font-bold hover:bg-slate-50">Cancel</button>
+                <button onClick={() => mark(confirming, 'done')} disabled={busyTopicId != null} className="flex-1 py-3 rounded-xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 disabled:opacity-60 flex items-center justify-center gap-2">
+                  {busyTopicId != null ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Yes, mark done
+                </button>
+              </div>
+            </motion.div>
           </div>
-          <div className="flex items-center gap-2">
-            <button className="p-2 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition-colors">
-              <ChevronLeft size={20} />
-            </button>
-            <button className="w-8 h-8 rounded-lg bg-brand-500 text-white font-bold flex items-center justify-center shadow-sm shadow-brand-200">
-              1
-            </button>
-            <button className="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-50 font-bold flex items-center justify-center transition-colors">
-              2
-            </button>
-            <button className="w-8 h-8 rounded-lg text-slate-600 hover:bg-slate-50 font-bold flex items-center justify-center transition-colors">
-              3
-            </button>
-            <button className="p-2 rounded-lg bg-slate-900 text-white hover:bg-slate-800 transition-colors shadow-sm">
-              <ChevronRight size={20} />
-            </button>
-          </div>
-        </div>
-      </Card>
-
-      {/* SweetAlert-style Confirmation Modal */}
-      {confirmModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-3xl shadow-2xl w-full max-w-sm p-8 flex flex-col items-center text-center animate-in zoom-in-95 duration-200">
-            <div className="w-20 h-20 rounded-full border-4 border-amber-100 text-amber-500 flex items-center justify-center mb-6">
-              <span className="text-4xl font-black">!</span>
-            </div>
-            
-            <h3 className="text-2xl font-extrabold text-slate-800 mb-2">Are you sure?</h3>
-            <p className="text-slate-500 font-medium mb-8">You won't be able to revert this!</p>
-            
-            <div className="flex items-center gap-3 w-full">
-              <button 
-                onClick={handleConfirmSubmit}
-                className="flex-1 py-3 bg-brand-500 hover:bg-brand-600 text-white font-bold rounded-xl shadow-lg shadow-brand-200 transition-all hover:-translate-y-0.5"
-              >
-                Yes, submit it!
-              </button>
-              <button 
-                onClick={() => setConfirmModalOpen(false)}
-                className="flex-1 py-3 bg-rose-500 hover:bg-rose-600 text-white font-bold rounded-xl shadow-lg shadow-rose-200 transition-all hover:-translate-y-0.5"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </AnimatePresence>
     </div>
   );
 };

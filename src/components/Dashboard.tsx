@@ -1072,7 +1072,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {activeTab !== 'overview' && activeTab !== 'attendance' && activeTab !== 'diary' && activeTab !== 'syllabus' && activeTab !== 'library' && (
+        {activeTab === 'lesson-plan-list' && (
+          <motion.div
+            key="lesson-plan-list"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <LessonPlanList />
+          </motion.div>
+        )}
+
+        {!['overview', 'attendance', 'diary', 'syllabus', 'library', 'lesson-plan-list'].includes(activeTab) && (
           <motion.div
             key="placeholder"
             initial={{ opacity: 0 }}
