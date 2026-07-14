@@ -1,12 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 
-import { 
-  LayoutDashboard, 
-  Users, 
-  BookOpen, 
-  Calendar, 
-  Settings, 
+import {
+  LayoutDashboard,
+  Users,
+  BookOpen,
+  Calendar,
+  Settings,
   ChevronRight,
   GraduationCap,
   ShieldCheck,
@@ -18,9 +18,12 @@ import {
   FileText,
   Layers,
   Key,
-  Library as LibraryIcon
+  Library as LibraryIcon,
+  Shield,
 } from 'lucide-react';
 import { cn, UserRole } from '../types';
+import { usePermissions } from '../hooks/use-permissions';
+import { moduleForTab } from '../lib/tab-modules';
 
 interface SidebarProps {
   role: UserRole;
@@ -80,6 +83,7 @@ const menuItems: Record<UserRole, any[]> = {
       ]
     },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
+    { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
     { icon: Settings, label: 'System Settings', id: 'settings' },
   ],
@@ -107,6 +111,7 @@ const menuItems: Record<UserRole, any[]> = {
       ]
     },
     { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
+    { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     { icon: GraduationCap, label: 'Academic Years', id: 'academics' },
     { icon: CreditCard, label: 'Finance', id: 'finance' },
@@ -138,6 +143,7 @@ const menuItems: Record<UserRole, any[]> = {
       ],
     },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
+    { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: FileText, label: 'Diary', id: 'diary' },
   ],
   TEACHER: [
@@ -170,6 +176,25 @@ const menuItems: Record<UserRole, any[]> = {
 
 export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, onRoleChange, availableRoles, onLogout, isOpen, onClose }) => {
   const [expandedMenus, setExpandedMenus] = useState<string[]>([]);
+  const { canView } = usePermissions();
+
+  // A tab is visible if it is ungoverned (no module mapping) or the user has
+  // view permission on its module. Parent menus with sub-items are hidden only
+  // when every sub-item is hidden.
+  const isTabVisible = (tabId: string): boolean => {
+    const moduleSlug = moduleForTab(tabId);
+    return moduleSlug === null ? true : canView(moduleSlug);
+  };
+
+  const visibleMenu = (menuItems[role] ?? [])
+    .map((item) => {
+      if (item.subItems && item.subItems.length > 0) {
+        const subItems = item.subItems.filter((sub: any) => isTabVisible(sub.id));
+        return subItems.length > 0 ? { ...item, subItems } : null;
+      }
+      return isTabVisible(item.id) ? item : null;
+    })
+    .filter(Boolean) as any[];
 
   return (
     <>
@@ -211,7 +236,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
         <div className="mb-4 px-4 py-2">
           <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Main Menu</p>
         </div>
-        {menuItems[role].map((item, idx) => {
+        {visibleMenu.map((item, idx) => {
           const hasSubItems = item.subItems && item.subItems.length > 0;
           const isSubItemActive = hasSubItems && item.subItems.some((sub: any) => activeTab === sub.id);
           const isMainActive = activeTab === item.id || isSubItemActive;

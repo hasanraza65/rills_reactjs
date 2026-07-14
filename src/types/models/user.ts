@@ -16,6 +16,15 @@ export type UserRole =
 
 import { Branch } from './branch';
 
+/** A single CRUD action that can be permissioned per module. */
+export type PermissionAction = 'view' | 'create' | 'edit' | 'delete';
+
+/** The four boolean flags for one module. */
+export type ModulePermissions = Record<PermissionAction, boolean>;
+
+/** module_slug -> its allowed actions. Sent by the API on login / `/user`. */
+export type PermissionMap = Record<string, ModulePermissions>;
+
 /**
  * Domain model for a User.
  */
@@ -31,6 +40,8 @@ export interface User {
   branches?: Branch[];
   /** The user's own branch. Teachers and parents get no `branches` list, so this is their only branch context. */
   branchId?: number | null;
+  /** Effective permissions for this user's role, keyed by module slug. */
+  permissions?: PermissionMap;
 }
 
 /**

@@ -2,7 +2,7 @@
  * @fileoverview Authentication API types.
  */
 
-import { UserRole } from '../models/user';
+import { UserRole, PermissionMap } from '../models/user';
 
 import { Branch } from '../models/branch';
 
@@ -25,6 +25,8 @@ export interface ApiUser {
   branches?: Branch[];
   /** The user's own branch. Roles without a `branches` list still need this. */
   branch_id: number | null;
+  /** Effective permission map for the user's role, keyed by module slug. */
+  permissions?: PermissionMap;
 }
 
 /**

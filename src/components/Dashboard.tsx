@@ -50,6 +50,7 @@ import { DiariesManager } from './Academic/DiariesManager';
 import { ResultsManager } from './Academic/ResultsManager';
 
 import { StaffManagement } from './StaffManagement';
+import { RolesPage } from './RolesManagement/RolesPage';
 import { VisitorManagement } from './VisitorManagement';
 import { LibraryManager } from './Library/LibraryManager';
 import { ClassManagement } from './ClassManagement';
@@ -145,7 +146,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'branches', 'pricing', 'attendance', 'student-attendance', 'staff-attendance',
       'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
-      'subjects', 'results', 'class-syllabus',
+      'subjects', 'results', 'class-syllabus', 'roles',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -399,6 +400,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <ClassSyllabusManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'roles' && (
+          <motion.div
+            key="roles"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <RolesPage />
           </motion.div>
         )}
       </AnimatePresence>
@@ -897,6 +909,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <AdmissionKeys />
+          </motion.div>
+        )}
+
+        {activeTab === 'roles' && (
+          <motion.div
+            key="roles"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <RolesPage />
           </motion.div>
         )}
       </AnimatePresence>

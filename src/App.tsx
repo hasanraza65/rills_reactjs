@@ -10,6 +10,7 @@ import { useAuthStore } from './store/use-auth-store';
 import { UserRole } from './types/models/user';
 import { useBranchStore } from './store/use-branch-store';
 import { useCreateAdmissionKey } from './hooks/use-admission-keys';
+import { useSyncCurrentUser } from './hooks/use-auth';
 
 /**
  * The tab a role lands on after login. Only SUPER_ADMIN has an overview page,
@@ -25,6 +26,8 @@ const getDefaultTab = (role?: UserRole) => (role && DEFAULT_TAB[role]) || 'overv
 
 export default function App() {
   const { user, isAuthenticated, logout, setAuth } = useAuthStore();
+  // Refresh the current user (incl. permissions) on load so admin changes apply.
+  useSyncCurrentUser();
   const branches = user?.branches || [];
   const { selectedBranchId, setSelectedBranchId } = useBranchStore();
 
