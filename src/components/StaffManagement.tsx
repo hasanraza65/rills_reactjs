@@ -36,6 +36,7 @@ import { StatCard } from './StatCard';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
+import { useRoles } from '../hooks/use-roles';
 
 interface StaffManagementProps {
   role: string;
@@ -48,6 +49,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
   const [showStaffForm, setShowStaffForm] = useState(false);
   const [showSalaryModal, setShowSalaryModal] = useState(false);
   const [showPayslipModal, setShowPayslipModal] = useState(false);
+  const [selectedRoleId, setSelectedRoleId] = useState<number | ''>('');
+
+  // Dynamic roles from the Roles & Permissions module (includes custom roles).
+  const { data: roles, isLoading: rolesLoading } = useRoles();
 
   // Stats for Dashboard
   const totalStaff = STAFF_DATA.length;
@@ -701,11 +706,17 @@ export const StaffManagement: React.FC<StaffManagementProps> = ({ role }) => {
                 </div>
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-gray-700">Role</label>
-                  <select className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none">
-                    <option>TEACHER</option>
-                    <option>ADMIN</option>
-                    <option>SUPPORT</option>
-                    <option>GATE_KEEPER</option>
+                  <select
+                    value={selectedRoleId}
+                    onChange={(e) => setSelectedRoleId(e.target.value === '' ? '' : Number(e.target.value))}
+                    className="w-full px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 outline-none"
+                  >
+                    <option value="" disabled>
+                      {rolesLoading ? 'Loading roles…' : 'Select a role'}
+                    </option>
+                    {roles?.map((r) => (
+                      <option key={r.id} value={r.id}>{r.name}</option>
+                    ))}
                   </select>
                 </div>
                 <div className="space-y-2">
