@@ -450,17 +450,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
     return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
-        {activeTab === 'branches' && (
-          <motion.div
-            key="branches"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <BranchManagement />
-          </motion.div>
-        )}
-
         {activeTab === 'students' && (
           <motion.div
             key="students"

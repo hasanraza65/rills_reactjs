@@ -7,6 +7,8 @@ import { useCreateStaff, useUpdateStaff } from '../../hooks/use-staff-members';
 import { useAuthStore } from '../../store/use-auth-store';
 import { useBranchStore } from '../../store/use-branch-store';
 import type { StaffMember, StaffFormInput } from '../../types/api/staff';
+import { isPkMobile, normalizePkMobile, PK_MOBILE_ERROR, PK_MOBILE_PLACEHOLDER } from '../../lib/validations/phone';
+import { isCnic, normalizeCnic, CNIC_ERROR, CNIC_PLACEHOLDER } from '../../lib/validations/cnic';
 
 interface StaffFormModalProps {
   editing: StaffMember | null;
@@ -84,10 +86,31 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
     setError('');
 
     if (!form.name.trim()) return setError('Full name is required');
+    if (!form.father_husband_name?.trim()) return setError('Father / Husband name is required');
+    if (!form.cnic?.trim()) return setError('CNIC No is required');
+    if (!isCnic(form.cnic)) return setError(CNIC_ERROR);
+    if (!form.gender) return setError('Gender is required');
+    if (!form.dob) return setError('Date of Birth is required');
+    if (!form.date_of_joining) return setError('Date of Joining is required');
+    if (!form.marital_status) return setError('Marital Status is required');
+    if (!form.contact_no?.trim()) return setError('Contact Number is required');
+    if (!isPkMobile(form.contact_no)) return setError(PK_MOBILE_ERROR);
+    if (!form.whatsapp_no?.trim()) return setError('WhatsApp No is required');
+    if (!isPkMobile(form.whatsapp_no)) return setError(PK_MOBILE_ERROR);
+    if (!form.emergency_contact_no?.trim()) return setError('Emergency Contact Number is required');
+    if (!isPkMobile(form.emergency_contact_no)) return setError(PK_MOBILE_ERROR);
+    if (!form.current_address?.trim()) return setError('Current Address is required');
+    if (!form.permanent_address?.trim()) return setError('Permanent Address is required');
     if (!form.user_role) return setError('Please select a role');
 
     // Strip empty strings so the backend sees them as null / omitted.
-    const payload: StaffFormInput = { ...form };
+    const payload: StaffFormInput = {
+      ...form,
+      cnic: normalizeCnic(form.cnic)!,
+      contact_no: normalizePkMobile(form.contact_no)!,
+      whatsapp_no: normalizePkMobile(form.whatsapp_no)!,
+      emergency_contact_no: normalizePkMobile(form.emergency_contact_no)!,
+    };
     (Object.keys(payload) as (keyof StaffFormInput)[]).forEach((k) => {
       if (payload[k] === '') delete payload[k];
     });
@@ -135,22 +158,22 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
         <form onSubmit={handleSubmit} className="flex flex-col flex-1 overflow-hidden">
           <div className="p-8 grid grid-cols-1 sm:grid-cols-2 gap-5 overflow-y-auto">
             <div className="space-y-2">
-              <label className={labelCls}>Full Name *</label>
+              <label className={labelCls}>Full Name <span className="text-rose-500">*</span></label>
               <input className={inputCls} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="e.g. Ali Ahmed" />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Father / Husband Name</label>
+              <label className={labelCls}>Father / Husband Name <span className="text-rose-500">*</span></label>
               <input className={inputCls} value={form.father_husband_name} onChange={(e) => set('father_husband_name', e.target.value)} placeholder="e.g. Ahmed Khan" />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>CNIC No</label>
-              <input className={inputCls} value={form.cnic} onChange={(e) => set('cnic', e.target.value)} placeholder="00000-0000000-0" />
+              <label className={labelCls}>CNIC No <span className="text-rose-500">*</span></label>
+              <input className={inputCls} value={form.cnic} onChange={(e) => set('cnic', e.target.value)} placeholder={CNIC_PLACEHOLDER} />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Gender</label>
+              <label className={labelCls}>Gender <span className="text-rose-500">*</span></label>
               <select className={inputCls} value={form.gender} onChange={(e) => set('gender', e.target.value as StaffFormInput['gender'])}>
                 <option value="">Select gender</option>
                 <option value="male">Male</option>
@@ -160,17 +183,17 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Date of Birth</label>
+              <label className={labelCls}>Date of Birth <span className="text-rose-500">*</span></label>
               <input type="date" className={inputCls} value={form.dob} onChange={(e) => set('dob', e.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Date of Joining</label>
+              <label className={labelCls}>Date of Joining <span className="text-rose-500">*</span></label>
               <input type="date" className={inputCls} value={form.date_of_joining} onChange={(e) => set('date_of_joining', e.target.value)} />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Marital Status</label>
+              <label className={labelCls}>Marital Status <span className="text-rose-500">*</span></label>
               <select className={inputCls} value={form.marital_status} onChange={(e) => set('marital_status', e.target.value as StaffFormInput['marital_status'])}>
                 <option value="">Select status</option>
                 <option value="single">Single</option>
@@ -181,22 +204,22 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Contact Number</label>
-              <input className={inputCls} value={form.contact_no} onChange={(e) => set('contact_no', e.target.value)} placeholder="0300-0000000" />
+              <label className={labelCls}>Contact Number <span className="text-rose-500">*</span></label>
+              <input className={inputCls} value={form.contact_no} onChange={(e) => set('contact_no', e.target.value)} placeholder={PK_MOBILE_PLACEHOLDER} />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>WhatsApp No</label>
-              <input className={inputCls} value={form.whatsapp_no} onChange={(e) => set('whatsapp_no', e.target.value)} placeholder="0300-0000000" />
+              <label className={labelCls}>WhatsApp No <span className="text-rose-500">*</span></label>
+              <input className={inputCls} value={form.whatsapp_no} onChange={(e) => set('whatsapp_no', e.target.value)} placeholder={PK_MOBILE_PLACEHOLDER} />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Emergency Contact Number</label>
-              <input className={inputCls} value={form.emergency_contact_no} onChange={(e) => set('emergency_contact_no', e.target.value)} placeholder="0300-0000000" />
+              <label className={labelCls}>Emergency Contact Number <span className="text-rose-500">*</span></label>
+              <input className={inputCls} value={form.emergency_contact_no} onChange={(e) => set('emergency_contact_no', e.target.value)} placeholder={PK_MOBILE_PLACEHOLDER} />
             </div>
 
             <div className="space-y-2">
-              <label className={labelCls}>Role *</label>
+              <label className={labelCls}>Role <span className="text-rose-500">*</span></label>
               <select className={inputCls} value={form.user_role || ''} onChange={(e) => set('user_role', Number(e.target.value))}>
                 <option value="">Select a role</option>
                 {roles?.map((r) => (
@@ -220,12 +243,12 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <label className={labelCls}>Current Address</label>
+              <label className={labelCls}>Current Address <span className="text-rose-500">*</span></label>
               <textarea className={cn(inputCls, 'resize-none')} rows={2} value={form.current_address} onChange={(e) => set('current_address', e.target.value)} placeholder="House #, street, area, city" />
             </div>
 
             <div className="space-y-2 sm:col-span-2">
-              <label className={labelCls}>Permanent Address</label>
+              <label className={labelCls}>Permanent Address <span className="text-rose-500">*</span></label>
               <textarea className={cn(inputCls, 'resize-none')} rows={2} value={form.permanent_address} onChange={(e) => set('permanent_address', e.target.value)} placeholder="House #, street, area, city" />
             </div>
 

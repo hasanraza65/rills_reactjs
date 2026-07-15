@@ -44,12 +44,19 @@ export default function App() {
     return found || branches[0] || BRANCHES[0];
   }, [branches, selectedBranchId]);
 
-  // A reload resets activeTab to its initial value, and a role switch can leave
-  // us on a tab the new role has no page for. Send them to their landing tab.
+  // A reload resets activeTab to its initial value, and logging in as a
+  // different role can otherwise leave activeTab holding whatever tab the
+  // previous session was on (e.g. a Super Admin's 'branches' tab leaking into
+  // a freshly-logged-in Branch Admin session) — activeTab lives only in this
+  // component's memory and isn't cleared on logout. Track the role we last
+  // rendered for and send the user to their own landing tab whenever it changes.
+  const lastRoleRef = React.useRef<UserRole | undefined>(undefined);
   React.useEffect(() => {
-    if (isAuthenticated && user && activeTab === 'overview') {
+    if (!isAuthenticated || !user) return;
+    if (activeTab === 'overview' || lastRoleRef.current !== user.role) {
       setActiveTab(getDefaultTab(user.role));
     }
+    lastRoleRef.current = user.role;
   }, [isAuthenticated, user]);
 
   // Every time a different user logs in, reset to their first branch.

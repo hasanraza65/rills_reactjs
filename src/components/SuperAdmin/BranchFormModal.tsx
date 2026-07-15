@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Building2, MapPin, Phone, Loader2, Home, Hash, Calendar, Mail, Lock } from 'lucide-react';
+import { X, Building2, MapPin, Phone, Loader2, Home, Hash, Calendar, Mail, Lock, AlertCircle } from 'lucide-react';
 import { Branch, CreateBranchInput } from '../../types/models/branch';
 import { useCreateBranch, useUpdateBranch } from '../../hooks/use-branch';
 
@@ -25,10 +25,12 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
 
   const createMutation = useCreateBranch();
   const updateMutation = useUpdateBranch();
+  const [error, setError] = useState<string | null>(null);
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   useEffect(() => {
+    setError(null);
     if (branch) {
       setFormData({
         branch_name: branch.branch_name,
@@ -58,6 +60,7 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
     try {
       if (branch) {
         await updateMutation.mutateAsync({ id: branch.id, data: formData });
@@ -65,8 +68,12 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
         await createMutation.mutateAsync(formData);
       }
       onClose();
-    } catch (error) {
-      console.error('Failed to save branch:', error);
+    } catch (err: any) {
+      const msg = err?.response?.data?.message;
+      const firstErr = err?.response?.data?.errors
+        ? (Object.values(err.response.data.errors)[0] as string[])[0]
+        : null;
+      setError(firstErr || msg || 'Failed to save the branch. Please try again.');
     }
   };
 
@@ -240,6 +247,13 @@ export const BranchFormModal: React.FC<BranchFormModalProps> = ({ isOpen, onClos
                   </div>
                 </div>
               </div>
+
+              {error && (
+                <div className="flex items-center gap-2 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200">
+                  <AlertCircle className="text-rose-500 shrink-0" size={16} />
+                  <p className="text-xs font-bold text-rose-600">{error}</p>
+                </div>
+              )}
 
               <div className="flex gap-4 pt-4 shrink-0">
                 <button
