@@ -19,7 +19,7 @@ import { cn } from '../types';
 import { StatCard } from './StatCard';
 import { EmptyState } from './ui/EmptyState';
 import { StaffFormModal } from './Staff/StaffFormModal';
-import { useStaffMembers, useDeleteStaff } from '../hooks/use-staff-members';
+import { useStaffMembers, useStaffMember, useDeleteStaff } from '../hooks/use-staff-members';
 import { useRoles } from '../hooks/use-roles';
 import { usePermissions } from '../hooks/use-permissions';
 import { useAuthStore } from '../store/use-auth-store';
@@ -46,8 +46,13 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
   const [roleFilter, setRoleFilter] = useState<number | ''>('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
-  const [viewing, setViewing] = useState<StaffMember | null>(null);
+  const [viewingId, setViewingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+
+  // The list row can be missing/stale relations (e.g. staff_profile), so the
+  // view modal re-fetches the single-record detail endpoint by id instead of
+  // reusing whatever the list happened to have loaded.
+  const { data: viewing, isLoading: isLoadingViewing } = useStaffMember(viewingId);
 
   const branchName = (id: number | null) =>
     branches.find((b) => b.id === id)?.branch_name ?? '—';
@@ -198,7 +203,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                     <td className="px-6 py-4 text-sm text-slate-600 font-medium">{fmtDate(s.staff_profile?.date_of_joining)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => setViewing(s)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all" title="View">
+                        <button onClick={() => setViewingId(s.id)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all" title="View">
                           <Eye size={16} />
                         </button>
                         {can('staff', 'edit') && (
@@ -249,7 +254,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                     <span className="flex items-center gap-1"><CalendarDays size={12} /> {fmtDate(s.staff_profile?.date_of_joining)}</span>
                   </div>
                   <div className="flex items-center gap-1 pt-2 border-t border-slate-50">
-                    <button onClick={() => setViewing(s)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl"><Eye size={16} /></button>
+                    <button onClick={() => setViewingId(s.id)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl"><Eye size={16} /></button>
                     {can('staff', 'edit') && <button onClick={() => openEdit(s)} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl"><Edit2 size={16} /></button>}
                     {can('staff', 'delete') && <button onClick={() => setDeletingId(s.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl"><Trash2 size={16} /></button>}
                   </div>
@@ -269,7 +274,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
 
       {/* View modal */}
       <AnimatePresence>
-        {viewing && (
+        {viewingId != null && (
           <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.96 }}
@@ -279,51 +284,57 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
             >
               <div className="px-8 py-5 border-b border-slate-100 flex items-center justify-between">
                 <h3 className="text-lg font-extrabold text-slate-800">Staff Details</h3>
-                <button onClick={() => setViewing(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50"><X size={20} /></button>
+                <button onClick={() => setViewingId(null)} className="p-2 rounded-xl text-slate-400 hover:bg-slate-50"><X size={20} /></button>
               </div>
-              <div className="p-8 overflow-y-auto space-y-4">
-                <div className="flex items-center gap-4">
-                  <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-2xl">
-                    {viewing.name?.charAt(0)?.toUpperCase() || '?'}
-                  </div>
-                  <div>
-                    <p className="text-xl font-extrabold text-slate-800">{viewing.name}</p>
-                    {roleBadge(viewing)}
-                  </div>
+              {isLoadingViewing || !viewing ? (
+                <div className="p-16 text-center">
+                  <Loader2 className="w-6 h-6 animate-spin text-brand-500 mx-auto" />
                 </div>
-                <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
-                  {([
-                    ['Father / Husband', viewing.staff_profile?.father_husband_name],
-                    ['CNIC', viewing.cnic],
-                    ['Gender', viewing.staff_profile?.gender],
-                    ['Marital Status', viewing.staff_profile?.marital_status],
-                    ['Date of Birth', fmtDate(viewing.staff_profile?.dob)],
-                    ['Date of Joining', fmtDate(viewing.staff_profile?.date_of_joining)],
-                    ['Contact', viewing.phone],
-                    ['WhatsApp', viewing.staff_profile?.whatsapp_no],
-                    ['Emergency', viewing.staff_profile?.emergency_contact_no],
-                    ['Branch', branchName(viewing.branch_id)],
-                    ['Email', viewing.email],
-                  ] as [string, string | null | undefined][]).map(([label, value]) => (
-                    <div key={label}>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
-                      <p className="text-slate-700 font-medium capitalize">{value || '—'}</p>
-                    </div>
-                  ))}
-                </div>
-                {(viewing.staff_profile?.current_address || viewing.staff_profile?.permanent_address) && (
-                  <div className="space-y-3 pt-2">
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Address</p>
-                      <p className="text-slate-700 font-medium">{viewing.staff_profile?.current_address || '—'}</p>
+              ) : (
+                <div className="p-8 overflow-y-auto space-y-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 rounded-2xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-2xl">
+                      {viewing.name?.charAt(0)?.toUpperCase() || '?'}
                     </div>
                     <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Permanent Address</p>
-                      <p className="text-slate-700 font-medium">{viewing.staff_profile?.permanent_address || '—'}</p>
+                      <p className="text-xl font-extrabold text-slate-800">{viewing.name}</p>
+                      {roleBadge(viewing)}
                     </div>
                   </div>
-                )}
-              </div>
+                  <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">
+                    {([
+                      ['Father / Husband', viewing.staff_profile?.father_husband_name],
+                      ['CNIC', viewing.cnic],
+                      ['Gender', viewing.staff_profile?.gender],
+                      ['Marital Status', viewing.staff_profile?.marital_status],
+                      ['Date of Birth', fmtDate(viewing.staff_profile?.dob)],
+                      ['Date of Joining', fmtDate(viewing.staff_profile?.date_of_joining)],
+                      ['Contact', viewing.phone],
+                      ['WhatsApp', viewing.staff_profile?.whatsapp_no],
+                      ['Emergency', viewing.staff_profile?.emergency_contact_no],
+                      ['Branch', branchName(viewing.branch_id)],
+                      ['Email', viewing.email],
+                    ] as [string, string | null | undefined][]).map(([label, value]) => (
+                      <div key={label}>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{label}</p>
+                        <p className="text-slate-700 font-medium capitalize">{value || '—'}</p>
+                      </div>
+                    ))}
+                  </div>
+                  {(viewing.staff_profile?.current_address || viewing.staff_profile?.permanent_address) && (
+                    <div className="space-y-3 pt-2">
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Current Address</p>
+                        <p className="text-slate-700 font-medium">{viewing.staff_profile?.current_address || '—'}</p>
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Permanent Address</p>
+                        <p className="text-slate-700 font-medium">{viewing.staff_profile?.permanent_address || '—'}</p>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </motion.div>
           </div>
         )}

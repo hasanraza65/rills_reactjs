@@ -10,6 +10,14 @@ export const useStaffMembers = (branchId?: number | null) =>
     queryFn: () => staffService.getStaff({ branch_id: branchId ?? undefined }),
   });
 
+/** Fetches the full detail record for one staff member by id (GET /staff/:id). */
+export const useStaffMember = (id: number | null) =>
+  useQuery({
+    queryKey: [...STAFF_KEY, 'detail', id],
+    queryFn: () => staffService.getStaffMember(id!),
+    enabled: id != null,
+  });
+
 export const useCreateStaff = () => {
   const qc = useQueryClient();
   return useMutation({
