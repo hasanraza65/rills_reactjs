@@ -146,7 +146,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'branches', 'pricing', 'attendance', 'student-attendance', 'staff-attendance',
       'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
-      'subjects', 'results', 'class-syllabus', 'roles',
+      'subjects', 'results', 'class-syllabus', 'roles', 'staff',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -224,6 +224,17 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <BranchManagement />
+          </motion.div>
+        )}
+
+        {activeTab === 'staff' && (
+          <motion.div
+            key="staff"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <StaffManagement role={role} />
           </motion.div>
         )}
 

@@ -41,6 +41,7 @@ const menuItems: Record<UserRole, any[]> = {
   SUPER_ADMIN: [
     { icon: LayoutDashboard, label: 'Overview', id: 'overview' },
     { icon: Building2, label: 'Branches', id: 'branches' },
+    { icon: Users, label: 'Staff Management', id: 'staff' },
     {
       icon: BookOpen,
       label: 'Classes',

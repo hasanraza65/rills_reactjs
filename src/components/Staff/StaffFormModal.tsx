@@ -6,6 +6,7 @@ import { useRoles } from '../../hooks/use-roles';
 import { useCreateStaff, useUpdateStaff } from '../../hooks/use-staff-members';
 import { useAuthStore } from '../../store/use-auth-store';
 import { useBranchStore } from '../../store/use-branch-store';
+import { getAssignableRoleIds } from '../../lib/role-hierarchy';
 import type { StaffMember, StaffFormInput } from '../../types/api/staff';
 import { isPkMobile, normalizePkMobile, PK_MOBILE_ERROR, PK_MOBILE_PLACEHOLDER } from '../../lib/validations/phone';
 import { isCnic, normalizeCnic, CNIC_ERROR, CNIC_PLACEHOLDER } from '../../lib/validations/cnic';
@@ -40,8 +41,13 @@ const labelCls = 'text-xs font-bold text-slate-500 uppercase tracking-wider';
 
 export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose }) => {
   const { data: roles } = useRoles();
+  const currentUser = useAuthStore((s) => s.user);
   const branches = useAuthStore((s) => s.user?.branches) ?? [];
   const { selectedBranchId } = useBranchStore();
+  const assignableRoleIds = getAssignableRoleIds(currentUser?.role);
+  const assignableRoles = roles?.filter(
+    (r) => assignableRoleIds.includes(r.id) || r.id === editing?.user_role
+  );
   const createStaff = useCreateStaff();
   const updateStaff = useUpdateStaff();
 
@@ -222,7 +228,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
               <label className={labelCls}>Role <span className="text-rose-500">*</span></label>
               <select className={inputCls} value={form.user_role || ''} onChange={(e) => set('user_role', Number(e.target.value))}>
                 <option value="">Select a role</option>
-                {roles?.map((r) => (
+                {assignableRoles?.map((r) => (
                   <option key={r.id} value={r.id}>{r.name}</option>
                 ))}
               </select>
