@@ -19,6 +19,7 @@ import { cn } from '../types';
 import { StatCard } from './StatCard';
 import { EmptyState } from './ui/EmptyState';
 import { StaffFormModal } from './Staff/StaffFormModal';
+import { UserPermissionsModal } from './Staff/UserPermissionsModal';
 import { useStaffMembers, useStaffMember, useDeleteStaff } from '../hooks/use-staff-members';
 import { useRoles } from '../hooks/use-roles';
 import { usePermissions } from '../hooks/use-permissions';
@@ -35,8 +36,24 @@ const fmtDate = (d: string | null | undefined) =>
 
 export const StaffManagement: React.FC<StaffManagementProps> = () => {
   const { selectedBranchId } = useBranchStore();
-  const branches = useAuthStore((s) => s.user?.branches) ?? [];
+  const currentUser = useAuthStore((s) => s.user);
+  const branches = currentUser?.branches ?? [];
   const { can } = usePermissions();
+
+  // Only Super Admin may manage anyone's overrides; Branch Admin only for
+  // non-privileged staff within their own branch. Admin (role 2) is deliberately
+  // excluded from this specific capability even though it's "privileged" for
+  // general app access — mirrors the backend's authorizeTargetAccess() in
+  // UserPermissionController (that's the actual enforcement; this just decides
+  // whether to show the button).
+  const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
+  const canManagePermissionsFor = (s: StaffMember): boolean => {
+    if (isSuperAdmin) return true;
+    if (currentUser?.role === 'BRANCH_ADMIN') {
+      return s.branch_id != null && s.branch_id === currentUser.branchId && s.user_role !== 1 && s.user_role !== 2;
+    }
+    return false;
+  };
 
   const { data: staff, isLoading, error } = useStaffMembers(selectedBranchId);
   const { data: roles } = useRoles();
@@ -48,6 +65,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
+  const [permissionsFor, setPermissionsFor] = useState<StaffMember | null>(null);
 
   // The list row can be missing/stale relations (e.g. staff_profile), so the
   // view modal re-fetches the single-record detail endpoint by id instead of
@@ -211,6 +229,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                             <Edit2 size={16} />
                           </button>
                         )}
+                        {canManagePermissionsFor(s) && (
+                          <button onClick={() => setPermissionsFor(s)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all" title="Manage Permissions">
+                            <ShieldCheck size={16} />
+                          </button>
+                        )}
                         {can('staff', 'delete') && (
                           <button onClick={() => setDeletingId(s.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Delete">
                             <Trash2 size={16} />
@@ -256,6 +279,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                   <div className="flex items-center gap-1 pt-2 border-t border-slate-50">
                     <button onClick={() => setViewingId(s.id)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl"><Eye size={16} /></button>
                     {can('staff', 'edit') && <button onClick={() => openEdit(s)} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl"><Edit2 size={16} /></button>}
+                    {canManagePermissionsFor(s) && <button onClick={() => setPermissionsFor(s)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl"><ShieldCheck size={16} /></button>}
                     {can('staff', 'delete') && <button onClick={() => setDeletingId(s.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl"><Trash2 size={16} /></button>}
                   </div>
                 </div>
@@ -269,6 +293,20 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
       <AnimatePresence>
         {showForm && (
           <StaffFormModal editing={editing} onClose={() => { setShowForm(false); setEditing(null); }} />
+        )}
+      </AnimatePresence>
+
+      {/* Permissions modal */}
+      <AnimatePresence>
+        {permissionsFor && (
+          <UserPermissionsModal
+            userId={permissionsFor.id}
+            userName={permissionsFor.name}
+            roleName={permissionsFor.role?.name}
+            viewerIsPrivileged={isSuperAdmin}
+            viewerPermissions={currentUser?.permissions}
+            onClose={() => setPermissionsFor(null)}
+          />
         )}
       </AnimatePresence>
 
