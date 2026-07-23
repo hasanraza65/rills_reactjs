@@ -30,6 +30,31 @@ interface UserPermissionsModalProps {
   onClose: () => void;
 }
 
+/**
+ * Friendly hint of which Sidebar.tsx label(s) each permission module actually
+ * gates, so an admin editing overrides can tell what the user will see change —
+ * these are permission-system module slugs, not 1:1 with sidebar wording.
+ * Modules with no entry aren't wired to any sidebar tab yet (e.g. question_bank).
+ */
+const MODULE_SIDEBAR_HINTS: Record<string, string> = {
+  dashboard: 'Overview / Dashboard',
+  students: 'Students',
+  families: 'Parents & Families',
+  diaries: 'Diary, What I Have Learnt',
+  syllabus: 'Syllabus, Class Syllabus, Curriculum, Subjects',
+  lesson_plans: 'Lesson Plan',
+  student_attendance: 'Attendance, Student Attendance',
+  staff_attendance: 'Staff Attendance',
+  fees: 'Fees, Finance, Invoices',
+  staff: 'Staff Management',
+  branches: 'Branches',
+  classes_sections: 'Classes, Sections, Subjects',
+  visitors: 'Visitor Pass',
+  library: 'Library',
+  roles: 'Roles & Permissions',
+  reports: 'Results',
+};
+
 type Action = keyof NullableActionFlags;
 
 const ACTIONS: { key: Action; label: string }[] = [
@@ -225,6 +250,11 @@ export const UserPermissionsModal: React.FC<UserPermissionsModalProps> = ({
                             <tr key={mod.module_slug} className="hover:bg-slate-50/60 transition-colors">
                               <td className="px-5 py-3">
                                 <p className="text-sm font-semibold text-slate-700">{mod.module_name}</p>
+                                {MODULE_SIDEBAR_HINTS[mod.module_slug] && (
+                                  <p className="text-[10px] text-slate-400 mt-0.5">
+                                    Sidebar: {MODULE_SIDEBAR_HINTS[mod.module_slug]}
+                                  </p>
+                                )}
                               </td>
                               {ACTIONS.map(a => {
                                 const state = override[a.key];
