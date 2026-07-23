@@ -83,7 +83,6 @@ const menuItems: Record<UserRole, any[]> = {
         { label: 'Lesson Plan', id: 'lesson-plan-list' },
       ]
     },
-    { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
     { icon: Settings, label: 'System Settings', id: 'settings' },
@@ -111,7 +110,6 @@ const menuItems: Record<UserRole, any[]> = {
         { label: 'Lesson Plan', id: 'lesson-plan-list' },
       ]
     },
-    { icon: BookOpen, label: 'Syllabus', id: 'syllabus' },
     { icon: BookOpen, label: 'Class Syllabus', id: 'class-syllabus' },
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
