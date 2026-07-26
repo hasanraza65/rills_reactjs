@@ -58,6 +58,10 @@ import { SectionManagement } from './SectionManagement';
 import { SubjectModule } from './SubjectModule';
 import { AdmissionKeys } from './AdmissionKeys';
 import { InvoiceManagement } from './FeeManagement/InvoiceManagement';
+import { TimeTablePeriodsManager } from './TimeTable/TimeTablePeriodsManager';
+import { TimeTableGenerate } from './TimeTable/TimeTableGenerate';
+import { TimeTableList } from './TimeTable/TimeTableList';
+import { TeacherTimeTablePrint } from './TimeTable/TeacherTimeTablePrint';
 import { useStudents, useDeleteStudent } from '../hooks/use-student';
 import { StudentDetailsModal } from './StudentDetailsModal';
 import { NotificationPanel } from './NotificationPanel';
@@ -147,6 +151,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
       'subjects', 'results', 'class-syllabus', 'roles', 'staff',
+      'timetable-periods', 'timetable-generate', 'timetable-list', 'timetable-teacher-print',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -422,6 +427,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <RolesPage />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-periods' && (
+          <motion.div
+            key="timetable-periods"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTablePeriodsManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-generate' && (
+          <motion.div
+            key="timetable-generate"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTableGenerate onTabChange={onTabChange} />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-list' && (
+          <motion.div
+            key="timetable-list"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTableList onTabChange={onTabChange} />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-teacher-print' && (
+          <motion.div
+            key="timetable-teacher-print"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TeacherTimeTablePrint />
           </motion.div>
         )}
       </AnimatePresence>
@@ -934,6 +983,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <RolesPage />
           </motion.div>
         )}
+
+        {activeTab === 'timetable-periods' && (
+          <motion.div
+            key="timetable-periods"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTablePeriodsManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-generate' && (
+          <motion.div
+            key="timetable-generate"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTableGenerate onTabChange={onTabChange} />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-list' && (
+          <motion.div
+            key="timetable-list"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTableList onTabChange={onTabChange} />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-teacher-print' && (
+          <motion.div
+            key="timetable-teacher-print"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TeacherTimeTablePrint />
+          </motion.div>
+        )}
       </AnimatePresence>
 
 
@@ -1106,7 +1199,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list'].includes(activeTab) && (
+        {activeTab === 'timetable-teacher-print' && (
+          <motion.div
+            key="timetable-teacher-print"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TeacherTimeTablePrint selfOnly />
+          </motion.div>
+        )}
+
+        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list', 'timetable-teacher-print'].includes(activeTab) && (
           <motion.div
             key="placeholder"
             initial={{ opacity: 0 }}

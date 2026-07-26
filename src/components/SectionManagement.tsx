@@ -13,13 +13,15 @@ import {
   Building2,
   Clock,
   X,
-  BookOpen
+  BookOpen,
+  UserRound
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
 import { useSections, useSection, useCreateSection, useUpdateSection, useDeleteSection } from '../hooks/use-section';
 import { useClasses } from '../hooks/use-class';
+import { useBranches } from '../hooks/use-branch';
 import { SectionData } from '../types/api/section';
 import { useBranchStore } from '../store/use-branch-store';
 
@@ -36,7 +38,10 @@ export const SectionManagement: React.FC = () => {
   const { selectedBranchId } = useBranchStore();
   const { data: sections, isLoading, error } = useSections(selectedBranchId || 1);
   const { data: classes } = useClasses(selectedBranchId || 1);
+  const { data: branches } = useBranches();
   const { data: sectionDetails, isLoading: isLoadingDetails } = useSection(selectedSectionId);
+
+  const campusName = (branchId: number) => branches?.find((b) => b.id === branchId)?.branch_name || `Branch #${branchId}`;
 
   const createMutation = useCreateSection();
   const updateMutation = useUpdateSection();
@@ -149,10 +154,12 @@ export const SectionManagement: React.FC = () => {
               <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[40%]">Section Name</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Parent Class</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[20%]">Created At</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[10%]">Actions</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[26%]">Section Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[16%]">Parent Class</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[16%]">Campus</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[16%]">Added By</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[14%]">Created At</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[12%]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -173,6 +180,15 @@ export const SectionManagement: React.FC = () => {
                         <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-wider">
                           {s.school_class.name}
                         </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-600">
+                          <Building2 size={14} className="text-slate-400 shrink-0" />
+                          {campusName(s.branch_id)}
+                        </div>
+                      </td>
+                      <td className="px-8 py-5 text-sm text-slate-600">
+                        {s.added_by_user?.name || `User #${s.added_by}`}
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2 text-sm text-slate-500">
@@ -253,6 +269,14 @@ export const SectionManagement: React.FC = () => {
                       <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold border border-indigo-100/50 uppercase">
                         {s.school_class.name}
                       </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus</p>
+                      <span className="text-xs font-bold text-slate-700">{campusName(s.branch_id)}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added By</p>
+                      <span className="text-xs font-bold text-slate-700">{s.added_by_user?.name || `User #${s.added_by}`}</span>
                     </div>
                     <div className="flex items-center gap-2 text-xs text-slate-500 font-medium pt-1">
                       <Calendar size={14} className="text-slate-300" />
@@ -422,9 +446,20 @@ export const SectionManagement: React.FC = () => {
                       <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
                         <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-indigo-600">
                           <BookOpen size={13} sm:size={14} />
-                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Branch ID</p>
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus</p>
                         </div>
-                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">Branch #{sectionDetails.branch_id}</p>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">{campusName(sectionDetails.branch_id)}</p>
+                      </div>
+
+                      {/* Added By Info */}
+                      <div className="p-3.5 sm:p-4 rounded-2xl bg-slate-50 border border-slate-100/50">
+                        <div className="flex items-center gap-2 mb-1.5 sm:mb-2 text-rose-600">
+                          <UserRound size={13} sm:size={14} />
+                          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added By</p>
+                        </div>
+                        <p className="text-xs sm:text-sm font-bold text-slate-800 line-clamp-1">
+                          {sectionDetails.added_by_user?.name || `User #${sectionDetails.added_by}`}
+                        </p>
                       </div>
 
                       {/* Created Info */}

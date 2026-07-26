@@ -20,6 +20,7 @@ import {
   Key,
   Library as LibraryIcon,
   Shield,
+  Clock,
 } from 'lucide-react';
 import { cn, UserRole } from '../types';
 import { usePermissions } from '../hooks/use-permissions';
@@ -36,6 +37,18 @@ interface SidebarProps {
   onClose: () => void;
 }
 
+
+const TIME_TABLE_SUBMENU = {
+  icon: Clock,
+  label: 'Time Table',
+  id: 'timetable-menu',
+  subItems: [
+    { label: 'Time Table Periods', id: 'timetable-periods' },
+    { label: 'Time Table', id: 'timetable-generate' },
+    { label: 'Teacher Time Table Print', id: 'timetable-teacher-print' },
+    { label: 'Time Table Level List', id: 'timetable-list' },
+  ],
+};
 
 const menuItems: Record<UserRole, any[]> = {
   SUPER_ADMIN: [
@@ -83,6 +96,7 @@ const menuItems: Record<UserRole, any[]> = {
         { label: 'Lesson Plan', id: 'lesson-plan-list' },
       ]
     },
+    TIME_TABLE_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
     { icon: Settings, label: 'System Settings', id: 'settings' },
@@ -111,6 +125,7 @@ const menuItems: Record<UserRole, any[]> = {
       ]
     },
     { icon: BookOpen, label: 'Class Syllabus', id: 'class-syllabus' },
+    TIME_TABLE_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     { icon: GraduationCap, label: 'Academic Years', id: 'academics' },
@@ -144,6 +159,7 @@ const menuItems: Record<UserRole, any[]> = {
       ],
     },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
+    TIME_TABLE_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: FileText, label: 'Diary', id: 'diary' },
   ],
@@ -153,6 +169,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: FileText, label: 'Lesson Plan', id: 'lesson-plan-list' },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: FileText, label: 'Daily Diary', id: 'diary' },
+    { icon: Clock, label: 'My Time Table', id: 'timetable-teacher-print' },
     { icon: MessageSquare, label: 'Messages', id: 'messages' },
   ],
   PARENT: [

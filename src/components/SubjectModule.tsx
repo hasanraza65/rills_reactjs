@@ -21,9 +21,13 @@ import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { useClasses } from '../hooks/use-class';
 import { useClassSubjects, useCreateClassSubject, useUpdateClassSubject, useDeleteClassSubject } from '../hooks/use-class-subject';
+import { useStaffMembers } from '../hooks/use-staff-members';
+import { useBranches } from '../hooks/use-branch';
 import { useBranchStore } from '../store/use-branch-store';
 import { ClassSection } from '../types/api/class';
 import { ClassSubjectData } from '../types/api/class-subject';
+
+const TEACHER_ROLE_ID = 4;
 
 /**
  * Section Subjects View - Shows subjects for a specific section
@@ -35,20 +39,23 @@ const SectionSubjectsView: React.FC<{
   onBack: () => void;
 }> = ({ section, className: classTitle, onBack }) => {
   const { selectedBranchId } = useBranchStore();
+  const branchId = selectedBranchId || 1;
   const { data: subjectsResponse, isLoading, error } = useClassSubjects(section.id, selectedBranchId);
+  const { data: staff } = useStaffMembers(branchId);
+  const teacherOptions = (staff || []).filter((s) => s.user_role === TEACHER_ROLE_ID);
   const createMutation = useCreateClassSubject();
   const updateMutation = useUpdateClassSubject();
   const deleteMutation = useDeleteClassSubject();
-  
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [subjectName, setSubjectName] = useState('');
-  const [teacherId, setTeacherId] = useState<number>(1);
+  const [teacherId, setTeacherId] = useState<number | ''>('');
 
   // Edit state
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingSubject, setEditingSubject] = useState<ClassSubjectData | null>(null);
   const [editSubjectName, setEditSubjectName] = useState('');
-  const [editTeacherId, setEditTeacherId] = useState<number>(1);
+  const [editTeacherId, setEditTeacherId] = useState<number | ''>('');
 
   // Delete state
   const [subjectToDelete, setSubjectToDelete] = useState<ClassSubjectData | null>(null);
@@ -57,7 +64,7 @@ const SectionSubjectsView: React.FC<{
 
   const handleAddSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!subjectName.trim()) return;
+    if (!subjectName.trim() || !teacherId) return;
 
     createMutation.mutate(
       {
@@ -65,13 +72,13 @@ const SectionSubjectsView: React.FC<{
         section_id: section.id,
         teacher_id: teacherId,
         subject_name: subjectName.trim(),
-        branch_id: 1,
+        branch_id: branchId,
       },
       {
         onSuccess: () => {
           setIsAddModalOpen(false);
           setSubjectName('');
-          setTeacherId(1);
+          setTeacherId('');
         },
       }
     );
@@ -80,13 +87,13 @@ const SectionSubjectsView: React.FC<{
   const handleOpenEdit = (sub: ClassSubjectData) => {
     setEditingSubject(sub);
     setEditSubjectName(sub.name || sub.subject_name || '');
-    setEditTeacherId(sub.teacher_id || 1);
+    setEditTeacherId(sub.teacher_id || '');
     setIsEditModalOpen(true);
   };
 
   const handleEditSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSubject || !editSubjectName.trim()) return;
+    if (!editingSubject || !editSubjectName.trim() || !editTeacherId) return;
 
     updateMutation.mutate(
       {
@@ -186,10 +193,11 @@ const SectionSubjectsView: React.FC<{
               <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[8%]">#</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Subject Name</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[25%]">Section</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[22%]">Added On</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[6%]">#</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[24%]">Subject Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[18%]">Section</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[18%]">Teacher</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[19%]">Added On</th>
                     <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[15%]">Actions</th>
                   </tr>
                 </thead>
@@ -220,6 +228,12 @@ const SectionSubjectsView: React.FC<{
                         <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase tracking-wider border border-indigo-100/50">
                           {classTitle} — {section.name}
                         </span>
+                      </td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-700 font-bold">
+                          <User size={14} className="text-slate-400 shrink-0" />
+                          {sub.teacher?.name || `Teacher #${sub.teacher_id}`}
+                        </div>
                       </td>
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
@@ -272,18 +286,22 @@ const SectionSubjectsView: React.FC<{
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {sub.id}</p>
                     </div>
                   </div>
+                  <div className="flex items-center gap-2 text-sm text-slate-700 font-bold">
+                    <User size={14} className="text-slate-400 shrink-0" />
+                    {sub.teacher?.name || `Teacher #${sub.teacher_id}`}
+                  </div>
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase border border-indigo-100/50">
                       {classTitle} — {section.name}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button 
+                      <button
                         onClick={() => handleOpenEdit(sub)}
                         className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:text-brand-500 transition-colors"
                       >
                         <Edit2 size={16} />
                       </button>
-                      <button 
+                      <button
                         onClick={() => setSubjectToDelete(sub)}
                         className="p-2.5 text-rose-400 bg-rose-50/50 rounded-xl hover:text-rose-600 transition-colors"
                       >
@@ -344,11 +362,14 @@ const SectionSubjectsView: React.FC<{
                     </label>
                     <select
                       value={editTeacherId}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditTeacherId(Number(e.target.value))}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditTeacherId(e.target.value ? Number(e.target.value) : '')}
                       required
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-sm appearance-none"
                     >
-                      <option value={1}>Default Teacher (ID: 1)</option>
+                      <option value="">Select a teacher...</option>
+                      {teacherOptions.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
                     </select>
                   </div>
                 </div>
@@ -446,7 +467,7 @@ const SectionSubjectsView: React.FC<{
                     />
                   </div>
 
-                  {/* Teacher Selection (Hardcoded for now) */}
+                  {/* Teacher Selection */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
                       <User size={14} className="text-indigo-500" />
@@ -454,15 +475,20 @@ const SectionSubjectsView: React.FC<{
                     </label>
                     <select
                       value={teacherId}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTeacherId(Number(e.target.value))}
+                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTeacherId(e.target.value ? Number(e.target.value) : '')}
                       required
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 outline-none transition-all font-medium text-sm appearance-none"
                     >
-                      <option value={1}>Default Teacher (ID: 1)</option>
+                      <option value="">Select a teacher...</option>
+                      {teacherOptions.map((t) => (
+                        <option key={t.id} value={t.id}>{t.name}</option>
+                      ))}
                     </select>
-                    <p className="text-[10px] text-slate-400 font-medium">
-                      Teacher list will be dynamic in a future update.
-                    </p>
+                    {teacherOptions.length === 0 && (
+                      <p className="text-[10px] text-amber-600 font-medium">
+                        No teachers found for this campus — add one under Staff Management first.
+                      </p>
+                    )}
                   </div>
 
                   {/* Info Bar */}
@@ -519,6 +545,9 @@ export const SubjectModule: React.FC = () => {
   
   const { selectedBranchId } = useBranchStore();
   const { data: classes, isLoading, error } = useClasses(selectedBranchId || 1);
+  const { data: branches } = useBranches();
+
+  const campusName = (branchId: number) => branches?.find((b) => b.id === branchId)?.branch_name || `Branch #${branchId}`;
 
   // If a section is selected, show subjects view
   if (selectedSection) {
@@ -592,8 +621,11 @@ export const SubjectModule: React.FC = () => {
               <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[35%]">Class Name</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[65%]">Sections (Click to view subjects)</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[20%]">Class Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[13%]">Campus</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[13%]">Added By</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[12%]">Created At</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[42%]">Sections (Click to view subjects)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
@@ -616,6 +648,14 @@ export const SubjectModule: React.FC = () => {
                           </div>
                         </div>
                       </td>
+                      <td className="px-8 py-5 text-sm text-slate-600">{campusName(c.branch_id)}</td>
+                      <td className="px-8 py-5 text-sm text-slate-600">{c.added_by_user?.name || `User #${c.added_by}`}</td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Calendar size={14} className="text-slate-400" />
+                          {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                      </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-wrap gap-2">
                           {c.sections && c.sections.length > 0 ? (
@@ -629,6 +669,9 @@ export const SubjectModule: React.FC = () => {
                               >
                                 <Layers size={14} className="opacity-70" />
                                 Section {section.name}
+                                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] normal-case tracking-normal">
+                                  {section.subjects_count ?? 0} subj
+                                </span>
                                 <ChevronRight size={12} className="ml-1 opacity-50" />
                               </motion.button>
                             ))
@@ -662,6 +705,20 @@ export const SubjectModule: React.FC = () => {
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {c.id}</p>
                     </div>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{campusName(c.branch_id)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added By</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{c.added_by_user?.name || `User #${c.added_by}`}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                  </div>
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Sections</p>
                     <div className="flex flex-wrap gap-2">
@@ -674,6 +731,9 @@ export const SubjectModule: React.FC = () => {
                           >
                             <Layers size={14} className="opacity-70" />
                             Section {section.name}
+                            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] normal-case tracking-normal">
+                              {section.subjects_count ?? 0} subj
+                            </span>
                             <ChevronRight size={12} className="ml-1 opacity-50" />
                           </button>
                         ))

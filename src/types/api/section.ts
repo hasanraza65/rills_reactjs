@@ -20,6 +20,7 @@ export interface SectionData {
   created_at: string;
   updated_at: string;
   school_class: SectionClass;
+  added_by_user?: { id: number; name: string };
 }
 
 export interface CreateSectionInput {
