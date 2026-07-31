@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Plus, Trash2, Copy, CopyPlus, ArrowRight } from 'lucide-react';
 import { Button } from '../ui/Button';
-import { SCHOOL_DAYS as DAYS, DurationMatrix } from '../../lib/timetable-days';
+import { Select } from '../ui/Select';
+import { SCHOOL_DAYS as DAYS, DurationMatrix, addMinutesToTime, formatClockTime } from '../../lib/timetable-days';
 
 interface PeriodCellsGridProps {
   periods: number[];
@@ -11,6 +12,9 @@ interface PeriodCellsGridProps {
   onCopyRowDown: (periodNumber: number) => void;
   onSetDuration: (periodNumber: number, day: number, value: string) => void;
   onCopyColumn: (sourceDay: number, targetDays: number[]) => void;
+  /** Preview-only aid for the "Off Time" row below — owned by the parent (shown
+   * alongside Periods Title) since it isn't part of this grid's own data. */
+  startTime: string;
 }
 
 export const PeriodCellsGrid: React.FC<PeriodCellsGridProps> = ({
@@ -21,12 +25,22 @@ export const PeriodCellsGrid: React.FC<PeriodCellsGridProps> = ({
   onCopyRowDown,
   onSetDuration,
   onCopyColumn,
+  startTime,
 }) => {
   const [copySourceDay, setCopySourceDay] = useState<number>(DAYS[0].value);
   const [copyTargetDays, setCopyTargetDays] = useState<number[]>([]);
 
   const otherDays = DAYS.filter((d) => d.value !== copySourceDay);
   const allSelected = otherDays.length > 0 && otherDays.every((d) => copyTargetDays.includes(d.value));
+
+  const totalMinutesForDay = (day: number): number =>
+    periods.reduce((sum, periodNumber) => sum + (Number(matrix[periodNumber]?.[day]) || 0), 0);
+
+  const offTimeForDay = (day: number): string | null => {
+    const total = totalMinutesForDay(day);
+    if (total === 0) return null;
+    return formatClockTime(addMinutesToTime(startTime, total));
+  };
 
   const toggleCopyTarget = (day: number) => {
     setCopyTargetDays((prev) => (prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]));
@@ -60,19 +74,18 @@ export const PeriodCellsGrid: React.FC<PeriodCellsGridProps> = ({
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-3">
-          <select
-            value={copySourceDay}
-            onChange={(e) => {
-              const day = Number(e.target.value);
-              setCopySourceDay(day);
-              setCopyTargetDays((prev) => prev.filter((d) => d !== day));
-            }}
-            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 focus:ring-2 focus:ring-brand-500/20 outline-none"
-          >
-            {DAYS.map((d) => (
-              <option key={d.value} value={d.value}>{d.label}</option>
-            ))}
-          </select>
+          <div className="w-24">
+            <Select
+              value={String(copySourceDay)}
+              onChange={(v) => {
+                const day = Number(v);
+                setCopySourceDay(day);
+                setCopyTargetDays((prev) => prev.filter((d) => d !== day));
+              }}
+              options={DAYS.map((d) => ({ value: String(d.value), label: d.label }))}
+              size="sm"
+            />
+          </div>
           <ArrowRight size={14} className="text-brand-400 shrink-0" />
           <div className="flex flex-wrap gap-1.5">
             <button
@@ -165,6 +178,22 @@ export const PeriodCellsGrid: React.FC<PeriodCellsGridProps> = ({
                 </td>
               </tr>
             ))}
+            <tr className="bg-slate-50">
+              <td className="px-4 py-2.5 font-bold text-slate-500 text-xs uppercase tracking-wider">Off Time</td>
+              {DAYS.map((d) => {
+                const offTime = offTimeForDay(d.value);
+                return (
+                  <td key={d.value} className="px-2 py-2 text-center">
+                    {offTime ? (
+                      <span className="px-2 py-1 rounded-lg bg-brand-50 text-brand-700 text-xs font-bold">{offTime}</span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">-</span>
+                    )}
+                  </td>
+                );
+              })}
+              <td />
+            </tr>
           </tbody>
         </table>
       </div>

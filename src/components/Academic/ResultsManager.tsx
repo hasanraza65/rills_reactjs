@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 
 interface MockResult {
@@ -341,16 +342,16 @@ export const ResultsManager: React.FC = () => {
 
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Exam Type</label>
-                    <select 
+                    <Select
                       value={formData.examType}
-                      onChange={(e) => setFormData({...formData, examType: e.target.value})}
+                      onChange={(v) => setFormData({...formData, examType: v})}
+                      options={[
+                        { value: 'Mid Term', label: 'Mid Term' },
+                        { value: 'Final Term', label: 'Final Term' },
+                        { value: 'Monthly Test', label: 'Monthly Test' },
+                      ]}
                       required
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700" 
-                    >
-                      <option value="Mid Term">Mid Term</option>
-                      <option value="Final Term">Final Term</option>
-                      <option value="Monthly Test">Monthly Test</option>
-                    </select>
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 gap-4">

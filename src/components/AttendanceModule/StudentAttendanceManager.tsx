@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 import { Calendar, Search, Loader2, AlertTriangle } from 'lucide-react';
 import { cn } from '../../types';
@@ -77,32 +78,24 @@ export const StudentAttendanceManager: React.FC = () => {
           {/* Class */}
           <div className="space-y-2 flex-1 min-w-[150px]">
             <label className="text-sm font-bold text-slate-600">Class</label>
-            <select
+            <Select
               value={selectedClassId}
-              onChange={(e) => { setSelectedClassId(e.target.value); setSelectedSectionId(''); setSubmitted(false); }}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-700 appearance-none"
-            >
-              <option value="">All Classes</option>
-              {(classes ?? []).map((c) => (
-                <option key={c.id} value={String(c.id)}>{c.name}</option>
-              ))}
-            </select>
+              onChange={(v) => { setSelectedClassId(v); setSelectedSectionId(''); setSubmitted(false); }}
+              options={(classes ?? []).map((c) => ({ value: String(c.id), label: c.name }))}
+              placeholder="All Classes"
+            />
           </div>
 
           {/* Section */}
           <div className="space-y-2 flex-1 min-w-[150px]">
             <label className="text-sm font-bold text-slate-600">Section <span className="text-rose-500">*</span></label>
-            <select
+            <Select
               value={selectedSectionId}
-              onChange={(e) => { setSelectedSectionId(e.target.value); setSubmitted(false); }}
-              className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none font-medium text-slate-700 appearance-none"
+              onChange={(v) => { setSelectedSectionId(v); setSubmitted(false); }}
+              options={filteredSections.map((s) => ({ value: String(s.id), label: `${s.school_class?.name} — ${s.name}` }))}
+              placeholder="Choose…"
               required
-            >
-              <option value="">Choose…</option>
-              {filteredSections.map((s) => (
-                <option key={s.id} value={String(s.id)}>{s.school_class?.name} — {s.name}</option>
-              ))}
-            </select>
+            />
           </div>
 
           {/* Start Date */}

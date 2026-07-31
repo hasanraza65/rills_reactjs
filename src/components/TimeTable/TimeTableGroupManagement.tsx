@@ -46,6 +46,7 @@ export const TimeTableGroupManagement: React.FC<TimeTableGroupManagementProps> =
   // captures its periods, so creating a group and defining its schedule is one action.
   const [step, setStep] = useState<1 | 2>(1);
   const [periodTitle, setPeriodTitle] = useState('');
+  const [periodStartTime, setPeriodStartTime] = useState('08:00');
   const [createdGroupId, setCreatedGroupId] = useState<number | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const { periods, matrix, reset: resetPeriodCells, addRow: addPeriodRow, removeRow: removePeriodRow, copyRowDown, setDuration, copyColumn } = usePeriodCells();
@@ -56,6 +57,7 @@ export const TimeTableGroupManagement: React.FC<TimeTableGroupManagementProps> =
     setClassIds([]);
     setStep(1);
     setPeriodTitle('');
+    setPeriodStartTime('08:00');
     setCreatedGroupId(null);
     setSaveError(null);
     resetPeriodCells();
@@ -324,17 +326,29 @@ export const TimeTableGroupManagement: React.FC<TimeTableGroupManagementProps> =
                           {name}
                         </div>
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Periods Title</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. test time periods"
-                          value={periodTitle}
-                          onChange={(e) => setPeriodTitle(e.target.value)}
-                          required
-                          autoFocus
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Periods Title</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. test time periods"
+                            value={periodTitle}
+                            onChange={(e) => setPeriodTitle(e.target.value)}
+                            required
+                            autoFocus
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Start Time</label>
+                          <input
+                            type="time"
+                            value={periodStartTime}
+                            onChange={(e) => setPeriodStartTime(e.target.value)}
+                            title="Preview only — the actual Timetable's start time is set when you generate it."
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
                     <PeriodCellsGrid
@@ -345,6 +359,7 @@ export const TimeTableGroupManagement: React.FC<TimeTableGroupManagementProps> =
                       onCopyRowDown={copyRowDown}
                       onSetDuration={setDuration}
                       onCopyColumn={copyColumn}
+                      startTime={periodStartTime}
                     />
                     {saveError && <p className="text-xs text-rose-500">{saveError}</p>}
                   </div>

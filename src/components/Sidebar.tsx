@@ -45,8 +45,6 @@ const TIME_TABLE_SUBMENU = {
   subItems: [
     { label: 'Time Table Periods', id: 'timetable-periods' },
     { label: 'Time Table', id: 'timetable-generate' },
-    { label: 'Teacher Time Table Print', id: 'timetable-teacher-print' },
-    { label: 'Time Table Level List', id: 'timetable-list' },
   ],
 };
 

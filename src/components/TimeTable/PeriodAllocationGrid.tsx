@@ -6,22 +6,16 @@ import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { useTimetableSlots, useUpdateTimetableSlot, useRegenerateTimetable, useTeacherBusySlots } from '../../hooks/use-timetable';
 import { timetableService } from '../../lib/services/timetable-service';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { useClassSubjects } from '../../hooks/use-class-subject';
 import { useTimetableActivities } from '../../hooks/use-timetable-activity';
 import { useStaffMembers } from '../../hooks/use-staff-members';
 import { TimetableSlotData, TeacherBusySlot } from '../../types/api/timetable';
-import { dayLabel } from '../../lib/timetable-days';
+import { dayLabel, formatClockTime as formatTime } from '../../lib/timetable-days';
 
 // Anyone can be assigned to a period (Branch Admin, Admin, Teacher, etc.) except
 // Super Admin, who manages the system rather than teaching/supervising periods.
 const SUPER_ADMIN_ROLE_ID = 1;
-
-const formatTime = (time: string) => {
-  const [h, m] = time.split(':').map(Number);
-  const period = h >= 12 ? 'PM' : 'AM';
-  const hour12 = h % 12 === 0 ? 12 : h % 12;
-  return `${hour12}:${String(m).padStart(2, '0')} ${period}`;
-};
 
 interface CellValue {
   subjectKey: string; // '' | `cs-{id}` | `act-{id}`
@@ -125,42 +119,31 @@ const CellEditor: React.FC<CellEditorProps> = ({
 
   return (
     <div className="p-2 space-y-1.5 min-w-[170px] bg-brand-50/40">
-      <select
+      <Select
         value={draft.subjectKey}
-        onChange={(e) => handleSubjectChange(e.target.value)}
-        autoFocus
-        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-brand-500/20 outline-none"
-      >
-        <option value="">Select Subject</option>
-        {subjectOptions.map((s) => (
-          <option key={`cs-${s.id}`} value={`cs-${s.id}`}>{s.subjectName}</option>
-        ))}
-      </select>
+        onChange={handleSubjectChange}
+        options={subjectOptions.map((s) => ({ value: `cs-${s.id}`, label: s.subjectName }))}
+        placeholder="Select Subject"
+        size="sm"
+      />
 
-      <select
-        value={draft.teacherId ?? ''}
-        onChange={(e) => commit({ ...draft, teacherId: e.target.value ? Number(e.target.value) : null })}
-        className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:ring-2 focus:ring-brand-500/20 outline-none"
-      >
-        <option value="">Select Teacher</option>
-        {teacherOptions.map((t) => {
+      <Select
+        value={draft.teacherId ? String(draft.teacherId) : ''}
+        onChange={(v) => commit({ ...draft, teacherId: v ? Number(v) : null })}
+        options={teacherOptions.map((t) => {
           const conflict = conflictFor(t.id);
-          return (
-            <option
-              key={t.id}
-              value={t.id}
-              disabled={!!conflict}
-              title={
-                conflict
-                  ? `Already assigned to ${conflict.group_name ?? 'another group'}${conflict.section_name ? ` (${conflict.section_name})` : ''}, ${conflict.start_time.slice(0, 5)}-${conflict.end_time.slice(0, 5)}`
-                  : undefined
-              }
-            >
-              {t.name}{conflict ? ' (Already assigned)' : ''}
-            </option>
-          );
+          return {
+            value: String(t.id),
+            label: conflict ? `${t.name} (Already assigned)` : t.name,
+            disabled: !!conflict,
+            title: conflict
+              ? `Already assigned to ${conflict.group_name ?? 'another group'}${conflict.section_name ? ` (${conflict.section_name})` : ''}, ${conflict.start_time.slice(0, 5)}-${conflict.end_time.slice(0, 5)}`
+              : undefined,
+          };
         })}
-      </select>
+        placeholder="Select Teacher"
+        size="sm"
+      />
     </div>
   );
 };

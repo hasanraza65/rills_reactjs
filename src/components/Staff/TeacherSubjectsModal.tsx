@@ -1,6 +1,7 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { BookOpen, Check, ChevronDown, Loader2, Plus, Trash2, X } from 'lucide-react';
+import React, { useMemo, useState } from 'react';
+import { motion } from 'motion/react';
+import { BookOpen, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { Select } from '../ui/Select';
 import { useClasses } from '../../hooks/use-class';
 import { useSectionsByClass } from '../../hooks/use-section';
 import {
@@ -11,94 +12,6 @@ import {
 } from '../../hooks/use-class-subject';
 
 const NEW_SUBJECT_VALUE = '__new__';
-
-interface DropdownOption {
-  value: string;
-  label: string;
-  tick?: boolean;
-}
-
-/** The app's standard custom dropdown (button + animated panel) — used everywhere
- *  instead of a native <select> so the picker matches the rest of the UI. */
-const DropdownField: React.FC<{
-  value: string;
-  placeholder: string;
-  options: DropdownOption[];
-  onChange: (value: string) => void;
-  disabled?: boolean;
-  extraOption?: { value: string; label: string };
-}> = ({ value, placeholder, options, onChange, disabled, extraOption }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) setIsOpen(false);
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
-
-  const selectedLabel =
-    options.find((o) => o.value === value)?.label ??
-    (extraOption?.value === value ? extraOption.label : undefined);
-
-  return (
-    <div className="relative" ref={ref}>
-      <button
-        type="button"
-        onClick={() => !disabled && setIsOpen((v) => !v)}
-        disabled={disabled}
-        className={`w-full flex items-center justify-between px-3 py-2.5 bg-slate-50 border-2 rounded-xl transition-all disabled:opacity-50 ${
-          isOpen ? 'border-brand-500 bg-white ring-2 ring-brand-500/10' : 'border-transparent'
-        }`}
-      >
-        <span className={`text-sm font-bold truncate ${selectedLabel ? 'text-slate-700' : 'text-slate-400'}`}>
-          {selectedLabel ?? placeholder}
-        </span>
-        <ChevronDown className={`w-4 h-4 text-slate-400 shrink-0 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
-      </button>
-
-      <AnimatePresence>
-        {isOpen && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95, y: 5 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.95, y: 5 }}
-            className="absolute top-full left-0 right-0 z-50 mt-2 bg-white rounded-2xl shadow-2xl ring-1 ring-slate-100 p-2 overflow-hidden border border-slate-50 max-h-64 overflow-y-auto"
-          >
-            {options.map((opt) => (
-              <button
-                key={opt.value}
-                type="button"
-                onClick={() => { onChange(opt.value); setIsOpen(false); }}
-                className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-left text-sm font-bold transition-all ${
-                  value === opt.value ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                }`}
-              >
-                <span>{opt.label}</span>
-                {opt.tick && <Check className="w-4 h-4 text-emerald-500" />}
-              </button>
-            ))}
-            {extraOption && (
-              <div className="border-t border-slate-100 mt-1 pt-1">
-                <button
-                  type="button"
-                  onClick={() => { onChange(extraOption.value); setIsOpen(false); }}
-                  className={`w-full flex items-center justify-between px-4 py-2.5 rounded-xl text-left text-sm font-bold transition-all ${
-                    value === extraOption.value ? 'bg-brand-50 text-brand-600' : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
-                  }`}
-                >
-                  {extraOption.label}
-                </button>
-              </div>
-            )}
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  );
-};
 
 interface TeacherSubjectsModalProps {
   teacherId: number;
@@ -230,13 +143,13 @@ export const TeacherSubjectsModal: React.FC<TeacherSubjectsModalProps> = ({
           <div className="pt-4 border-t border-slate-100 space-y-3">
             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Add Subject</p>
             <div className="grid grid-cols-2 gap-3">
-              <DropdownField
+              <Select
                 value={classId === '' ? '' : String(classId)}
                 placeholder="Select Class"
                 options={(classes ?? []).map((c) => ({ value: String(c.id), label: c.name }))}
                 onChange={(v) => { setClassId(v ? Number(v) : ''); setSectionId(''); }}
               />
-              <DropdownField
+              <Select
                 value={sectionId === '' ? '' : String(sectionId)}
                 placeholder="Select Section"
                 options={(sections ?? []).map((s) => ({ value: String(s.id), label: s.name }))}
@@ -244,7 +157,7 @@ export const TeacherSubjectsModal: React.FC<TeacherSubjectsModalProps> = ({
                 disabled={classId === ''}
               />
             </div>
-            <DropdownField
+            <Select
               value={subjectChoice}
               placeholder="Select Subject"
               options={subjectNames.map((name) => ({ value: name, label: name, tick: isAssignedToTeacher(name) }))}

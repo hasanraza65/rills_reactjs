@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Plus, Loader2, Trash2, Edit2, Eye, X, Clock, Settings2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { TimeTableGroupManagement } from './TimeTableGroupManagement';
@@ -55,6 +56,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
   const [sectionId, setSectionId] = useState<number | ''>('');
   const [groupId, setGroupId] = useState<number | ''>('');
   const [title, setTitle] = useState('');
+  const [startTime, setStartTime] = useState('08:00');
   const { periods, matrix, reset: resetPeriodCells, addRow: addPeriodRow, removeRow: removePeriodRow, copyRowDown, setDuration, copyColumn } = usePeriodCells();
   const [setToDelete, setSetToDelete] = useState<TimetablePeriodSetData | null>(null);
   const [formError, setFormError] = useState<string | null>(null);
@@ -68,6 +70,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
     setSectionId('');
     setGroupId('');
     setTitle('');
+    setStartTime('08:00');
     resetPeriodCells();
     setFormError(null);
     setIsFormOpen(true);
@@ -78,6 +81,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
     setEditingSet(set);
     setGroupId(set.timetable_group_id);
     setTitle(set.title);
+    setStartTime('08:00');
     resetPeriodCells({ periods: p, matrix: m });
     setFormError(null);
     setIsFormOpen(true);
@@ -219,93 +223,100 @@ export const TimeTablePeriodsManager: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700">Time Table Group</label>
-                        <select
-                          value={groupId}
+                        <Select
+                          value={groupId ? String(groupId) : ''}
+                          onChange={() => {}}
+                          options={(groups || []).map((g) => ({ value: String(g.id), label: g.name }))}
+                          placeholder="Select a group..."
                           disabled
-                          required
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none disabled:opacity-60"
-                        >
-                          <option value="">Select a group...</option>
-                          {groups?.map((g) => (
-                            <option key={g.id} value={g.id}>{g.name}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Periods Title</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. test time periods"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          required
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
                         />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Periods Title</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. test time periods"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Start Time</label>
+                          <input
+                            type="time"
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                            title="Preview only — the actual Timetable's start time is set when you generate it."
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
                   ) : (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700">Class</label>
-                        <select
-                          value={classId}
-                          onChange={(e) => {
-                            const value = e.target.value ? Number(e.target.value) : '';
-                            setClassId(value);
+                        <Select
+                          value={classId ? String(classId) : ''}
+                          onChange={(v) => {
+                            setClassId(v ? Number(v) : '');
                             setSectionId('');
                             setGroupId('');
                           }}
+                          options={(classes || []).map((c) => ({ value: String(c.id), label: c.name }))}
+                          placeholder="Select a class..."
                           required
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        >
-                          <option value="">Select a class...</option>
-                          {classes?.map((c) => (
-                            <option key={c.id} value={c.id}>{c.name}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700">Section</label>
-                        <select
-                          value={sectionId}
-                          onChange={(e) => setSectionId(e.target.value ? Number(e.target.value) : '')}
+                        <Select
+                          value={sectionId ? String(sectionId) : ''}
+                          onChange={(v) => setSectionId(v ? Number(v) : '')}
+                          options={(sections || []).map((s) => ({ value: String(s.id), label: s.name }))}
+                          placeholder="Select a section..."
                           disabled={!classId}
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
-                        >
-                          <option value="">Select a section...</option>
-                          {sections?.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
+                        />
                       </div>
                       <div className="space-y-2">
                         <label className="text-sm font-bold text-slate-700">Time Table Group</label>
-                        <select
-                          value={groupId}
-                          onChange={(e) => setGroupId(e.target.value ? Number(e.target.value) : '')}
+                        <Select
+                          value={groupId ? String(groupId) : ''}
+                          onChange={(v) => setGroupId(v ? Number(v) : '')}
+                          options={(filteredGroups || []).map((g) => ({ value: String(g.id), label: g.name }))}
+                          placeholder="Select a group..."
                           disabled={!classId}
                           required
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
-                        >
-                          <option value="">Select a group...</option>
-                          {filteredGroups?.map((g) => (
-                            <option key={g.id} value={g.id}>{g.name}</option>
-                          ))}
-                        </select>
+                        />
                         {classId && filteredGroups?.length === 0 && (
                           <p className="text-xs text-rose-500">No Time Table Group covers this class yet.</p>
                         )}
                       </div>
-                      <div className="space-y-2">
-                        <label className="text-sm font-bold text-slate-700">Periods Title</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. test time periods"
-                          value={title}
-                          onChange={(e) => setTitle(e.target.value)}
-                          required
-                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
-                        />
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Periods Title</label>
+                          <input
+                            type="text"
+                            placeholder="e.g. test time periods"
+                            value={title}
+                            onChange={(e) => setTitle(e.target.value)}
+                            required
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <label className="text-sm font-bold text-slate-700">Start Time</label>
+                          <input
+                            type="time"
+                            value={startTime}
+                            onChange={(e) => setStartTime(e.target.value)}
+                            title="Preview only — the actual Timetable's start time is set when you generate it."
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
                   )}
@@ -319,6 +330,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
                       onCopyRowDown={copyRowDown}
                       onSetDuration={setDuration}
                       onCopyColumn={copyColumn}
+                      startTime={startTime}
                     />
                     {formError && <p className="mt-3 text-xs text-rose-500">{formError}</p>}
                   </div>

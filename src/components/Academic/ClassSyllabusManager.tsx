@@ -15,6 +15,7 @@ import {
 import { cn, UserRole } from '../../types';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 import { Skeleton } from '../ui/Skeleton';
 import { DeleteConfirmationModal } from '../ui/DeleteConfirmationModal';
@@ -173,33 +174,29 @@ const SyllabusFormModal: React.FC<{
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className={labelCls}>Class</label>
-                  <select
-                    value={classId ?? ''}
-                    onChange={e => {
-                      setClassId(e.target.value ? Number(e.target.value) : null);
+                  <Select
+                    value={classId ? String(classId) : ''}
+                    onChange={v => {
+                      setClassId(v ? Number(v) : null);
                       setSectionId(null);
                       setSubjectId(null);
                     }}
-                    className={cn(inputCls, 'border-transparent appearance-none')}
-                  >
-                    <option value="">Choose Class</option>
-                    {(classes ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                  </select>
+                    options={(classes ?? []).map(c => ({ value: String(c.id), label: c.name }))}
+                    placeholder="Choose Class"
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className={labelCls}>Section</label>
-                  <select
-                    value={sectionId ?? ''}
+                  <Select
+                    value={sectionId ? String(sectionId) : ''}
                     disabled={!classId}
-                    onChange={e => {
-                      setSectionId(e.target.value ? Number(e.target.value) : null);
+                    onChange={v => {
+                      setSectionId(v ? Number(v) : null);
                       setSubjectId(null);
                     }}
-                    className={cn(inputCls, 'border-transparent appearance-none disabled:opacity-50')}
-                  >
-                    <option value="">Choose Section</option>
-                    {(sections ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                  </select>
+                    options={(sections ?? []).map(s => ({ value: String(s.id), label: s.name }))}
+                    placeholder="Choose Section"
+                  />
                 </div>
               </div>
             )}
@@ -210,26 +207,17 @@ const SyllabusFormModal: React.FC<{
                 <label className={labelCls}>
                   Subject <span className="text-rose-500">*</span>
                 </label>
-                <select
-                  value={subjectId ?? ''}
+                <Select
+                  value={subjectId ? String(subjectId) : ''}
                   disabled={isEdit || (!isTeacher && !sectionId) || (isTeacher && loadingMine)}
-                  onChange={e => {
-                    setSubjectId(e.target.value ? Number(e.target.value) : null);
+                  onChange={v => {
+                    setSubjectId(v ? Number(v) : null);
                     clearError('subject_id');
                   }}
-                  className={cn(
-                    inputCls,
-                    'appearance-none disabled:opacity-50',
-                    errors.subject_id ? errorRing : 'border-transparent'
-                  )}
-                >
-                  <option value="">
-                    {isTeacher && loadingMine ? 'Loading your subjects...' : 'Choose Subject'}
-                  </option>
-                  {subjectOptions.map(s => (
-                    <option key={s.id} value={s.id}>{subjectLabel(s)}</option>
-                  ))}
-                </select>
+                  options={subjectOptions.map(s => ({ value: String(s.id), label: subjectLabel(s) }))}
+                  placeholder={isTeacher && loadingMine ? 'Loading your subjects...' : 'Choose Subject'}
+                  error={!!errors.subject_id}
+                />
                 {errors.subject_id && <p className="text-xs font-bold text-rose-500">{errors.subject_id}</p>}
                 {isTeacher && !loadingMine && subjectOptions.length === 0 && (
                   <p className="text-xs font-medium text-amber-600">
@@ -394,29 +382,25 @@ export const ClassSyllabusManager: React.FC<ClassSyllabusManagerProps> = ({ role
         <Card className="flex flex-col sm:flex-row gap-4">
           <div className="flex-1 space-y-1.5">
             <label className={labelCls}>Class</label>
-            <select
-              value={filterClassId ?? ''}
-              onChange={e => {
-                setFilterClassId(e.target.value ? Number(e.target.value) : null);
+            <Select
+              value={filterClassId ? String(filterClassId) : ''}
+              onChange={v => {
+                setFilterClassId(v ? Number(v) : null);
                 setFilterSectionId(null);
               }}
-              className={cn(inputCls, 'border-transparent appearance-none')}
-            >
-              <option value="">All Classes</option>
-              {(classes ?? []).map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+              options={(classes ?? []).map(c => ({ value: String(c.id), label: c.name }))}
+              placeholder="All Classes"
+            />
           </div>
           <div className="flex-1 space-y-1.5">
             <label className={labelCls}>Section</label>
-            <select
-              value={filterSectionId ?? ''}
+            <Select
+              value={filterSectionId ? String(filterSectionId) : ''}
               disabled={!filterClassId}
-              onChange={e => setFilterSectionId(e.target.value ? Number(e.target.value) : null)}
-              className={cn(inputCls, 'border-transparent appearance-none disabled:opacity-50')}
-            >
-              <option value="">All Sections</option>
-              {(sections ?? []).map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-            </select>
+              onChange={v => setFilterSectionId(v ? Number(v) : null)}
+              options={(sections ?? []).map(s => ({ value: String(s.id), label: s.name }))}
+              placeholder="All Sections"
+            />
           </div>
         </Card>
       )}

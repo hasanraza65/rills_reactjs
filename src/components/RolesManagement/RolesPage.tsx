@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../types';
+import { Select } from '../ui/Select';
 import {
   useRoles,
   useRolePermissions,
@@ -154,16 +155,12 @@ const RoleModal: React.FC<RoleModalProps> = ({ roles, editing, onClose }) => {
               <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">
                 Copy Permissions From
               </label>
-              <select
-                value={copyFrom}
-                onChange={e => setCopyFrom(e.target.value === '' ? '' : Number(e.target.value))}
-                className="w-full px-4 py-3 bg-slate-50 rounded-xl text-sm font-medium outline-none border border-transparent focus:border-brand-300 transition-all"
-              >
-                <option value="">— Start blank —</option>
-                {roles.map(r => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
+              <Select
+                value={copyFrom === '' ? '' : String(copyFrom)}
+                onChange={v => setCopyFrom(v === '' ? '' : Number(v))}
+                options={roles.map(r => ({ value: String(r.id), label: r.name }))}
+                placeholder="— Start blank —"
+              />
             </div>
           )}
 

@@ -4,6 +4,7 @@ import {
   X, Plus, FileText, Loader2, Trash2, BookOpen, Layers, Paperclip, Check, AlertCircle, ExternalLink,
 } from 'lucide-react';
 import { cn } from '../../types';
+import { Select } from '../ui/Select';
 import { useClasses } from '../../hooks/use-class';
 import { useSectionsByClass } from '../../hooks/use-section';
 import { useClassSubjects, useCreateClassSubject, useDeleteClassSubject } from '../../hooks/use-class-subject';
@@ -69,24 +70,32 @@ export const AddLessonPlan: React.FC = () => {
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex flex-col lg:flex-row lg:items-end gap-4">
         <div className="space-y-2 flex-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Class</label>
-          <select className={inputCls} value={classId} onChange={(e) => setClassId(e.target.value === '' ? '' : Number(e.target.value))}>
-            <option value="">Select class</option>
-            {classes?.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-          </select>
+          <Select
+            value={classId === '' ? '' : String(classId)}
+            onChange={(v) => setClassId(v === '' ? '' : Number(v))}
+            options={(classes || []).map((c) => ({ value: String(c.id), label: c.name }))}
+            placeholder="Select class"
+          />
         </div>
         <div className="space-y-2 flex-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Section</label>
-          <select className={inputCls} value={sectionId} onChange={(e) => setSectionId(e.target.value === '' ? '' : Number(e.target.value))} disabled={classId === ''}>
-            <option value="">{classId === '' ? 'Select a class first' : 'Select section'}</option>
-            {sections?.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
-          </select>
+          <Select
+            value={sectionId === '' ? '' : String(sectionId)}
+            onChange={(v) => setSectionId(v === '' ? '' : Number(v))}
+            options={(sections || []).map((s) => ({ value: String(s.id), label: s.name }))}
+            placeholder={classId === '' ? 'Select a class first' : 'Select section'}
+            disabled={classId === ''}
+          />
         </div>
         <div className="space-y-2 flex-1">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Subject</label>
-          <select className={inputCls} value={subjectId} onChange={(e) => setSubjectId(e.target.value === '' ? '' : Number(e.target.value))} disabled={sectionId === ''}>
-            <option value="">{sectionId === '' ? 'Select a section first' : 'Select subject'}</option>
-            {subjects.map((s) => <option key={s.id} value={s.id}>{s.subject_name}</option>)}
-          </select>
+          <Select
+            value={subjectId === '' ? '' : String(subjectId)}
+            onChange={(v) => setSubjectId(v === '' ? '' : Number(v))}
+            options={subjects.map((s) => ({ value: String(s.id), label: s.subject_name }))}
+            placeholder={sectionId === '' ? 'Select a section first' : 'Select subject'}
+            disabled={sectionId === ''}
+          />
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -253,10 +262,12 @@ const AddSubjectModal: React.FC<{
         </div>
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Teacher</label>
-          <select className={inputCls} value={teacherId} onChange={(e) => setTeacherId(e.target.value === '' ? '' : Number(e.target.value))}>
-            <option value="">{teachers.length === 0 ? 'No teachers in this branch' : 'Select teacher'}</option>
-            {teachers.map((t) => <option key={t.id} value={t.id}>{t.name}</option>)}
-          </select>
+          <Select
+            value={teacherId === '' ? '' : String(teacherId)}
+            onChange={(v) => setTeacherId(v === '' ? '' : Number(v))}
+            options={teachers.map((t) => ({ value: String(t.id), label: t.name }))}
+            placeholder={teachers.length === 0 ? 'No teachers in this branch' : 'Select teacher'}
+          />
         </div>
         <ModalActions
           isPending={isPending}

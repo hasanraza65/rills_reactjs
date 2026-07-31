@@ -19,6 +19,7 @@ import {
 import { cn } from '../types';
 import { StatCard } from './StatCard';
 import { EmptyState } from './ui/EmptyState';
+import { Select } from './ui/Select';
 import { StaffFormModal } from './Staff/StaffFormModal';
 import { UserPermissionsModal } from './Staff/UserPermissionsModal';
 import { TeacherSubjectsModal } from './Staff/TeacherSubjectsModal';
@@ -151,16 +152,14 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
             className="w-full bg-white border border-slate-100 rounded-xl py-3 pl-12 pr-4 text-sm outline-none font-medium shadow-sm"
           />
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value === '' ? '' : Number(e.target.value))}
-          className="bg-white border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 outline-none shadow-sm"
-        >
-          <option value="">All Roles</option>
-          {roles?.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
+        <div className="w-48">
+          <Select
+            value={roleFilter === '' ? '' : String(roleFilter)}
+            onChange={(v) => setRoleFilter(v === '' ? '' : Number(v))}
+            options={(roles || []).map((r) => ({ value: String(r.id), label: r.name }))}
+            placeholder="All Roles"
+          />
+        </div>
       </div>
 
       {/* Directory */}

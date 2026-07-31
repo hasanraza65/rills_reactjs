@@ -60,7 +60,6 @@ import { AdmissionKeys } from './AdmissionKeys';
 import { InvoiceManagement } from './FeeManagement/InvoiceManagement';
 import { TimeTablePeriodsManager } from './TimeTable/TimeTablePeriodsManager';
 import { TimeTableGenerate } from './TimeTable/TimeTableGenerate';
-import { TimeTableList } from './TimeTable/TimeTableList';
 import { TeacherTimeTablePrint } from './TimeTable/TeacherTimeTablePrint';
 import { useStudents, useDeleteStudent } from '../hooks/use-student';
 import { StudentDetailsModal } from './StudentDetailsModal';
@@ -68,6 +67,7 @@ import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
+import { Select } from './ui/Select';
 import { 
   AreaChart, 
   Area, 
@@ -132,6 +132,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
 
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
+  const [revenueChartRange, setRevenueChartRange] = React.useState('Last 7 Days');
+  const [dashboardClassFilter, setDashboardClassFilter] = React.useState('All Classes');
 
   // Student CRUD State
   const [viewingStudent, setViewingStudent] = React.useState<any | null>(null);
@@ -151,7 +153,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
       'subjects', 'results', 'class-syllabus', 'roles', 'staff',
-      'timetable-periods', 'timetable-generate', 'timetable-list', 'timetable-teacher-print',
+      'timetable-periods', 'timetable-generate',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -191,10 +193,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <h3 className="text-xl font-bold text-slate-800">Platform Growth</h3>
                     <p className="text-slate-500 text-sm">Revenue and user acquisition over time</p>
                   </div>
-                  <select className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-semibold outline-none">
-                    <option>Last 7 Days</option>
-                    <option>Last 30 Days</option>
-                  </select>
+                  <div className="w-36">
+                    <Select
+                      value={revenueChartRange}
+                      onChange={setRevenueChartRange}
+                      options={[{ value: 'Last 7 Days', label: 'Last 7 Days' }, { value: 'Last 30 Days', label: 'Last 30 Days' }]}
+                      size="sm"
+                    />
+                  </div>
                 </div>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -451,28 +457,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <TimeTableGenerate onTabChange={onTabChange} />
           </motion.div>
         )}
-
-        {activeTab === 'timetable-list' && (
-          <motion.div
-            key="timetable-list"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <TimeTableList onTabChange={onTabChange} />
-          </motion.div>
-        )}
-
-        {activeTab === 'timetable-teacher-print' && (
-          <motion.div
-            key="timetable-teacher-print"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <TeacherTimeTablePrint />
-          </motion.div>
-        )}
       </AnimatePresence>
     </div>
   );
@@ -550,9 +534,12 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
                     <BookOpen size={16} className="text-slate-400" />
-                    <select className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none w-full lg:w-32">
-                      <option>All Classes</option>
-                    </select>
+                    <Select
+                      value={dashboardClassFilter}
+                      onChange={setDashboardClassFilter}
+                      options={[{ value: 'All Classes', label: 'All Classes' }]}
+                      size="sm"
+                    />
                   </div>
                   <button className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all border border-transparent font-bold text-sm">
                     <Filter size={18} />
@@ -1003,28 +990,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <TimeTableGenerate onTabChange={onTabChange} />
-          </motion.div>
-        )}
-
-        {activeTab === 'timetable-list' && (
-          <motion.div
-            key="timetable-list"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <TimeTableList onTabChange={onTabChange} />
-          </motion.div>
-        )}
-
-        {activeTab === 'timetable-teacher-print' && (
-          <motion.div
-            key="timetable-teacher-print"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <TeacherTimeTablePrint />
           </motion.div>
         )}
       </AnimatePresence>

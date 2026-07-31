@@ -56,7 +56,6 @@ export const TAB_MODULE_MAP: Record<string, string> = {
   // Time Table
   'timetable-periods': 'timetable',
   'timetable-generate': 'timetable',
-  'timetable-list': 'timetable',
   'timetable-teacher-print': 'timetable',
 };
 

@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
+import { Select } from './ui/Select';
 import { EmptyState } from './ui/EmptyState';
 import { useSections, useSection, useCreateSection, useUpdateSection, useDeleteSection } from '../hooks/use-section';
 import { useClasses } from '../hooks/use-class';
@@ -335,17 +336,13 @@ export const SectionManagement: React.FC = () => {
 
                   <div className="space-y-2">
                     <label className="text-sm font-bold text-slate-700">Parent Class</label>
-                    <select
-                      value={parentClassId}
-                      onChange={(e) => setParentClassId(Number(e.target.value))}
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none font-medium appearance-none"
+                    <Select
+                      value={parentClassId ? String(parentClassId) : ''}
+                      onChange={(v) => setParentClassId(Number(v))}
+                      options={(classes || []).map(c => ({ value: String(c.id), label: c.name }))}
+                      placeholder="Select a class"
                       required
-                    >
-                      <option value="">Select a class</option>
-                      {classes?.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                      ))}
-                    </select>
+                    />
                   </div>
                 </div>
 

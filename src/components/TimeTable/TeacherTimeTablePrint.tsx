@@ -5,6 +5,7 @@ import html2pdf from 'html2pdf.js';
 import { Loader2, Printer, UserSquare2 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 import { useStaffMembers } from '../../hooks/use-staff-members';
 import { useTeacherPrint } from '../../hooks/use-timetable';
@@ -56,6 +57,10 @@ export const TeacherTimeTablePrint: React.FC<TeacherTimeTablePrintProps> = ({ se
           useCORS: true,
           letterRendering: true,
           logging: false,
+          // See TimeTableGenerate.tsx's handlePrintDay for why this matters: without
+          // it, html2canvas renders the detached template at the current window's
+          // width instead of its own, clipping it before the page-fit scaling ever runs.
+          windowWidth: 1040,
           onclone: (doc: Document) => {
             doc.querySelectorAll('style,link[rel="stylesheet"]').forEach((el) => el.remove());
           },
@@ -87,16 +92,14 @@ export const TeacherTimeTablePrint: React.FC<TeacherTimeTablePrintProps> = ({ se
       {!selfOnly && (
         <Card padding="md">
           <label className="text-sm font-bold text-slate-700 mb-2 block">Select Teacher</label>
-          <select
-            value={selectedTeacherId ?? ''}
-            onChange={(e) => setSelectedTeacherId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full sm:w-80 px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
-          >
-            <option value="">Select a teacher...</option>
-            {teacherOptions.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
+          <div className="w-full sm:w-80">
+            <Select
+              value={selectedTeacherId ? String(selectedTeacherId) : ''}
+              onChange={(v) => setSelectedTeacherId(v ? Number(v) : null)}
+              options={teacherOptions.map((t) => ({ value: String(t.id), label: t.name }))}
+              placeholder="Select a teacher..."
+            />
+          </div>
         </Card>
       )}
 

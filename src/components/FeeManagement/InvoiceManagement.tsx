@@ -14,6 +14,7 @@ import { useBranchStore } from '../../store/use-branch-store';
 import { cn } from '../../types';
 import { InvoiceData, InvoiceStatus } from '../../types/api/invoice';
 import { EmptyState } from '../ui/EmptyState';
+import { Select } from '../ui/Select';
 import { GenerateInvoiceModal } from './GenerateInvoiceModal';
 import { InvoiceDetailsModal } from './InvoiceDetailsModal';
 import { InvoicePaymentModal } from './InvoicePaymentModal';
@@ -187,28 +188,34 @@ export const InvoiceManagement: React.FC = () => {
 
           <div className="flex items-center gap-2 flex-wrap">
             {/* Date filter */}
-            <select
-              value={dateFilter}
-              onChange={(e) => setDateFilter(e.target.value as DateFilter)}
-              className="bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 outline-none"
-            >
-              <option value="all">All Dates</option>
-              <option value="this_month">This Month</option>
-              <option value="last_month">Last Month</option>
-            </select>
+            <div className="w-36">
+              <Select
+                value={dateFilter}
+                onChange={(v) => setDateFilter(v as DateFilter)}
+                options={[
+                  { value: 'all', label: 'All Dates' },
+                  { value: 'this_month', label: 'This Month' },
+                  { value: 'last_month', label: 'Last Month' },
+                ]}
+                size="sm"
+              />
+            </div>
 
             {/* Status filter */}
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as StatusFilter)}
-              className="bg-slate-50 border-none rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 outline-none"
-            >
-              <option value="all">All Statuses</option>
-              <option value="unpaid">Unpaid</option>
-              <option value="partial">Partial</option>
-              <option value="paid">Paid</option>
-              <option value="carried_forward">Carried Forward</option>
-            </select>
+            <div className="w-40">
+              <Select
+                value={statusFilter}
+                onChange={(v) => setStatusFilter(v as StatusFilter)}
+                options={[
+                  { value: 'all', label: 'All Statuses' },
+                  { value: 'unpaid', label: 'Unpaid' },
+                  { value: 'partial', label: 'Partial' },
+                  { value: 'paid', label: 'Paid' },
+                  { value: 'carried_forward', label: 'Carried Forward' },
+                ]}
+                size="sm"
+              />
+            </div>
           </div>
         </div>
 

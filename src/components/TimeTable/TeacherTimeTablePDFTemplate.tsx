@@ -16,7 +16,7 @@ export const TeacherTimeTablePDFTemplate: React.FC<TeacherTimeTablePDFTemplatePr
     data.days.flatMap((d) => d.periods).find((p) => p.period_number === periodNumber)?.time_label || '';
 
   return (
-    <div style={{ padding: '32px', backgroundColor: '#ffffff', color: '#1e293b', fontFamily: 'sans-serif', width: '1100px' }}>
+    <div style={{ boxSizing: 'border-box', padding: '32px', backgroundColor: '#ffffff', color: '#1e293b', fontFamily: 'sans-serif', width: '1040px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '4px solid #15803d', paddingBottom: '20px', marginBottom: '24px' }}>
         <div>
           <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#15803d', margin: '0 0 4px 0', letterSpacing: '-0.03em' }}>{campusName}</h1>
@@ -29,17 +29,17 @@ export const TeacherTimeTablePDFTemplate: React.FC<TeacherTimeTablePDFTemplatePr
         </div>
       </div>
 
-      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+      <table style={{ width: '100%', tableLayout: 'fixed', borderCollapse: 'collapse', fontSize: '11px' }}>
         <thead>
           <tr style={{ backgroundColor: '#1e293b', color: '#ffffff' }}>
-            <th style={{ padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Day</th>
+            <th style={{ width: '90px', padding: '10px 12px', textAlign: 'left', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Day</th>
             {periodNumbers.map((p) => (
-              <th key={p} style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 'bold' }}>
+              <th key={p} style={{ padding: '10px 4px', textAlign: 'center', fontWeight: 'bold', overflow: 'hidden' }}>
                 <div>P{p}</div>
                 <div style={{ fontSize: '9px', fontWeight: 500, opacity: 0.8 }}>{timeLabelForPeriod(p)}</div>
               </th>
             ))}
-            <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 'bold' }}>Free</th>
+            <th style={{ width: '60px', padding: '10px 8px', textAlign: 'center', fontWeight: 'bold' }}>Free</th>
           </tr>
         </thead>
         <tbody>
@@ -49,7 +49,7 @@ export const TeacherTimeTablePDFTemplate: React.FC<TeacherTimeTablePDFTemplatePr
               {periodNumbers.map((p) => {
                 const period = day.periods.find((dp) => dp.period_number === p);
                 return (
-                  <td key={p} style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #f1f5f9' }}>
+                  <td key={p} style={{ padding: '8px 4px', textAlign: 'center', borderBottom: '1px solid #f1f5f9', borderLeft: '1px solid #f1f5f9', overflow: 'hidden', wordBreak: 'break-word' }}>
                     {period?.subject_label ? (
                       <>
                         <div style={{ fontWeight: 'bold', color: '#1e293b' }}>{period.subject_label}</div>
