@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Calendar, Clock, Sparkles, Plus, Loader2, ArrowLeft, RefreshCw, CalendarClock } from 'lucide-react';
+import { Calendar, Clock, Sparkles, Plus, Loader2, ArrowLeft, CalendarClock, Copy, Trash2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
+import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { useTimetableGroups } from '../../hooks/use-timetable-group';
 import { useTimetablePeriodSets } from '../../hooks/use-timetable-period-set';
-import { useCreateTimetable, useTimetables, useUpdateTimetable, useRegenerateTimetable } from '../../hooks/use-timetable';
+import { useCreateTimetable, useTimetables, useUpdateTimetable, useDeleteTimetable } from '../../hooks/use-timetable';
+import { useClasses } from '../../hooks/use-class';
+import { useSectionsByClass } from '../../hooks/use-section';
 import { useBranchStore } from '../../store/use-branch-store';
 import { PeriodAllocationGrid } from './PeriodAllocationGrid';
 import { TimetableData } from '../../types/api/timetable';
@@ -20,7 +23,10 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
 
   const { data: groups } = useTimetableGroups(branchId);
   const { data: timetables, isLoading: isLoadingTimetables } = useTimetables(branchId);
+  const { data: classes } = useClasses(branchId);
 
+  const [classId, setClassId] = useState<number | ''>('');
+  const [sectionId, setSectionId] = useState<number | ''>('');
   const [groupId, setGroupId] = useState<number | ''>('');
   const [periodSetId, setPeriodSetId] = useState<number | ''>('');
   const [title, setTitle] = useState('');
@@ -28,12 +34,26 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
   const [dateTo, setDateTo] = useState('');
   const [schoolTimeFrom, setSchoolTimeFrom] = useState('09:00');
   const [isActive, setIsActive] = useState(false);
+  const [wantsCopy, setWantsCopy] = useState(false);
+  const [copyFromId, setCopyFromId] = useState<number | ''>('');
 
+  const { data: sections } = useSectionsByClass(classId || null);
+  const filteredGroups = groups?.filter((g) => !classId || g.classes?.some((c) => c.id === classId));
   const { data: periodSets } = useTimetablePeriodSets(branchId, groupId ? Number(groupId) : undefined);
+  const timetablesForGroup = timetables?.filter((tt) => tt.timetable_group_id === groupId);
+
+  const applyCopyFrom = (sourceId: number | '') => {
+    setCopyFromId(sourceId);
+    const source = timetables?.find((tt) => tt.id === sourceId);
+    if (!source) return;
+    setPeriodSetId(source.period_set_id);
+    setSchoolTimeFrom(source.school_time_from.slice(0, 5));
+    setIsActive(source.is_active);
+  };
 
   const createMutation = useCreateTimetable();
   const updateMutation = useUpdateTimetable();
-  const regenerateMutation = useRegenerateTimetable();
+  const deleteMutation = useDeleteTimetable();
 
   const toggleActive = (tt: TimetableData) => {
     updateMutation.mutate({ id: tt.id, data: { title: tt.title, is_active: !tt.is_active } });
@@ -43,6 +63,7 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
   // the Period Allocation grid for a selected/just-created Timetable.
   const [isCreating, setIsCreating] = useState(false);
   const [activeTimetable, setActiveTimetable] = useState<TimetableData | null>(null);
+  const [timetableToDelete, setTimetableToDelete] = useState<TimetableData | null>(null);
 
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,6 +79,7 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
         date_to: dateTo,
         school_time_from: schoolTimeFrom,
         is_active: isActive,
+        ...(wantsCopy && copyFromId ? { copy_from_timetable_id: Number(copyFromId) } : {}),
       },
       {
         onSuccess: (timetable) => {
@@ -69,6 +91,8 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
   };
 
   const resetForm = () => {
+    setClassId('');
+    setSectionId('');
     setGroupId('');
     setPeriodSetId('');
     setTitle('');
@@ -76,6 +100,8 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
     setDateTo('');
     setSchoolTimeFrom('09:00');
     setIsActive(false);
+    setWantsCopy(false);
+    setCopyFromId('');
   };
 
   const backToList = () => {
@@ -94,15 +120,6 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
             <p className="text-sm text-slate-500">Fill in the Period Allocation grid below, then click Save on each cell.</p>
           </div>
           <div className="flex items-center gap-3">
-            <Button
-              variant="outline"
-              onClick={() => regenerateMutation.mutate({ id: activeTimetable.id, data: {} })}
-              disabled={regenerateMutation.isPending}
-              leftIcon={<RefreshCw size={16} className={regenerateMutation.isPending ? 'animate-spin' : ''} />}
-              title="Re-run generation (e.g. after adding a Section) — keeps existing cell assignments"
-            >
-              {regenerateMutation.isPending ? 'Regenerating...' : 'Regenerate'}
-            </Button>
             <Button variant="outline" onClick={backToList} leftIcon={<ArrowLeft size={16} />}>
               Back to List
             </Button>
@@ -135,21 +152,65 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
           <form onSubmit={handleGenerate} className="space-y-5">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Class</label>
+                <select
+                  value={classId}
+                  onChange={(e) => {
+                    const value = e.target.value ? Number(e.target.value) : '';
+                    setClassId(value);
+                    setSectionId('');
+                    setGroupId('');
+                    setPeriodSetId('');
+                    setWantsCopy(false);
+                    setCopyFromId('');
+                  }}
+                  required
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                >
+                  <option value="">Select a class...</option>
+                  {classes?.map((c) => (
+                    <option key={c.id} value={c.id}>{c.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-bold text-slate-700">Section</label>
+                <select
+                  value={sectionId}
+                  onChange={(e) => setSectionId(e.target.value ? Number(e.target.value) : '')}
+                  disabled={!classId}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
+                >
+                  <option value="">Select a section...</option>
+                  {sections?.map((s) => (
+                    <option key={s.id} value={s.id}>{s.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Group Time Table</label>
                 <select
                   value={groupId}
                   onChange={(e) => {
                     setGroupId(e.target.value ? Number(e.target.value) : '');
                     setPeriodSetId('');
+                    setWantsCopy(false);
+                    setCopyFromId('');
                   }}
                   required
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                  disabled={!classId}
+                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
                 >
                   <option value="">Select a group...</option>
-                  {groups?.map((g) => (
+                  {filteredGroups?.map((g) => (
                     <option key={g.id} value={g.id}>{g.name}</option>
                   ))}
                 </select>
+                {classId && filteredGroups?.length === 0 && (
+                  <p className="text-xs text-rose-500">No Time Table Group covers this class yet.</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -170,7 +231,46 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
                   <p className="text-xs text-amber-600">No Periods template exists yet for this group — create one under Time Table Periods first.</p>
                 )}
               </div>
+            </div>
 
+            {!!groupId && (
+              <div className="p-4 bg-brand-50/40 border border-brand-100 rounded-2xl space-y-3">
+                {timetablesForGroup?.length ? (
+                  <>
+                    <label className="flex items-center gap-2 text-sm font-bold text-slate-700 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={wantsCopy}
+                        onChange={(e) => {
+                          setWantsCopy(e.target.checked);
+                          if (!e.target.checked) applyCopyFrom('');
+                        }}
+                        className="accent-brand-500"
+                      />
+                      <Copy size={15} className="text-brand-600" /> Copy settings from an existing Timetable of this group
+                    </label>
+                    {wantsCopy && (
+                      <select
+                        value={copyFromId}
+                        onChange={(e) => applyCopyFrom(e.target.value ? Number(e.target.value) : '')}
+                        className="w-full px-4 py-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                      >
+                        <option value="">Select a Timetable to copy from...</option>
+                        {timetablesForGroup.map((tt) => (
+                          <option key={tt.id} value={tt.id}>{tt.title} ({tt.date_from} to {tt.date_to})</option>
+                        ))}
+                      </select>
+                    )}
+                  </>
+                ) : (
+                  <p className="flex items-center gap-2 text-sm text-slate-500">
+                    <Copy size={15} className="text-slate-400" /> No existing Timetable for this group yet — nothing to copy from. Fill in the fields below manually.
+                  </p>
+                )}
+              </div>
+            )}
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-bold text-slate-700">Title</label>
                 <input
@@ -279,6 +379,7 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
                   <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Group</th>
                   <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Date Range</th>
                   <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                  <th className="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-50">
@@ -286,7 +387,7 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
                   <tr
                     key={tt.id}
                     onClick={() => setActiveTimetable(tt)}
-                    className="hover:bg-slate-50/50 transition-colors cursor-pointer"
+                    className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
                   >
                     <td className="px-6 py-4 text-sm font-bold text-slate-800">{tt.title}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{tt.group?.name || '-'}</td>
@@ -309,6 +410,19 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
                         {tt.is_active ? 'Active' : 'Inactive'}
                       </button>
                     </td>
+                    <td className="px-6 py-4 text-right">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setTimetableToDelete(tt);
+                        }}
+                        title="Delete"
+                        className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all opacity-0 group-hover:opacity-100"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -316,6 +430,18 @@ export const TimeTableGenerate: React.FC<TimeTableGenerateProps> = ({ onTabChang
           </div>
         )}
       </Card>
+
+      <ConfirmationModal
+        isOpen={!!timetableToDelete}
+        onClose={() => setTimetableToDelete(null)}
+        onConfirm={() =>
+          timetableToDelete && deleteMutation.mutate(timetableToDelete.id, { onSuccess: () => setTimetableToDelete(null) })
+        }
+        title="Delete Timetable?"
+        message={`Are you sure you want to delete "${timetableToDelete?.title}"? This will remove its entire period allocation grid too.`}
+        confirmLabel="Yes, Delete"
+        isLoading={deleteMutation.isPending}
+      />
     </div>
   );
 };

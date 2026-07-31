@@ -13,6 +13,7 @@ import {
   UpdateTimetableSlotInput,
   DailyPrintResponse,
   TeacherPrintResponse,
+  TeacherBusySlot,
 } from '../../types/api/timetable';
 
 export const timetableService = {
@@ -68,6 +69,13 @@ export const timetableService = {
 
   getTeacherPrint: async (teacherId: number): Promise<TeacherPrintResponse> => {
     const response = await apiClient.get<TeacherPrintResponse>(`/teacher-timetable/${teacherId}`);
+    return response.data;
+  },
+
+  getTeacherBusySlots: async (branchId?: number): Promise<TeacherBusySlot[]> => {
+    const response = await apiClient.get<TeacherBusySlot[]>('/timetables/teacher-busy-slots', {
+      params: branchId ? { branch_id: branchId } : {},
+    });
     return response.data;
   },
 };

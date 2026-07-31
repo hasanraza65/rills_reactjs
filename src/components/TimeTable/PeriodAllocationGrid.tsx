@@ -1,18 +1,20 @@
 import React, { useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { Loader2, Check, X, Copy, Pencil, Trash2, AlertTriangle, Plus, Save } from 'lucide-react';
+import { Loader2, Copy, Pencil, Trash2, AlertTriangle, Plus, Save } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
-import { useTimetableSlots, useUpdateTimetableSlot, useRegenerateTimetable } from '../../hooks/use-timetable';
+import { useTimetableSlots, useUpdateTimetableSlot, useRegenerateTimetable, useTeacherBusySlots } from '../../hooks/use-timetable';
 import { timetableService } from '../../lib/services/timetable-service';
 import { Button } from '../ui/Button';
 import { useClassSubjects } from '../../hooks/use-class-subject';
 import { useTimetableActivities } from '../../hooks/use-timetable-activity';
 import { useStaffMembers } from '../../hooks/use-staff-members';
-import { TimetableSlotData } from '../../types/api/timetable';
+import { TimetableSlotData, TeacherBusySlot } from '../../types/api/timetable';
 import { dayLabel } from '../../lib/timetable-days';
 
-const TEACHER_ROLE_ID = 4;
+// Anyone can be assigned to a period (Branch Admin, Admin, Teacher, etc.) except
+// Super Admin, who manages the system rather than teaching/supervising periods.
+const SUPER_ADMIN_ROLE_ID = 1;
 
 const formatTime = (time: string) => {
   const [h, m] = time.split(':').map(Number);
@@ -38,8 +40,6 @@ const cellValueFromSlot = (slot: TimetableSlotData): CellValue => ({
 interface SubjectOption {
   id: number;
   subjectName: string;
-  teacherId: number;
-  teacherName: string;
 }
 interface ActivityOption {
   id: number;
@@ -50,19 +50,23 @@ interface TeacherOption {
   name: string;
 }
 
+// The period's teacher is always a free, manual pick (any staff member except Super
+// Admin) — independent of whichever teacher a subject is officially assigned to
+// elsewhere in Class/Subject management.
 const displayForValue = (
   value: CellValue,
   subjectOptions: SubjectOption[],
   activityOptions: ActivityOption[],
   teacherOptions: TeacherOption[]
 ): { title: string; subtitle: string | null } | null => {
+  const teacherName = value.teacherId ? teacherOptions.find((t) => t.id === value.teacherId)?.name ?? null : null;
+
   if (value.subjectKey.startsWith('cs-')) {
     const subject = subjectOptions.find((s) => `cs-${s.id}` === value.subjectKey);
-    return subject ? { title: subject.subjectName, subtitle: subject.teacherName } : null;
+    return subject ? { title: subject.subjectName, subtitle: teacherName } : null;
   }
   if (value.subjectKey.startsWith('act-')) {
     const activity = activityOptions.find((a) => `act-${a.id}` === value.subjectKey);
-    const teacherName = value.teacherId ? teacherOptions.find((t) => t.id === value.teacherId)?.name ?? null : null;
     return activity ? { title: activity.name, subtitle: teacherName } : null;
   }
   return null;
@@ -73,97 +77,90 @@ const displayForValue = (
 // single Save button above the table. ───────────────────────────────────────────
 
 interface CellEditorProps {
+  slot: TimetableSlotData;
   initialValue: CellValue;
   subjectOptions: SubjectOption[];
-  activityOptions: ActivityOption[];
   teacherOptions: TeacherOption[];
+  busySlots: TeacherBusySlot[];
   onConfirm: (value: CellValue) => void;
-  onCancel: () => void;
 }
 
 const CellEditor: React.FC<CellEditorProps> = ({
+  slot,
   initialValue,
   subjectOptions,
-  activityOptions,
   teacherOptions,
+  busySlots,
   onConfirm,
-  onCancel,
 }) => {
   const [draft, setDraft] = useState<CellValue>(initialValue);
 
-  const isActivitySelected = draft.subjectKey.startsWith('act-');
+  // A teacher is "busy" if some OTHER slot (any section/group/timetable, as long as
+  // it's active) on the same day overlaps this cell's time — same rule the backend
+  // enforces on Save, surfaced here up front so a conflicting pick can't even be made.
+  const conflictFor = (teacherId: number): TeacherBusySlot | undefined =>
+    busySlots.find(
+      (b) =>
+        b.teacher_id === teacherId &&
+        b.day_of_week === slot.day_of_week &&
+        b.id !== slot.id &&
+        b.start_time < slot.end_time &&
+        b.end_time > slot.start_time
+    );
 
-  // Subjects are teacher-specific (one ClassSubject row = one teacher), so the
-  // Subjects list only shows what the currently-picked teacher actually teaches
-  // in this section. Activities are always offered since their teacher is optional.
-  const subjectsForTeacher = draft.teacherId
-    ? subjectOptions.filter((s) => s.teacherId === draft.teacherId)
-    : [];
+  // No Done/Cancel step — a cell auto-confirms the moment it's either fully cleared
+  // or has a complete pair (Subject/Activity + Teacher), whichever order they're picked in.
+  const commit = (next: CellValue) => {
+    setDraft(next);
+    const isComplete = !!next.subjectKey && !!next.teacherId;
+    const isCleared = !next.subjectKey && !next.teacherId;
+    if (isComplete || isCleared) {
+      onConfirm(next);
+    }
+  };
 
-  const handleTeacherChange = (teacherId: number | null) => {
-    const currentSubject = draft.subjectKey.startsWith('cs-')
-      ? subjectOptions.find((s) => `cs-${s.id}` === draft.subjectKey)
-      : null;
-    // Switching teacher invalidates a previously-picked subject that belonged to
-    // the old teacher; an activity selection is unaffected (teacher is just duty).
-    const subjectStillValid = !currentSubject || currentSubject.teacherId === teacherId;
-    setDraft({ subjectKey: subjectStillValid ? draft.subjectKey : '', teacherId });
+  const handleSubjectChange = (subjectKey: string) => {
+    commit(subjectKey ? { ...draft, subjectKey } : { subjectKey: '', teacherId: null });
   };
 
   return (
     <div className="p-2 space-y-1.5 min-w-[170px] bg-brand-50/40">
       <select
-        value={draft.teacherId ?? ''}
-        onChange={(e) => handleTeacherChange(e.target.value ? Number(e.target.value) : null)}
+        value={draft.subjectKey}
+        onChange={(e) => handleSubjectChange(e.target.value)}
         autoFocus
         className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-xs focus:ring-2 focus:ring-brand-500/20 outline-none"
       >
-        <option value="">Select Teacher</option>
-        {teacherOptions.map((t) => (
-          <option key={t.id} value={t.id}>{t.name}</option>
+        <option value="">Select Subject</option>
+        {subjectOptions.map((s) => (
+          <option key={`cs-${s.id}`} value={`cs-${s.id}`}>{s.subjectName}</option>
         ))}
       </select>
 
       <select
-        value={draft.subjectKey}
-        onChange={(e) => setDraft({ ...draft, subjectKey: e.target.value })}
+        value={draft.teacherId ?? ''}
+        onChange={(e) => commit({ ...draft, teacherId: e.target.value ? Number(e.target.value) : null })}
         className="w-full px-2 py-1.5 bg-white border border-slate-200 rounded-lg text-[11px] focus:ring-2 focus:ring-brand-500/20 outline-none"
       >
-        <option value="">Select Subject</option>
-        {subjectsForTeacher.length > 0 && (
-          <optgroup label="Subjects">
-            {subjectsForTeacher.map((s) => (
-              <option key={`cs-${s.id}`} value={`cs-${s.id}`}>{s.subjectName}</option>
-            ))}
-          </optgroup>
-        )}
-        <optgroup label="Activities">
-          {activityOptions.map((a) => (
-            <option key={`act-${a.id}`} value={`act-${a.id}`}>{a.name}</option>
-          ))}
-        </optgroup>
+        <option value="">Select Teacher</option>
+        {teacherOptions.map((t) => {
+          const conflict = conflictFor(t.id);
+          return (
+            <option
+              key={t.id}
+              value={t.id}
+              disabled={!!conflict}
+              title={
+                conflict
+                  ? `Already assigned to ${conflict.group_name ?? 'another group'}${conflict.section_name ? ` (${conflict.section_name})` : ''}, ${conflict.start_time.slice(0, 5)}-${conflict.end_time.slice(0, 5)}`
+                  : undefined
+              }
+            >
+              {t.name}{conflict ? ' (Already assigned)' : ''}
+            </option>
+          );
+        })}
       </select>
-      {!draft.teacherId && !isActivitySelected && (
-        <p className="text-[10px] text-slate-400">Pick a teacher to see the subjects they teach here.</p>
-      )}
-
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => onConfirm(draft)}
-          className="flex-1 flex items-center justify-center gap-1 py-1.5 text-[11px] font-bold text-white bg-brand-500 hover:bg-brand-600 rounded-lg transition-colors"
-        >
-          <Check size={12} />
-          Done
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="p-1.5 text-slate-400 hover:bg-slate-100 rounded-lg transition-colors"
-        >
-          <X size={14} />
-        </button>
-      </div>
     </div>
   );
 };
@@ -179,8 +176,8 @@ interface TimetableCellProps {
   subjectOptions: SubjectOption[];
   activityOptions: ActivityOption[];
   teacherOptions: TeacherOption[];
+  busySlots: TeacherBusySlot[];
   onStartEdit: () => void;
-  onCancelEdit: () => void;
   onConfirm: (value: CellValue) => void;
   onDeleteRequest: () => void;
 }
@@ -194,20 +191,20 @@ const TimetableCell: React.FC<TimetableCellProps> = ({
   subjectOptions,
   activityOptions,
   teacherOptions,
+  busySlots,
   onStartEdit,
-  onCancelEdit,
   onConfirm,
   onDeleteRequest,
 }) => {
   if (isEditing) {
     return (
       <CellEditor
+        slot={slot}
         initialValue={value}
         subjectOptions={subjectOptions}
-        activityOptions={activityOptions}
         teacherOptions={teacherOptions}
+        busySlots={busySlots}
         onConfirm={onConfirm}
-        onCancel={onCancelEdit}
       />
     );
   }
@@ -277,30 +274,33 @@ interface SectionScheduleBlockProps {
   sectionSlots: TimetableSlotData[];
   timetableId: number;
   branchId: number;
+  busySlots: TeacherBusySlot[];
 }
 
-const SectionScheduleBlock: React.FC<SectionScheduleBlockProps> = ({ sectionLabel, sectionSlots, timetableId, branchId }) => {
+const SectionScheduleBlock: React.FC<SectionScheduleBlockProps> = ({ sectionLabel, sectionSlots, timetableId, branchId, busySlots }) => {
   const sectionId = sectionSlots[0]?.section_id ?? null;
 
   const { data: classSubjectsResponse } = useClassSubjects(sectionId, branchId);
   const { data: activities } = useTimetableActivities(branchId);
   const { data: staff } = useStaffMembers(branchId);
 
-  const subjectOptions = useMemo(
-    () =>
-      (classSubjectsResponse?.data || []).map((cs) => ({
-        id: cs.id,
-        subjectName: cs.subject_name,
-        teacherId: cs.teacher_id,
-        teacherName: cs.teacher?.name || `Teacher #${cs.teacher_id}`,
-      })),
-    [classSubjectsResponse]
-  );
+  // One entry per distinct subject name — a subject can have several ClassSubject
+  // rows (one per teacher officially tied to it), but the period's teacher is now a
+  // separate, manual pick, so only the subject identity itself is shown/needed here.
+  const subjectOptions = useMemo(() => {
+    const seen = new Map<string, SubjectOption>();
+    (classSubjectsResponse?.data || []).forEach((cs) => {
+      if (!seen.has(cs.subject_name)) {
+        seen.set(cs.subject_name, { id: cs.id, subjectName: cs.subject_name });
+      }
+    });
+    return Array.from(seen.values());
+  }, [classSubjectsResponse]);
 
   const activityOptions = useMemo(() => (activities || []).map((a) => ({ id: a.id, name: a.name })), [activities]);
 
   const teacherOptions = useMemo(
-    () => (staff || []).filter((s) => s.user_role === TEACHER_ROLE_ID).map((s) => ({ id: s.id, name: s.name })),
+    () => (staff || []).filter((s) => s.user_role !== SUPER_ADMIN_ROLE_ID).map((s) => ({ id: s.id, name: s.name })),
     [staff]
   );
 
@@ -398,7 +398,7 @@ const SectionScheduleBlock: React.FC<SectionScheduleBlockProps> = ({ sectionLabe
     for (const slot of dirtySlots) {
       const value = cellValues[slot.id];
       const payload = value.subjectKey.startsWith('cs-')
-        ? { class_subject_id: Number(value.subjectKey.replace('cs-', '')), timetable_activity_id: null, teacher_id: null }
+        ? { class_subject_id: Number(value.subjectKey.replace('cs-', '')), timetable_activity_id: null, teacher_id: value.teacherId }
         : value.subjectKey.startsWith('act-')
         ? { class_subject_id: null, timetable_activity_id: Number(value.subjectKey.replace('act-', '')), teacher_id: value.teacherId }
         : { class_subject_id: null, timetable_activity_id: null, teacher_id: null };
@@ -413,6 +413,7 @@ const SectionScheduleBlock: React.FC<SectionScheduleBlockProps> = ({ sectionLabe
 
     setCellErrors(errors);
     await queryClient.invalidateQueries({ queryKey: ['timetables', 'slots', timetableId] });
+    await queryClient.invalidateQueries({ queryKey: ['timetables', 'teacher-busy-slots'] });
     setSavingAll(false);
     setSaveAllFeedback({ saved, failed: Object.keys(errors).length });
     setTimeout(() => setSaveAllFeedback(null), 4000);
@@ -427,6 +428,7 @@ const SectionScheduleBlock: React.FC<SectionScheduleBlockProps> = ({ sectionLabe
         onSuccess: () => {
           setCellValues((prev) => ({ ...prev, [slotToDelete.id]: { subjectKey: '', teacherId: null } }));
           setSlotToDelete(null);
+          queryClient.invalidateQueries({ queryKey: ['timetables', 'teacher-busy-slots'] });
         },
       }
     );
@@ -512,8 +514,8 @@ const SectionScheduleBlock: React.FC<SectionScheduleBlockProps> = ({ sectionLabe
                         subjectOptions={subjectOptions}
                         activityOptions={activityOptions}
                         teacherOptions={teacherOptions}
+                        busySlots={busySlots}
                         onStartEdit={() => setEditingSlotId(slot.id)}
-                        onCancelEdit={() => setEditingSlotId(null)}
                         onConfirm={(value) => {
                           setCellValues((prev) => ({ ...prev, [slot.id]: value }));
                           setCellErrors((prev) => {
@@ -561,6 +563,7 @@ interface PeriodAllocationGridProps {
 
 export const PeriodAllocationGrid: React.FC<PeriodAllocationGridProps> = ({ timetableId, branchId, onGoToSections }) => {
   const { data, isLoading } = useTimetableSlots(timetableId);
+  const { data: busySlots } = useTeacherBusySlots(branchId);
   const regenerateMutation = useRegenerateTimetable();
 
   const sections = useMemo(() => {
@@ -621,6 +624,7 @@ export const PeriodAllocationGrid: React.FC<PeriodAllocationGridProps> = ({ time
             sectionSlots={sectionSlots}
             timetableId={timetableId}
             branchId={branchId}
+            busySlots={busySlots || []}
           />
         );
       })}

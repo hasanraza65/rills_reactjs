@@ -1,21 +1,30 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Loader2, Trash2, Edit2, X, Layers } from 'lucide-react';
+import { Plus, Loader2, Trash2, Edit2, X, Layers, ArrowLeft } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
+import { PeriodCellsGrid } from './PeriodCellsGrid';
 import {
   useTimetableGroups,
   useCreateTimetableGroup,
   useUpdateTimetableGroup,
   useDeleteTimetableGroup,
 } from '../../hooks/use-timetable-group';
+import { useCreateTimetablePeriodSet } from '../../hooks/use-timetable-period-set';
 import { useClasses } from '../../hooks/use-class';
+import { usePeriodCells } from '../../hooks/use-period-cells';
 import { TimetableGroupData } from '../../types/api/timetable-group';
 import { useBranchStore } from '../../store/use-branch-store';
+import { SCHOOL_DAYS as DAYS } from '../../lib/timetable-days';
 
-export const TimeTableGroupManagement: React.FC = () => {
+interface TimeTableGroupManagementProps {
+  /** Called after a new group + its periods are saved, so a host modal (e.g. "Manage Groups") can close too. */
+  onGroupCreated?: () => void;
+}
+
+export const TimeTableGroupManagement: React.FC<TimeTableGroupManagementProps> = ({ onGroupCreated }) => {
   const { selectedBranchId } = useBranchStore();
   const branchId = selectedBranchId || 1;
 
@@ -25,6 +34,7 @@ export const TimeTableGroupManagement: React.FC = () => {
   const createMutation = useCreateTimetableGroup();
   const updateMutation = useUpdateTimetableGroup();
   const deleteMutation = useDeleteTimetableGroup();
+  const createPeriodSetMutation = useCreateTimetablePeriodSet();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingGroup, setEditingGroup] = useState<TimetableGroupData | null>(null);
@@ -32,10 +42,23 @@ export const TimeTableGroupManagement: React.FC = () => {
   const [classIds, setClassIds] = useState<number[]>([]);
   const [groupToDelete, setGroupToDelete] = useState<TimetableGroupData | null>(null);
 
+  // Only used for the create flow: step 1 captures the group, step 2 (same modal)
+  // captures its periods, so creating a group and defining its schedule is one action.
+  const [step, setStep] = useState<1 | 2>(1);
+  const [periodTitle, setPeriodTitle] = useState('');
+  const [createdGroupId, setCreatedGroupId] = useState<number | null>(null);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const { periods, matrix, reset: resetPeriodCells, addRow: addPeriodRow, removeRow: removePeriodRow, copyRowDown, setDuration, copyColumn } = usePeriodCells();
+
   const openAddForm = () => {
     setEditingGroup(null);
     setName('');
     setClassIds([]);
+    setStep(1);
+    setPeriodTitle('');
+    setCreatedGroupId(null);
+    setSaveError(null);
+    resetPeriodCells();
     setIsFormOpen(true);
   };
 
@@ -50,24 +73,60 @@ export const TimeTableGroupManagement: React.FC = () => {
     setClassIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || classIds.length === 0 || !editingGroup) return;
+
+    updateMutation.mutate(
+      { id: editingGroup.id, data: { name, class_ids: classIds } },
+      { onSuccess: () => setIsFormOpen(false) }
+    );
+  };
+
+  const handleNextStep = (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim() || classIds.length === 0) return;
+    setStep(2);
+  };
 
-    if (editingGroup) {
-      updateMutation.mutate(
-        { id: editingGroup.id, data: { name, class_ids: classIds } },
-        { onSuccess: () => setIsFormOpen(false) }
-      );
-    } else {
-      createMutation.mutate(
-        { branch_id: branchId, name, class_ids: classIds },
-        { onSuccess: () => setIsFormOpen(false) }
+  const handleWizardSave = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!periodTitle.trim()) return;
+
+    const slots = periods.flatMap((periodNumber) =>
+      DAYS.filter((d) => matrix[periodNumber]?.[d.value]).map((d) => ({
+        day_of_week: d.value,
+        period_number: periodNumber,
+        duration_minutes: parseInt(matrix[periodNumber][d.value], 10),
+      }))
+    );
+    if (slots.length === 0) {
+      setSaveError('Please fill in at least one period duration before saving.');
+      return;
+    }
+
+    setSaveError(null);
+    try {
+      let groupId = createdGroupId;
+      if (!groupId) {
+        const group = await createMutation.mutateAsync({ branch_id: branchId, name, class_ids: classIds });
+        groupId = group.id;
+        setCreatedGroupId(groupId);
+      }
+      await createPeriodSetMutation.mutateAsync({ branch_id: branchId, timetable_group_id: groupId, title: periodTitle, slots });
+      setIsFormOpen(false);
+      onGroupCreated?.();
+    } catch {
+      setSaveError(
+        createdGroupId
+          ? 'The group was saved, but saving its periods failed. Please try again.'
+          : 'Something went wrong while saving. Please try again.'
       );
     }
   };
 
-  const isSaving = createMutation.isPending || updateMutation.isPending;
+  const isSaving = updateMutation.isPending;
+  const isWizardSaving = createMutation.isPending || createPeriodSetMutation.isPending;
 
   return (
     <div className="space-y-6">
@@ -143,55 +202,162 @@ export const TimeTableGroupManagement: React.FC = () => {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white w-full max-w-md rounded-3xl overflow-hidden shadow-2xl"
+              className={`bg-white w-full ${!editingGroup && step === 2 ? 'max-w-4xl' : 'max-w-md'} rounded-3xl overflow-hidden shadow-2xl max-h-[90vh] flex flex-col`}
             >
-              <div className="p-6 border-b border-slate-100 flex items-center justify-between">
-                <h3 className="font-bold text-slate-900">{editingGroup ? 'Edit Group' : 'Add Time Table Group'}</h3>
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between shrink-0">
+                <div>
+                  <h3 className="font-bold text-slate-900">
+                    {editingGroup ? 'Edit Group' : step === 1 ? 'Add Time Table Group' : 'Define Periods'}
+                  </h3>
+                  {!editingGroup && <p className="text-xs text-slate-400 mt-0.5">Step {step} of 2</p>}
+                </div>
                 <button onClick={() => setIsFormOpen(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
                   <X className="w-5 h-5 text-slate-400" />
                 </button>
               </div>
-              <form onSubmit={handleSubmit}>
-                <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Group Name</label>
-                    <input
-                      type="text"
-                      placeholder="e.g. Level Six to Seven Time Table"
-                      value={name}
-                      onChange={(e) => setName(e.target.value)}
-                      required
-                      autoFocus
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-sm font-bold text-slate-700">Levels Covered</label>
-                    <div className="grid grid-cols-2 gap-2">
-                      {classes?.map((c) => (
-                        <label
-                          key={c.id}
-                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${
-                            classIds.includes(c.id) ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-slate-50 border-slate-200 text-slate-600'
-                          }`}
-                        >
-                          <input type="checkbox" checked={classIds.includes(c.id)} onChange={() => toggleClass(c.id)} className="accent-brand-500" />
-                          <span className="text-sm font-medium">{c.name}</span>
-                        </label>
-                      ))}
+
+              {editingGroup ? (
+                <form onSubmit={handleEditSubmit} className="flex flex-col overflow-hidden">
+                  <div className="p-6 space-y-4 overflow-y-auto">
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">Group Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Level Six to Seven Time Table"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        autoFocus
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                      />
                     </div>
-                    {classIds.length === 0 && <p className="text-xs text-rose-500">Select at least one level.</p>}
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">Levels Covered</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {classes?.map((c) => (
+                          <label
+                            key={c.id}
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${
+                              classIds.includes(c.id) ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-slate-50 border-slate-200 text-slate-600'
+                            }`}
+                          >
+                            <input type="checkbox" checked={classIds.includes(c.id)} onChange={() => toggleClass(c.id)} className="accent-brand-500" />
+                            <span className="text-sm font-medium">{c.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {classIds.length === 0 && <p className="text-xs text-rose-500">Select at least one level.</p>}
+                    </div>
                   </div>
-                </div>
-                <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3">
-                  <Button type="button" variant="ghost" onClick={() => setIsFormOpen(false)} className="w-full sm:w-auto">
-                    Cancel
-                  </Button>
-                  <Button type="submit" className="w-full sm:w-auto" disabled={isSaving}>
-                    {isSaving ? 'Saving...' : 'Save Group'}
-                  </Button>
-                </div>
-              </form>
+                  <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 shrink-0">
+                    <Button type="button" variant="ghost" onClick={() => setIsFormOpen(false)} className="w-full sm:w-auto">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isSaving}>
+                      {isSaving ? 'Saving...' : 'Save Group'}
+                    </Button>
+                  </div>
+                </form>
+              ) : step === 1 ? (
+                <form onSubmit={handleNextStep} className="flex flex-col overflow-hidden">
+                  <div className="p-6 space-y-4 overflow-y-auto">
+                    {createdGroupId && (
+                      <p className="text-xs text-slate-500 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                        This group is already saved — only its periods can still be edited here.
+                      </p>
+                    )}
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">Group Name</label>
+                      <input
+                        type="text"
+                        placeholder="e.g. Level Six to Seven Time Table"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        required
+                        autoFocus
+                        disabled={!!createdGroupId}
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <label className="text-sm font-bold text-slate-700">Levels Covered</label>
+                      <div className="grid grid-cols-2 gap-2">
+                        {classes?.map((c) => (
+                          <label
+                            key={c.id}
+                            className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border transition-colors ${
+                              createdGroupId ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'
+                            } ${
+                              classIds.includes(c.id) ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-slate-50 border-slate-200 text-slate-600'
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={classIds.includes(c.id)}
+                              onChange={() => toggleClass(c.id)}
+                              disabled={!!createdGroupId}
+                              className="accent-brand-500"
+                            />
+                            <span className="text-sm font-medium">{c.name}</span>
+                          </label>
+                        ))}
+                      </div>
+                      {classIds.length === 0 && <p className="text-xs text-rose-500">Select at least one level.</p>}
+                    </div>
+                  </div>
+                  <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 shrink-0">
+                    <Button type="button" variant="ghost" onClick={() => setIsFormOpen(false)} className="w-full sm:w-auto">
+                      Cancel
+                    </Button>
+                    <Button type="submit" className="w-full sm:w-auto">
+                      Next
+                    </Button>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleWizardSave} className="flex flex-col overflow-hidden">
+                  <div className="p-6 space-y-4 overflow-y-auto">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Time Table Group</label>
+                        <div className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl font-bold text-slate-800">
+                          {name}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Periods Title</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. test time periods"
+                          value={periodTitle}
+                          onChange={(e) => setPeriodTitle(e.target.value)}
+                          required
+                          autoFocus
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
+                    </div>
+                    <PeriodCellsGrid
+                      periods={periods}
+                      matrix={matrix}
+                      onAddRow={addPeriodRow}
+                      onRemoveRow={removePeriodRow}
+                      onCopyRowDown={copyRowDown}
+                      onSetDuration={setDuration}
+                      onCopyColumn={copyColumn}
+                    />
+                    {saveError && <p className="text-xs text-rose-500">{saveError}</p>}
+                  </div>
+                  <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 shrink-0">
+                    <Button type="button" variant="outline" onClick={() => setStep(1)} leftIcon={<ArrowLeft size={16} />} className="w-full sm:w-auto" disabled={isWizardSaving}>
+                      Back
+                    </Button>
+                    <Button type="submit" className="w-full sm:w-auto" disabled={isWizardSaving}>
+                      {isWizardSaving ? 'Saving...' : 'Save'}
+                    </Button>
+                  </div>
+                </form>
+              )}
             </motion.div>
           </div>
         )}

@@ -13,6 +13,7 @@ import {
   CalendarDays,
   Loader2,
   ShieldCheck,
+  BookOpen,
   X,
 } from 'lucide-react';
 import { cn } from '../types';
@@ -20,6 +21,7 @@ import { StatCard } from './StatCard';
 import { EmptyState } from './ui/EmptyState';
 import { StaffFormModal } from './Staff/StaffFormModal';
 import { UserPermissionsModal } from './Staff/UserPermissionsModal';
+import { TeacherSubjectsModal } from './Staff/TeacherSubjectsModal';
 import { useStaffMembers, useStaffMember, useDeleteStaff } from '../hooks/use-staff-members';
 import { useRoles } from '../hooks/use-roles';
 import { usePermissions } from '../hooks/use-permissions';
@@ -30,6 +32,10 @@ import type { StaffMember } from '../types/api/staff';
 interface StaffManagementProps {
   role?: string;
 }
+
+// Only actual Teachers (role 4) teach subjects — matches the same restriction
+// applied to subject assignment in SubjectModule.tsx.
+const TEACHER_ROLE_ID = 4;
 
 const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -66,6 +72,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [permissionsFor, setPermissionsFor] = useState<StaffMember | null>(null);
+  const [subjectsFor, setSubjectsFor] = useState<StaffMember | null>(null);
 
   // The list row can be missing/stale relations (e.g. staff_profile), so the
   // view modal re-fetches the single-record detail endpoint by id instead of
@@ -234,6 +241,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                             <ShieldCheck size={16} />
                           </button>
                         )}
+                        {s.user_role === TEACHER_ROLE_ID && can('staff', 'edit') && (
+                          <button onClick={() => setSubjectsFor(s)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Assign Subjects">
+                            <BookOpen size={16} />
+                          </button>
+                        )}
                         {can('staff', 'delete') && (
                           <button onClick={() => setDeletingId(s.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all" title="Delete">
                             <Trash2 size={16} />
@@ -280,6 +292,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                     <button onClick={() => setViewingId(s.id)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl"><Eye size={16} /></button>
                     {can('staff', 'edit') && <button onClick={() => openEdit(s)} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl"><Edit2 size={16} /></button>}
                     {canManagePermissionsFor(s) && <button onClick={() => setPermissionsFor(s)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl"><ShieldCheck size={16} /></button>}
+                    {s.user_role === TEACHER_ROLE_ID && can('staff', 'edit') && <button onClick={() => setSubjectsFor(s)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl"><BookOpen size={16} /></button>}
                     {can('staff', 'delete') && <button onClick={() => setDeletingId(s.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl"><Trash2 size={16} /></button>}
                   </div>
                 </div>
@@ -306,6 +319,18 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
             viewerIsPrivileged={isSuperAdmin}
             viewerPermissions={currentUser?.permissions}
             onClose={() => setPermissionsFor(null)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* Assign Subjects modal */}
+      <AnimatePresence>
+        {subjectsFor && (
+          <TeacherSubjectsModal
+            teacherId={subjectsFor.id}
+            teacherName={subjectsFor.name}
+            branchId={subjectsFor.branch_id ?? selectedBranchId ?? 1}
+            onClose={() => setSubjectsFor(null)}
           />
         )}
       </AnimatePresence>

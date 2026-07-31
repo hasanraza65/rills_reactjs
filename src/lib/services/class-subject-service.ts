@@ -40,6 +40,18 @@ export const classSubjectService = {
   },
 
   /**
+   * Fetches every subject a specific teacher is assigned to, across all classes and
+   * sections in the branch — used by an admin managing a teacher's subjects directly
+   * from Staff Management, as opposed to `getMySubjects` (the teacher's own view).
+   */
+  getSubjectsByTeacher: async (teacherId: number, branchId: number): Promise<ClassSubjectsResponse> => {
+    const response = await apiClient.get<ClassSubjectsResponse>('/class-subjects', {
+      params: { teacher_id: teacherId, branch_id: branchId }
+    });
+    return response.data;
+  },
+
+  /**
    * Creates a new subject for a class section.
    */
   createSubject: async (data: CreateClassSubjectInput): Promise<any> => {

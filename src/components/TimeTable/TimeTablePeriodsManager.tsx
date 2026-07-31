@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Plus, Loader2, Trash2, Edit2, Eye, X, Clock, Settings2, Copy } from 'lucide-react';
+import { Plus, Loader2, Trash2, Edit2, Eye, X, Clock, Settings2 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
 import { EmptyState } from '../ui/EmptyState';
 import { ConfirmationModal } from '../ui/ConfirmationModal';
 import { TimeTableGroupManagement } from './TimeTableGroupManagement';
+import { PeriodCellsGrid } from './PeriodCellsGrid';
 import {
   useTimetablePeriodSets,
   useCreateTimetablePeriodSet,
@@ -13,15 +14,12 @@ import {
   useDeleteTimetablePeriodSet,
 } from '../../hooks/use-timetable-period-set';
 import { useTimetableGroups } from '../../hooks/use-timetable-group';
+import { useClasses } from '../../hooks/use-class';
+import { useSectionsByClass } from '../../hooks/use-section';
+import { usePeriodCells } from '../../hooks/use-period-cells';
 import { TimetablePeriodSetData } from '../../types/api/timetable-period-set';
 import { useBranchStore } from '../../store/use-branch-store';
-import { TIMETABLE_DAYS as DAYS } from '../../lib/timetable-days';
-
-// duration matrix: periodNumber -> dayOfWeek -> minutes (string for controlled input; '' = no period that day)
-type DurationMatrix = Record<number, Record<number, string>>;
-
-const emptyMatrixRow = (): Record<number, string> =>
-  DAYS.reduce((acc, d) => ({ ...acc, [d.value]: '' }), {} as Record<number, string>);
+import { SCHOOL_DAYS as DAYS, DurationMatrix, emptyMatrixRow } from '../../lib/timetable-days';
 
 const matrixFromSlots = (slots: TimetablePeriodSetData['slots']): { periods: number[]; matrix: DurationMatrix } => {
   const matrix: DurationMatrix = {};
@@ -43,6 +41,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
 
   const { data: periodSets, isLoading } = useTimetablePeriodSets(branchId);
   const { data: groups } = useTimetableGroups(branchId);
+  const { data: classes } = useClasses(branchId);
 
   const createMutation = useCreateTimetablePeriodSet();
   const updateMutation = useUpdateTimetablePeriodSet();
@@ -52,18 +51,25 @@ export const TimeTablePeriodsManager: React.FC = () => {
   const [isGroupManagerOpen, setIsGroupManagerOpen] = useState(false);
   const [viewingSet, setViewingSet] = useState<TimetablePeriodSetData | null>(null);
   const [editingSet, setEditingSet] = useState<TimetablePeriodSetData | null>(null);
+  const [classId, setClassId] = useState<number | ''>('');
+  const [sectionId, setSectionId] = useState<number | ''>('');
   const [groupId, setGroupId] = useState<number | ''>('');
   const [title, setTitle] = useState('');
-  const [periods, setPeriods] = useState<number[]>([1]);
-  const [matrix, setMatrix] = useState<DurationMatrix>({ 1: emptyMatrixRow() });
+  const { periods, matrix, reset: resetPeriodCells, addRow: addPeriodRow, removeRow: removePeriodRow, copyRowDown, setDuration, copyColumn } = usePeriodCells();
   const [setToDelete, setSetToDelete] = useState<TimetablePeriodSetData | null>(null);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const { data: sections } = useSectionsByClass(classId || null);
+  const filteredGroups = groups?.filter((g) => !classId || g.classes?.some((c) => c.id === classId));
 
   const openAddForm = () => {
     setEditingSet(null);
+    setClassId('');
+    setSectionId('');
     setGroupId('');
     setTitle('');
-    setPeriods([1]);
-    setMatrix({ 1: emptyMatrixRow() });
+    resetPeriodCells();
+    setFormError(null);
     setIsFormOpen(true);
   };
 
@@ -72,44 +78,22 @@ export const TimeTablePeriodsManager: React.FC = () => {
     setEditingSet(set);
     setGroupId(set.timetable_group_id);
     setTitle(set.title);
-    setPeriods(p);
-    setMatrix(m);
+    resetPeriodCells({ periods: p, matrix: m });
+    setFormError(null);
     setIsFormOpen(true);
-  };
-
-  const addPeriodRow = () => {
-    const nextNumber = periods.length ? Math.max(...periods) + 1 : 1;
-    setPeriods([...periods, nextNumber]);
-    setMatrix({ ...matrix, [nextNumber]: emptyMatrixRow() });
-  };
-
-  const removePeriodRow = (periodNumber: number) => {
-    setPeriods(periods.filter((p) => p !== periodNumber));
-    const next = { ...matrix };
-    delete next[periodNumber];
-    setMatrix(next);
-  };
-
-  // Copies this period row's minutes-per-day into the next row, so adding a run of
-  // same-length periods doesn't mean retyping every day's value each time.
-  const copyRowDown = (periodNumber: number) => {
-    const index = periods.indexOf(periodNumber);
-    const nextPeriodNumber = periods[index + 1];
-    if (nextPeriodNumber === undefined) return;
-
-    setMatrix({ ...matrix, [nextPeriodNumber]: { ...matrix[periodNumber] } });
-  };
-
-  const setDuration = (periodNumber: number, day: number, value: string) => {
-    setMatrix({
-      ...matrix,
-      [periodNumber]: { ...matrix[periodNumber], [day]: value },
-    });
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!groupId || !title.trim()) return;
+    if (!editingSet && !classId) {
+      setFormError('Please select a class first.');
+      return;
+    }
+    if (!groupId) {
+      setFormError('Please select a Time Table Group.');
+      return;
+    }
+    if (!title.trim()) return;
 
     const slots = periods.flatMap((periodNumber) =>
       DAYS.filter((d) => matrix[periodNumber]?.[d.value]).map((d) => ({
@@ -119,7 +103,11 @@ export const TimeTablePeriodsManager: React.FC = () => {
       }))
     );
 
-    if (slots.length === 0) return;
+    if (slots.length === 0) {
+      setFormError('Please fill in at least one period duration before saving.');
+      return;
+    }
+    setFormError(null);
 
     if (editingSet) {
       updateMutation.mutate({ id: editingSet.id, data: { title, slots } }, { onSuccess: () => setIsFormOpen(false) });
@@ -177,7 +165,11 @@ export const TimeTablePeriodsManager: React.FC = () => {
               </thead>
               <tbody className="divide-y divide-slate-50">
                 {periodSets.map((set) => (
-                  <tr key={set.id} className="hover:bg-slate-50/50 transition-colors group">
+                  <tr
+                    key={set.id}
+                    onClick={() => setViewingSet(set)}
+                    className="hover:bg-slate-50/50 transition-colors group cursor-pointer"
+                  >
                     <td className="px-6 py-4 text-sm font-bold text-slate-800">{set.title}</td>
                     <td className="px-6 py-4 text-sm text-slate-600">{set.group?.name || '-'}</td>
                     <td className="px-6 py-4">
@@ -187,13 +179,13 @@ export const TimeTablePeriodsManager: React.FC = () => {
                     </td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={() => setViewingSet(set)} className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" title="View">
+                        <button onClick={(e) => { e.stopPropagation(); setViewingSet(set); }} className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" title="View">
                           <Eye size={16} />
                         </button>
-                        <button onClick={() => openEditForm(set)} className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" title="Edit">
+                        <button onClick={(e) => { e.stopPropagation(); openEditForm(set); }} className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" title="Edit">
                           <Edit2 size={16} />
                         </button>
-                        <button onClick={() => setSetToDelete(set)} className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all" title="Delete">
+                        <button onClick={(e) => { e.stopPropagation(); setSetToDelete(set); }} className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all" title="Delete">
                           <Trash2 size={16} />
                         </button>
                       </div>
@@ -223,101 +215,112 @@ export const TimeTablePeriodsManager: React.FC = () => {
               </div>
               <form onSubmit={handleSubmit} className="flex flex-col overflow-hidden">
                 <div className="p-6 space-y-4 overflow-y-auto">
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Time Table Group</label>
-                      <select
-                        value={groupId}
-                        onChange={(e) => setGroupId(e.target.value ? Number(e.target.value) : '')}
-                        disabled={!!editingSet}
-                        required
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
-                      >
-                        <option value="">Select a group...</option>
-                        {groups?.map((g) => (
-                          <option key={g.id} value={g.id}>{g.name}</option>
-                        ))}
-                      </select>
+                  {editingSet ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Time Table Group</label>
+                        <select
+                          value={groupId}
+                          disabled
+                          required
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl outline-none disabled:opacity-60"
+                        >
+                          <option value="">Select a group...</option>
+                          {groups?.map((g) => (
+                            <option key={g.id} value={g.id}>{g.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Periods Title</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. test time periods"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          required
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-sm font-bold text-slate-700">Periods Title</label>
-                      <input
-                        type="text"
-                        placeholder="e.g. test time periods"
-                        value={title}
-                        onChange={(e) => setTitle(e.target.value)}
-                        required
-                        className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
-                      />
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Class</label>
+                        <select
+                          value={classId}
+                          onChange={(e) => {
+                            const value = e.target.value ? Number(e.target.value) : '';
+                            setClassId(value);
+                            setSectionId('');
+                            setGroupId('');
+                          }}
+                          required
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        >
+                          <option value="">Select a class...</option>
+                          {classes?.map((c) => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Section</label>
+                        <select
+                          value={sectionId}
+                          onChange={(e) => setSectionId(e.target.value ? Number(e.target.value) : '')}
+                          disabled={!classId}
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
+                        >
+                          <option value="">Select a section...</option>
+                          {sections?.map((s) => (
+                            <option key={s.id} value={s.id}>{s.name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Time Table Group</label>
+                        <select
+                          value={groupId}
+                          onChange={(e) => setGroupId(e.target.value ? Number(e.target.value) : '')}
+                          disabled={!classId}
+                          required
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none disabled:opacity-60"
+                        >
+                          <option value="">Select a group...</option>
+                          {filteredGroups?.map((g) => (
+                            <option key={g.id} value={g.id}>{g.name}</option>
+                          ))}
+                        </select>
+                        {classId && filteredGroups?.length === 0 && (
+                          <p className="text-xs text-rose-500">No Time Table Group covers this class yet.</p>
+                        )}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="text-sm font-bold text-slate-700">Periods Title</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. test time periods"
+                          value={title}
+                          onChange={(e) => setTitle(e.target.value)}
+                          required
+                          className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none"
+                        />
+                      </div>
                     </div>
-                  </div>
+                  )}
 
                   <div className="pt-2">
-                    <div className="flex items-center justify-between mb-3">
-                      <label className="text-sm font-bold text-slate-700">Add Periods</label>
-                      <span className="text-xs text-slate-400">Leave a cell blank if that period doesn't run on that day.</span>
-                    </div>
-                    <div className="overflow-x-auto border border-slate-200 rounded-2xl">
-                      <table className="w-full text-left text-sm">
-                        <thead>
-                          <tr className="bg-slate-800 text-white">
-                            <th className="px-4 py-3 text-xs font-bold uppercase tracking-wider">Period No.</th>
-                            {DAYS.map((d) => (
-                              <th key={d.value} className="px-3 py-3 text-xs font-bold uppercase tracking-wider">{d.label}</th>
-                            ))}
-                            <th className="px-3 py-3 text-xs font-bold uppercase tracking-wider">Action</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-100">
-                          {periods.map((periodNumber, index) => (
-                            <tr key={periodNumber} className="hover:bg-slate-50/50">
-                              <td className="px-4 py-2.5 font-bold text-slate-700">{periodNumber}</td>
-                              {DAYS.map((d) => (
-                                <td key={d.value} className="px-2 py-2">
-                                  <input
-                                    type="number"
-                                    min={1}
-                                    placeholder="min"
-                                    value={matrix[periodNumber]?.[d.value] || ''}
-                                    onChange={(e) => setDuration(periodNumber, d.value, e.target.value)}
-                                    className="w-16 px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-center text-sm focus:ring-2 focus:ring-brand-500/20 outline-none"
-                                  />
-                                </td>
-                              ))}
-                              <td className="px-3 py-2">
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    type="button"
-                                    onClick={() => copyRowDown(periodNumber)}
-                                    disabled={index === periods.length - 1}
-                                    title="Copy this row's minutes down to the next period"
-                                    className="p-1.5 text-slate-300 hover:bg-brand-50 hover:text-brand-600 rounded-lg transition-all disabled:opacity-30"
-                                  >
-                                    <Copy size={14} />
-                                  </button>
-                                  <button
-                                    type="button"
-                                    onClick={() => removePeriodRow(periodNumber)}
-                                    disabled={periods.length === 1}
-                                    title="Remove this period row"
-                                    className="p-1.5 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-lg transition-all disabled:opacity-30"
-                                  >
-                                    <Trash2 size={14} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={addPeriodRow}
-                      className="mt-3 text-sm font-bold text-brand-600 hover:text-brand-700 flex items-center gap-1"
-                    >
-                      <Plus size={16} /> Add another period row
-                    </button>
+                    <PeriodCellsGrid
+                      periods={periods}
+                      matrix={matrix}
+                      onAddRow={addPeriodRow}
+                      onRemoveRow={removePeriodRow}
+                      onCopyRowDown={copyRowDown}
+                      onSetDuration={setDuration}
+                      onCopyColumn={copyColumn}
+                    />
+                    {formError && <p className="mt-3 text-xs text-rose-500">{formError}</p>}
                   </div>
                 </div>
                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 shrink-0">
@@ -337,8 +340,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
       <AnimatePresence>
         {viewingSet && (() => {
           const { periods: viewPeriods, matrix: viewMatrix } = matrixFromSlots(viewingSet.slots);
-          // Always show Mon-Sat; Sunday is never a school day here.
-          const viewDays = DAYS.filter((d) => d.value !== 7);
+          const viewDays = DAYS;
           return (
             <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
               <motion.div
@@ -424,7 +426,7 @@ export const TimeTablePeriodsManager: React.FC = () => {
                 </button>
               </div>
               <div className="p-6 overflow-y-auto">
-                <TimeTableGroupManagement />
+                <TimeTableGroupManagement onGroupCreated={() => setIsGroupManagerOpen(false)} />
               </div>
             </motion.div>
           </div>

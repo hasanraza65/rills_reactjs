@@ -30,6 +30,13 @@ export const useTimetableSlots = (timetableId: number | null) => {
   });
 };
 
+export const useTeacherBusySlots = (branchId?: number) => {
+  return useQuery({
+    queryKey: ['timetables', 'teacher-busy-slots', branchId],
+    queryFn: () => timetableService.getTeacherBusySlots(branchId),
+  });
+};
+
 export const useCreateTimetable = () => {
   const queryClient = useQueryClient();
 

@@ -33,15 +33,43 @@ export const useMySubjects = (enabled = true) => {
 };
 
 /**
+ * Hook to fetch every subject a specific teacher is assigned to — used when an
+ * admin manages a teacher's subjects directly from Staff Management.
+ */
+export const useTeacherSubjects = (teacherId: number | null, branchId?: number | null) => {
+  return useQuery({
+    queryKey: ['class-subjects', 'teacher', teacherId, branchId ?? 'default'],
+    queryFn: () => classSubjectService.getSubjectsByTeacher(teacherId!, branchId ?? 1),
+    enabled: !!teacherId,
+  });
+};
+
+/**
+ * Hook to fetch every class-subject row in a branch — used to derive the full
+ * catalogue of subject names already in use (e.g. "Math"), so a subject can be
+ * assigned to another teacher without retyping/misspelling its name.
+ */
+export const useBranchSubjects = (branchId: number) => {
+  return useQuery({
+    queryKey: ['class-subjects', 'branch', branchId],
+    queryFn: () => classSubjectService.getSubjectsByBranch(branchId),
+  });
+};
+
+/**
  * Hook to create a new class subject.
+ *
+ * Invalidates every `class-subjects` query (not just the section it was created
+ * for) since the same row is also visible from a per-teacher view (Staff
+ * Management's subject assignment) which is keyed differently.
  */
 export const useCreateClassSubject = () => {
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: (data: CreateClassSubjectInput) => classSubjectService.createSubject(data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['class-subjects', variables.section_id] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-subjects'] });
     },
     onError: (error: any) => {
       console.error(error?.response?.data?.message || 'Failed to create subject');
@@ -59,8 +87,8 @@ export const useUpdateClassSubject = () => {
   return useMutation({
     mutationFn: ({ id, data }: { id: number; data: UpdateClassSubjectInput }) =>
       classSubjectService.updateSubject(id, data),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['class-subjects', variables.data.section_id] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-subjects'] });
     },
     onError: (error: any) => {
       console.error(error?.response?.data?.message || 'Failed to update subject');
@@ -78,8 +106,8 @@ export const useDeleteClassSubject = () => {
   return useMutation({
     mutationFn: ({ id }: { id: number; sectionId: number }) =>
       classSubjectService.deleteSubject(id),
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['class-subjects', variables.sectionId] });
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['class-subjects'] });
     },
     onError: (error: any) => {
       console.error(error?.response?.data?.message || 'Failed to delete subject');

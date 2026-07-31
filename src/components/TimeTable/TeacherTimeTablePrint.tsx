@@ -13,7 +13,9 @@ import { useAuthStore } from '../../store/use-auth-store';
 import { dayLabel } from '../../lib/timetable-days';
 import { TeacherTimeTablePDFTemplate } from './TeacherTimeTablePDFTemplate';
 
-const TEACHER_ROLE_ID = 4;
+// Anyone can be picked here (Branch Admin, Admin, Teacher, etc.) except Super
+// Admin, who manages the system rather than teaching/supervising periods.
+const SUPER_ADMIN_ROLE_ID = 1;
 
 interface TeacherTimeTablePrintProps {
   /** Teachers viewing their own schedule skip the picker and only ever see themselves. */
@@ -26,7 +28,7 @@ export const TeacherTimeTablePrint: React.FC<TeacherTimeTablePrintProps> = ({ se
   const branchId = selectedBranchId || 1;
 
   const { data: staff } = useStaffMembers(selfOnly ? undefined : branchId);
-  const teacherOptions = (staff || []).filter((s) => s.user_role === TEACHER_ROLE_ID);
+  const teacherOptions = (staff || []).filter((s) => s.user_role !== SUPER_ADMIN_ROLE_ID);
 
   const [selectedTeacherId, setSelectedTeacherId] = useState<number | null>(selfOnly ? (user?.id ?? null) : null);
   const [isPrinting, setIsPrinting] = useState(false);

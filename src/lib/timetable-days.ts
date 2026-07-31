@@ -15,3 +15,12 @@ export const TIMETABLE_DAYS: { value: number; label: string }[] = [
 
 export const dayLabel = (day: number): string =>
   TIMETABLE_DAYS.find((d) => d.value === day)?.label || `Day ${day}`;
+
+/** Mon-Sat only — Sunday is never a school day, so periods/schedule forms shouldn't offer it. */
+export const SCHOOL_DAYS = TIMETABLE_DAYS.filter((d) => d.value !== 7);
+
+/** periodNumber -> dayOfWeek -> minutes (string for controlled input; '' = no period that day). */
+export type DurationMatrix = Record<number, Record<number, string>>;
+
+export const emptyMatrixRow = (): Record<number, string> =>
+  TIMETABLE_DAYS.reduce((acc, d) => ({ ...acc, [d.value]: '' }), {} as Record<number, string>);

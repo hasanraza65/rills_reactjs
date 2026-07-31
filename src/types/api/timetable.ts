@@ -63,6 +63,19 @@ export interface TimetableSlotsResponse {
   slots: TimetableSlotData[];
 }
 
+/** One teacher-assigned slot from any of this branch's ACTIVE Timetables — used to
+ * pre-disable a teacher in the Period Allocation Grid picker when they're already
+ * booked elsewhere at an overlapping day/time. */
+export interface TeacherBusySlot {
+  id: number;
+  teacher_id: number;
+  day_of_week: number;
+  start_time: string;
+  end_time: string;
+  group_name: string | null;
+  section_name: string | null;
+}
+
 export interface CreateTimetableInput {
   branch_id: number;
   timetable_group_id: number;
@@ -72,6 +85,9 @@ export interface CreateTimetableInput {
   date_to: string;
   school_time_from: string;
   is_active?: boolean;
+  /** Copies every Subject/Activity/Teacher assignment from this Timetable's slots
+   * into the new one (matched by section/day/period) — the "copy settings" option. */
+  copy_from_timetable_id?: number;
 }
 
 /** Meta-only edit — see TimetableController::update for why dates/period_set aren't here. */
