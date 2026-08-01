@@ -32,6 +32,7 @@ export interface StaffMember {
   user_role: number;
   branch_id: number | null;
   avatar: string | null;
+  is_active: boolean;
   staff_profile: StaffProfile | null;
   role: StaffRoleRef | null;
 }
@@ -54,4 +55,5 @@ export interface StaffFormInput {
   branch_id?: number | null;
   email?: string;
   password?: string;
+  is_active?: boolean;
 }

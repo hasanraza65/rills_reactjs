@@ -109,10 +109,10 @@ export const Select: React.FC<SelectProps> = ({
         menuPos &&
         createPortal(
           <>
-            <div className="fixed inset-0 z-40" onClick={closeMenu} />
+            <div className="fixed inset-0 z-[9998]" onClick={closeMenu} />
             <div
               style={{ top: menuPos.top, left: menuPos.left, width: menuPos.width }}
-              className="fixed z-50 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 max-h-64 overflow-y-auto"
+              className="fixed z-[9999] bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 max-h-64 overflow-y-auto"
             >
               {options.length === 0 ? (
                 <p className="px-4 py-2 text-sm text-slate-400">No options</p>

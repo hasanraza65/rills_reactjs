@@ -24,6 +24,7 @@ export interface StudentData {
   parent_id: number;
   source: string;
   attachments: any | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
   class?: ClassData;
@@ -52,6 +53,7 @@ export interface CreateStudentInput {
   source?: string;
   photo?: string | File;
   attachments?: (string | File)[];
+  is_active?: boolean;
   fee_heads?: Array<{
     head_name: string;
     head_amount: number;

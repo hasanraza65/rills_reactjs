@@ -34,6 +34,7 @@ const emptyForm: StaffFormInput = {
   branch_id: null,
   email: '',
   password: '',
+  is_active: true,
 };
 
 const inputCls =
@@ -77,6 +78,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
         branch_id: editing.branch_id,
         email: editing.email ?? '',
         password: '',
+        is_active: editing.is_active,
       });
     } else {
       setForm({ ...emptyForm, branch_id: selectedBranchId ?? null });
@@ -251,6 +253,21 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
                 options={branches.map((b) => ({ value: String(b.id), label: b.branch_name }))}
                 placeholder="No specific branch"
               />
+            </div>
+
+            <div className="space-y-2">
+              <label className={labelCls}>Status</label>
+              <label className="flex items-center gap-2.5 h-[46px] px-4 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_active !== false}
+                  onChange={(e) => set('is_active', e.target.checked)}
+                  className="w-4 h-4 accent-brand-500 shrink-0"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  {form.is_active !== false ? 'Active' : 'Inactive'}
+                </span>
+              </label>
             </div>
 
             <div className="space-y-2 sm:col-span-2">
