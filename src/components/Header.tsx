@@ -12,6 +12,7 @@ import {
 
 import { Branch, User, ROLES, UserRole } from '../types';
 import { cn } from '../types';
+import { Select } from './ui/Select';
 
 interface HeaderProps {
   user: User;
@@ -84,18 +85,17 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2">
           <Globe size={16} className="text-slate-400 shrink-0" />
           {user.role === 'SUPER_ADMIN' ? (
-            <select
-              value={currentBranch?.id || ''}
-              onChange={(e) => {
-                const b = branches.find(br => br.id === Number(e.target.value));
-                if (b) onBranchChange(b);
-              }}
-              className="bg-transparent border-none text-sm font-semibold text-slate-700 focus:ring-0 cursor-pointer outline-none max-w-[140px] truncate"
-            >
-              {branches.map(b => (
-                <option key={b.id} value={b.id}>{b.branch_name}</option>
-              ))}
-            </select>
+            <div className="w-[150px]">
+              <Select
+                value={currentBranch?.id ? String(currentBranch.id) : ''}
+                onChange={(v) => {
+                  const b = branches.find(br => br.id === Number(v));
+                  if (b) onBranchChange(b);
+                }}
+                options={branches.map(b => ({ value: String(b.id), label: b.branch_name }))}
+                size="sm"
+              />
+            </div>
           ) : (
             <span className="text-sm font-semibold text-slate-700 max-w-[140px] truncate">
               {currentBranch?.branch_name ?? 'No Branch'}

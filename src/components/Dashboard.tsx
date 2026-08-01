@@ -58,12 +58,16 @@ import { SectionManagement } from './SectionManagement';
 import { SubjectModule } from './SubjectModule';
 import { AdmissionKeys } from './AdmissionKeys';
 import { InvoiceManagement } from './FeeManagement/InvoiceManagement';
-import { useStudents, useDeleteStudent } from '../hooks/use-student';
+import { TimeTablePeriodsManager } from './TimeTable/TimeTablePeriodsManager';
+import { TimeTableGenerate } from './TimeTable/TimeTableGenerate';
+import { TeacherTimeTablePrint } from './TimeTable/TeacherTimeTablePrint';
+import { useStudents, useDeleteStudent, useUpdateStudent } from '../hooks/use-student';
 import { StudentDetailsModal } from './StudentDetailsModal';
 import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
 import { EmptyState } from './ui/EmptyState';
+import { Select } from './ui/Select';
 import { 
   AreaChart, 
   Area, 
@@ -128,6 +132,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
   );
 
   const [studentSearchQuery, setStudentSearchQuery] = React.useState('');
+  const [revenueChartRange, setRevenueChartRange] = React.useState('Last 7 Days');
+  const [dashboardClassFilter, setDashboardClassFilter] = React.useState('All Classes');
+  const [studentStatusFilter, setStudentStatusFilter] = React.useState<'' | 'active' | 'inactive'>('');
 
   // Student CRUD State
   const [viewingStudent, setViewingStudent] = React.useState<any | null>(null);
@@ -136,6 +143,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(selectedBranchId || 1);
   const deleteStudentMutation = useDeleteStudent();
+  const updateStudentMutation = useUpdateStudent();
+
+  const toggleStudentActive = (s: { id: number; is_active: boolean }) => {
+    updateStudentMutation.mutate({ id: s.id, data: { is_active: !s.is_active } });
+  };
 
   const renderSuperAdmin = () => {
     const d = overviewResp?.data as SuperAdminOverview | undefined;
@@ -147,6 +159,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
       'subjects', 'results', 'class-syllabus', 'roles', 'staff',
+      'timetable-periods', 'timetable-generate',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -186,10 +199,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                     <h3 className="text-xl font-bold text-slate-800">Platform Growth</h3>
                     <p className="text-slate-500 text-sm">Revenue and user acquisition over time</p>
                   </div>
-                  <select className="bg-slate-50 border-none rounded-xl px-4 py-2 text-sm font-semibold outline-none">
-                    <option>Last 7 Days</option>
-                    <option>Last 30 Days</option>
-                  </select>
+                  <div className="w-36">
+                    <Select
+                      value={revenueChartRange}
+                      onChange={setRevenueChartRange}
+                      options={[{ value: 'Last 7 Days', label: 'Last 7 Days' }, { value: 'Last 30 Days', label: 'Last 30 Days' }]}
+                      size="sm"
+                    />
+                  </div>
                 </div>
                 <div className="h-[300px] w-full">
                   <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
@@ -424,6 +441,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <RolesPage />
           </motion.div>
         )}
+
+        {activeTab === 'timetable-periods' && (
+          <motion.div
+            key="timetable-periods"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTablePeriodsManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-generate' && (
+          <motion.div
+            key="timetable-generate"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTableGenerate onTabChange={onTabChange} />
+          </motion.div>
+        )}
       </AnimatePresence>
     </div>
   );
@@ -431,6 +470,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   const renderBranchAdmin = () => {
     const filteredStudents = students?.filter(s => {
+      if (studentStatusFilter === 'active' && !s.is_active) return false;
+      if (studentStatusFilter === 'inactive' && s.is_active) return false;
+
       const query = studentSearchQuery.toLowerCase().trim();
       if (!query) return true;
       
@@ -501,14 +543,26 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex flex-wrap items-center gap-2">
                   <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
                     <BookOpen size={16} className="text-slate-400" />
-                    <select className="bg-transparent border-none text-sm font-bold text-slate-600 outline-none w-full lg:w-32">
-                      <option>All Classes</option>
-                    </select>
+                    <Select
+                      value={dashboardClassFilter}
+                      onChange={setDashboardClassFilter}
+                      options={[{ value: 'All Classes', label: 'All Classes' }]}
+                      size="sm"
+                    />
                   </div>
-                  <button className="flex items-center gap-2 px-4 py-2.5 bg-slate-50 text-slate-500 rounded-xl hover:bg-slate-100 transition-all border border-transparent font-bold text-sm">
-                    <Filter size={18} />
-                    <span className="lg:hidden">Filter</span>
-                  </button>
+                  <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
+                    <Filter size={16} className="text-slate-400" />
+                    <Select
+                      value={studentStatusFilter}
+                      onChange={(v) => setStudentStatusFilter(v as '' | 'active' | 'inactive')}
+                      options={[
+                        { value: 'active', label: 'Active' },
+                        { value: 'inactive', label: 'Inactive' },
+                      ]}
+                      placeholder="All Status"
+                      size="sm"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -546,7 +600,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
                           <EmptyState 
                             icon={GraduationCap}
                             title="No Students Found"
-                            description={studentSearchQuery ? `No records match "${studentSearchQuery}"` : "Begin by registering your first student."}
+                            description={studentSearchQuery ? `No records match "${studentSearchQuery}"` : studentStatusFilter ? "No students match this status filter." : "Begin by registering your first student."}
                             actionLabel={studentSearchQuery ? "Clear Search" : "New Admission"}
                             onAction={studentSearchQuery ? () => setStudentSearchQuery('') : () => {
                               setEditingStudent(null);
@@ -588,10 +642,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                             </div>
                           </td>
                           <td className="px-8 py-5">
-                            <div className="flex items-center gap-1.5 text-emerald-500 text-xs font-bold">
-                              <div className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                              Active
-                            </div>
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleStudentActive(s); }}
+                              disabled={updateStudentMutation.isPending}
+                              title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                                s.is_active
+                                  ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              }`}
+                            >
+                              {s.is_active ? 'Active' : 'Inactive'}
+                            </button>
                           </td>
                           <td className="px-8 py-5 text-right">
                             <div className="flex items-center justify-end gap-2">
@@ -660,10 +723,19 @@ export const Dashboard: React.FC<DashboardProps> = ({
                               </div>
                             </div>
                           </div>
-                          <div className="flex items-center gap-1.5 text-emerald-500 text-[10px] font-bold bg-emerald-50 px-2 py-1 rounded-full uppercase">
-                            <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                            Active
-                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleStudentActive(s); }}
+                            disabled={updateStudentMutation.isPending}
+                            title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                              s.is_active
+                                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {s.is_active ? 'Active' : 'Inactive'}
+                          </button>
                         </div>
 
                         <div className="flex flex-wrap gap-2">
@@ -934,6 +1006,28 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <RolesPage />
           </motion.div>
         )}
+
+        {activeTab === 'timetable-periods' && (
+          <motion.div
+            key="timetable-periods"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTablePeriodsManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'timetable-generate' && (
+          <motion.div
+            key="timetable-generate"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TimeTableGenerate onTabChange={onTabChange} />
+          </motion.div>
+        )}
       </AnimatePresence>
 
 
@@ -1106,7 +1200,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list'].includes(activeTab) && (
+        {activeTab === 'timetable-teacher-print' && (
+          <motion.div
+            key="timetable-teacher-print"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <TeacherTimeTablePrint selfOnly />
+          </motion.div>
+        )}
+
+        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list', 'timetable-teacher-print'].includes(activeTab) && (
           <motion.div
             key="placeholder"
             initial={{ opacity: 0 }}

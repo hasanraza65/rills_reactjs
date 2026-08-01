@@ -21,6 +21,7 @@ import {
 import { cn, Book, IssuedBook, BOOKS_DATA, ISSUED_BOOKS_DATA, STUDENTS } from '../../types';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 
 export const LibraryManager: React.FC = () => {
@@ -30,6 +31,9 @@ export const LibraryManager: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAddBook, setShowAddBook] = useState(false);
   const [showIssueBook, setShowIssueBook] = useState(false);
+  const [newBookCategory, setNewBookCategory] = useState('Fiction');
+  const [issueStudentId, setIssueStudentId] = useState('');
+  const [issueBookId, setIssueBookId] = useState('');
 
   const filteredBooks = books.filter(b => 
     b.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -473,12 +477,16 @@ export const LibraryManager: React.FC = () => {
                   </div>
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Category</label>
-                    <select className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-brand-500 appearance-none">
-                      <option>Fiction</option>
-                      <option>Science</option>
-                      <option>Mathematics</option>
-                      <option>History</option>
-                    </select>
+                    <Select
+                      value={newBookCategory}
+                      onChange={setNewBookCategory}
+                      options={[
+                        { value: 'Fiction', label: 'Fiction' },
+                        { value: 'Science', label: 'Science' },
+                        { value: 'Mathematics', label: 'Mathematics' },
+                        { value: 'History', label: 'History' },
+                      ]}
+                    />
                   </div>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
@@ -527,19 +535,21 @@ export const LibraryManager: React.FC = () => {
               <div className="p-6 sm:p-8 space-y-4 sm:space-y-6">
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Select Student</label>
-                  <select className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-brand-500 appearance-none">
-                    {STUDENTS.map(s => (
-                      <option key={s.id} value={s.id}>{s.name} ({s.rollNumber})</option>
-                    ))}
-                  </select>
+                  <Select
+                    value={issueStudentId}
+                    onChange={setIssueStudentId}
+                    options={STUDENTS.map(s => ({ value: s.id, label: `${s.name} (${s.rollNumber})` }))}
+                    placeholder="Select a student..."
+                  />
                 </div>
                 <div className="space-y-2">
                   <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider ml-1">Select Book</label>
-                  <select className="w-full px-4 py-3 bg-slate-50 border-none rounded-2xl text-sm focus:ring-2 focus:ring-brand-500 appearance-none">
-                    {books.filter(b => b.availableCopies > 0).map(b => (
-                      <option key={b.id} value={b.id}>{b.title} - {b.author}</option>
-                    ))}
-                  </select>
+                  <Select
+                    value={issueBookId}
+                    onChange={setIssueBookId}
+                    options={books.filter(b => b.availableCopies > 0).map(b => ({ value: b.id, label: `${b.title} - ${b.author}` }))}
+                    placeholder="Select a book..."
+                  />
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">

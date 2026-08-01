@@ -13,14 +13,17 @@ import {
   CalendarDays,
   Loader2,
   ShieldCheck,
+  BookOpen,
   X,
 } from 'lucide-react';
 import { cn } from '../types';
 import { StatCard } from './StatCard';
 import { EmptyState } from './ui/EmptyState';
+import { Select } from './ui/Select';
 import { StaffFormModal } from './Staff/StaffFormModal';
 import { UserPermissionsModal } from './Staff/UserPermissionsModal';
-import { useStaffMembers, useStaffMember, useDeleteStaff } from '../hooks/use-staff-members';
+import { TeacherSubjectsModal } from './Staff/TeacherSubjectsModal';
+import { useStaffMembers, useStaffMember, useDeleteStaff, useUpdateStaff } from '../hooks/use-staff-members';
 import { useRoles } from '../hooks/use-roles';
 import { usePermissions } from '../hooks/use-permissions';
 import { useAuthStore } from '../store/use-auth-store';
@@ -30,6 +33,10 @@ import type { StaffMember } from '../types/api/staff';
 interface StaffManagementProps {
   role?: string;
 }
+
+// Only actual Teachers (role 4) teach subjects — matches the same restriction
+// applied to subject assignment in SubjectModule.tsx.
+const TEACHER_ROLE_ID = 4;
 
 const fmtDate = (d: string | null | undefined) =>
   d ? new Date(d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
@@ -58,14 +65,17 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
   const { data: staff, isLoading, error } = useStaffMembers(selectedBranchId);
   const { data: roles } = useRoles();
   const deleteStaff = useDeleteStaff();
+  const updateStaff = useUpdateStaff();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState<number | ''>('');
+  const [statusFilter, setStatusFilter] = useState<'' | 'active' | 'inactive'>('');
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState<StaffMember | null>(null);
   const [viewingId, setViewingId] = useState<number | null>(null);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [permissionsFor, setPermissionsFor] = useState<StaffMember | null>(null);
+  const [subjectsFor, setSubjectsFor] = useState<StaffMember | null>(null);
 
   // The list row can be missing/stale relations (e.g. staff_profile), so the
   // view modal re-fetches the single-record detail endpoint by id instead of
@@ -79,6 +89,8 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
     const q = searchQuery.toLowerCase().trim();
     return (staff ?? []).filter((s) => {
       if (roleFilter !== '' && s.user_role !== roleFilter) return false;
+      if (statusFilter === 'active' && !s.is_active) return false;
+      if (statusFilter === 'inactive' && s.is_active) return false;
       if (!q) return true;
       return (
         s.name.toLowerCase().includes(q) ||
@@ -87,7 +99,35 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
         (s.role?.name ?? '').toLowerCase().includes(q)
       );
     });
-  }, [staff, searchQuery, roleFilter]);
+  }, [staff, searchQuery, roleFilter, statusFilter]);
+
+  // Staff's update endpoint isn't partial-friendly, so the toggle resends the
+  // full current profile (mirroring StaffFormModal's edit-seed shape) with
+  // just is_active flipped — sending only a subset would null out the rest.
+  const toggleActive = (s: StaffMember) => {
+    const p = s.staff_profile;
+    updateStaff.mutate({
+      id: s.id,
+      payload: {
+        name: s.name,
+        father_husband_name: p?.father_husband_name ?? undefined,
+        cnic: s.cnic ?? undefined,
+        gender: p?.gender ?? undefined,
+        dob: p?.dob ? p.dob.substring(0, 10) : undefined,
+        date_of_joining: p?.date_of_joining ? p.date_of_joining.substring(0, 10) : undefined,
+        marital_status: p?.marital_status ?? undefined,
+        contact_no: s.phone ?? undefined,
+        whatsapp_no: p?.whatsapp_no ?? undefined,
+        emergency_contact_no: p?.emergency_contact_no ?? undefined,
+        current_address: p?.current_address ?? undefined,
+        permanent_address: p?.permanent_address ?? undefined,
+        user_role: s.user_role,
+        branch_id: s.branch_id,
+        email: s.email,
+        is_active: !s.is_active,
+      },
+    });
+  };
 
   const openAdd = () => { setEditing(null); setShowForm(true); };
   const openEdit = (s: StaffMember) => { setEditing(s); setShowForm(true); };
@@ -105,6 +145,22 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
     >
       {s.role?.name ?? 'Staff'}
     </span>
+  );
+
+  const statusPill = (s: StaffMember) => (
+    <button
+      type="button"
+      onClick={(e) => { e.stopPropagation(); toggleActive(s); }}
+      disabled={updateStaff.isPending}
+      title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
+      className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+        s.is_active
+          ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+          : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+      }`}
+    >
+      {s.is_active ? 'Active' : 'Inactive'}
+    </button>
   );
 
   return (
@@ -144,16 +200,25 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
             className="w-full bg-white border border-slate-100 rounded-xl py-3 pl-12 pr-4 text-sm outline-none font-medium shadow-sm"
           />
         </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value === '' ? '' : Number(e.target.value))}
-          className="bg-white border border-slate-100 rounded-xl px-4 py-3 text-sm font-bold text-slate-600 outline-none shadow-sm"
-        >
-          <option value="">All Roles</option>
-          {roles?.map((r) => (
-            <option key={r.id} value={r.id}>{r.name}</option>
-          ))}
-        </select>
+        <div className="w-48">
+          <Select
+            value={roleFilter === '' ? '' : String(roleFilter)}
+            onChange={(v) => setRoleFilter(v === '' ? '' : Number(v))}
+            options={(roles || []).map((r) => ({ value: String(r.id), label: r.name }))}
+            placeholder="All Roles"
+          />
+        </div>
+        <div className="w-40">
+          <Select
+            value={statusFilter}
+            onChange={(v) => setStatusFilter(v as '' | 'active' | 'inactive')}
+            options={[
+              { value: 'active', label: 'Active' },
+              { value: 'inactive', label: 'Inactive' },
+            ]}
+            placeholder="All Status"
+          />
+        </div>
       </div>
 
       {/* Directory */}
@@ -162,12 +227,12 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
           <table className="w-full text-left hidden lg:table">
             <thead>
               <tr className="bg-slate-50/50">
-                {['Staff', 'Role', 'CNIC', 'Contact', 'Branch', 'Joined', 'Actions'].map((h, i) => (
+                {['Staff', 'Role', 'CNIC', 'Contact', 'Branch', 'Joined', 'Status', 'Actions'].map((h, i) => (
                   <th
                     key={h}
                     className={cn(
                       'px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest',
-                      i === 6 && 'text-right'
+                      i === 7 && 'text-right'
                     )}
                   >
                     {h}
@@ -178,23 +243,23 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
             <tbody className="divide-y divide-slate-50">
               {isLoading ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
+                  <td colSpan={8} className="px-6 py-16 text-center">
                     <Loader2 className="w-6 h-6 animate-spin text-brand-500 mx-auto" />
                   </td>
                 </tr>
               ) : error ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center text-rose-500 font-bold">
+                  <td colSpan={8} className="px-6 py-16 text-center text-rose-500 font-bold">
                     Failed to load staff. Please try again.
                   </td>
                 </tr>
               ) : filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-16 text-center">
+                  <td colSpan={8} className="px-6 py-16 text-center">
                     <EmptyState
                       icon={Users}
                       title="No Staff Found"
-                      description={searchQuery || roleFilter !== '' ? 'No staff match your filters.' : 'Add your first staff member to get started.'}
+                      description={searchQuery || roleFilter !== '' || statusFilter !== '' ? 'No staff match your filters.' : 'Add your first staff member to get started.'}
                       actionLabel={can('staff', 'create') && !searchQuery ? 'Add Staff' : undefined}
                       onAction={can('staff', 'create') && !searchQuery ? openAdd : undefined}
                     />
@@ -219,6 +284,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                     <td className="px-6 py-4 text-sm text-slate-600 font-medium">{s.phone || '—'}</td>
                     <td className="px-6 py-4 text-sm text-slate-600 font-medium">{branchName(s.branch_id)}</td>
                     <td className="px-6 py-4 text-sm text-slate-600 font-medium">{fmtDate(s.staff_profile?.date_of_joining)}</td>
+                    <td className="px-6 py-4">{statusPill(s)}</td>
                     <td className="px-6 py-4">
                       <div className="flex items-center justify-end gap-1">
                         <button onClick={() => setViewingId(s.id)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all" title="View">
@@ -232,6 +298,11 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                         {canManagePermissionsFor(s) && (
                           <button onClick={() => setPermissionsFor(s)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all" title="Manage Permissions">
                             <ShieldCheck size={16} />
+                          </button>
+                        )}
+                        {s.user_role === TEACHER_ROLE_ID && can('staff', 'edit') && (
+                          <button onClick={() => setSubjectsFor(s)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl transition-all" title="Assign Subjects">
+                            <BookOpen size={16} />
                           </button>
                         )}
                         {can('staff', 'delete') && (
@@ -268,7 +339,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                         <p className="text-xs text-slate-400">{s.email}</p>
                       </div>
                     </div>
-                    {roleBadge(s)}
+                    <div className="flex flex-col items-end gap-1.5">
+                      {roleBadge(s)}
+                      {statusPill(s)}
+                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-2 text-xs text-slate-500">
                     <span className="flex items-center gap-1"><CreditCard size={12} /> {s.cnic || '—'}</span>
@@ -280,6 +354,7 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                     <button onClick={() => setViewingId(s.id)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl"><Eye size={16} /></button>
                     {can('staff', 'edit') && <button onClick={() => openEdit(s)} className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl"><Edit2 size={16} /></button>}
                     {canManagePermissionsFor(s) && <button onClick={() => setPermissionsFor(s)} className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl"><ShieldCheck size={16} /></button>}
+                    {s.user_role === TEACHER_ROLE_ID && can('staff', 'edit') && <button onClick={() => setSubjectsFor(s)} className="p-2 text-slate-400 hover:text-emerald-500 hover:bg-emerald-50 rounded-xl"><BookOpen size={16} /></button>}
                     {can('staff', 'delete') && <button onClick={() => setDeletingId(s.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl"><Trash2 size={16} /></button>}
                   </div>
                 </div>
@@ -310,6 +385,18 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
         )}
       </AnimatePresence>
 
+      {/* Assign Subjects modal */}
+      <AnimatePresence>
+        {subjectsFor && (
+          <TeacherSubjectsModal
+            teacherId={subjectsFor.id}
+            teacherName={subjectsFor.name}
+            branchId={subjectsFor.branch_id ?? selectedBranchId ?? 1}
+            onClose={() => setSubjectsFor(null)}
+          />
+        )}
+      </AnimatePresence>
+
       {/* View modal */}
       <AnimatePresence>
         {viewingId != null && (
@@ -336,7 +423,10 @@ export const StaffManagement: React.FC<StaffManagementProps> = () => {
                     </div>
                     <div>
                       <p className="text-xl font-extrabold text-slate-800">{viewing.name}</p>
-                      {roleBadge(viewing)}
+                      <div className="flex items-center gap-2 mt-1">
+                        {roleBadge(viewing)}
+                        {statusPill(viewing)}
+                      </div>
                     </div>
                   </div>
                   <div className="grid grid-cols-2 gap-x-6 gap-y-4 text-sm">

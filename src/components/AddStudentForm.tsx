@@ -28,6 +28,7 @@ import {
 import { cn, FeeHead, FeeFrequency } from '../types';
 import { apiClient } from '../lib/api-client';
 import { AddClassModal } from './AddClassModal';
+import { Select } from './ui/Select';
 import { useClasses } from '../hooks/use-class';
 import { useParents, useCreateParent } from '../hooks/use-parent';
 import { useSections, useSectionsByClass } from '../hooks/use-section';
@@ -695,30 +696,22 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
               <Plus size={12} /> Add New
             </button>
           </div>
-          <select 
+          <Select
             value={formData.classId}
-            onChange={e => setFormData({...formData, classId: e.target.value, sectionId: ''})}
-            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
-          >
-            <option value="">Select a class...</option>
-            {classesList?.map(c => (
-              <option key={c.id} value={c.id}>{c.name}</option>
-            ))}
-          </select>
+            onChange={(v) => setFormData({...formData, classId: v, sectionId: ''})}
+            options={(classesList || []).map(c => ({ value: String(c.id), label: c.name }))}
+            placeholder="Select a class..."
+          />
         </div>
         <div className="space-y-2">
           <label className="text-xs font-bold text-slate-400 uppercase tracking-wider">Select Section</label>
-          <select 
+          <Select
             value={formData.sectionId}
-            onChange={e => setFormData({...formData, sectionId: e.target.value})}
-            className="w-full bg-slate-50 border-none rounded-2xl py-3.5 px-4 text-sm focus:ring-2 focus:ring-brand-500/20 outline-none appearance-none"
+            onChange={(v) => setFormData({...formData, sectionId: v})}
+            options={(sectionsList || []).map(s => ({ value: String(s.id), label: s.name }))}
+            placeholder="Select a section..."
             disabled={!formData.classId}
-          >
-            <option value="">Select a section...</option>
-            {sectionsList?.map(s => (
-              <option key={s.id} value={s.id}>{s.name}</option>
-            ))}
-          </select>
+          />
         </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -1188,15 +1181,12 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-1.5">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Guardian Type</label>
-                  <select
+                  <Select
                     value={formData.newParent.guardian_type}
-                    onChange={(e) => setFormData({...formData, newParent: {...formData.newParent, guardian_type: e.target.value as 'father' | 'mother'}})}
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 px-4 text-sm outline-none focus:ring-2 focus:ring-brand-500/10 appearance-none font-medium"
+                    onChange={(v) => setFormData({...formData, newParent: {...formData.newParent, guardian_type: v as 'father' | 'mother'}})}
+                    options={[{ value: 'father', label: 'Father' }, { value: 'mother', label: 'Mother' }]}
                     required
-                  >
-                    <option value="father">Father</option>
-                    <option value="mother">Mother</option>
-                  </select>
+                  />
                 </div>
                 <div className="space-y-1.5 sm:col-span-2">
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Residential Address</label>

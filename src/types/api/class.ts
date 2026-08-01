@@ -10,6 +10,7 @@ export interface ClassSection {
   name: string;
   created_at: string;
   updated_at: string;
+  subjects_count?: number;
 }
 
 export interface ClassData {
@@ -20,6 +21,7 @@ export interface ClassData {
   created_at: string;
   updated_at: string;
   sections?: ClassSection[];
+  added_by_user?: { id: number; name: string };
 }
 
 export interface CreateClassInput {

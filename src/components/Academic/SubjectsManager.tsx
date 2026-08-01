@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Search,
-  Filter,
   Loader2,
   BookOpen,
   ArrowLeft,
@@ -14,6 +13,7 @@ import {
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 import { useBranchStore } from '../../store/use-branch-store';
 import { ClassSection, ClassData } from '../../types/api/class';
@@ -22,7 +22,7 @@ import { ClassSubjectData } from '../../types/api/class-subject';
 import { classService } from '../../lib/services/class-service';
 import { sectionService } from '../../lib/services/section-service';
 import { SectionData } from '../../types/api/section';
-import { X, ChevronDown } from 'lucide-react';
+import { X } from 'lucide-react';
 
 const SectionSubjectsView: React.FC<{ section: ClassSection, className: string, onBack: () => void }> = ({ section, className, onBack }) => {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -216,8 +216,7 @@ const AddSubjectModal: React.FC<{ branchId: number; teachers: { id: number; name
       .finally(() => setLoadingClasses(false));
   }, [branchId]);
 
-  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const classId = e.target.value;
+  const handleClassChange = (classId: string) => {
     setForm(prev => ({ ...prev, class_id: classId, section_id: '' }));
     if (!classId) { setSections([]); return; }
     setLoadingSections(true);
@@ -284,49 +283,36 @@ const AddSubjectModal: React.FC<{ branchId: number; teachers: { id: number; name
             {/* Class */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Class</label>
-              <div className="relative">
-                <select
-                  name="class_id" value={form.class_id} onChange={handleClassChange} required
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10"
-                >
-                  <option value="" disabled>{loadingClasses ? 'Loading...' : 'Select Class'}</option>
-                  {classes.map((c: ClassData) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={form.class_id}
+                onChange={handleClassChange}
+                options={classes.map((c: ClassData) => ({ value: String(c.id), label: c.name }))}
+                placeholder={loadingClasses ? 'Loading...' : 'Select Class'}
+                required
+              />
             </div>
             {/* Section */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Section</label>
-              <div className="relative">
-                <select
-                  name="section_id" value={form.section_id} onChange={handleChange} required
-                  disabled={!form.class_id || loadingSections}
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10 disabled:opacity-50"
-                >
-                  <option value="" disabled>
-                    {!form.class_id ? 'Select a class first' : loadingSections ? 'Loading...' : 'Select Section'}
-                  </option>
-                  {sections.map((s: SectionData) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={form.section_id}
+                onChange={(v) => setForm(prev => ({ ...prev, section_id: v }))}
+                disabled={!form.class_id || loadingSections}
+                options={sections.map((s: SectionData) => ({ value: String(s.id), label: s.name }))}
+                placeholder={!form.class_id ? 'Select a class first' : loadingSections ? 'Loading...' : 'Select Section'}
+                required
+              />
             </div>
             {/* Teacher */}
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Teacher</label>
-              <div className="relative">
-                <select
-                  name="teacher_id" value={form.teacher_id} onChange={handleChange} required
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10"
-                >
-                  <option value="" disabled>Select Teacher</option>
-                  {teachers.map((t: { id: number; name: string }) => (
-                    <option key={t.id} value={t.id}>{t.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={form.teacher_id}
+                onChange={(v) => setForm(prev => ({ ...prev, teacher_id: v }))}
+                options={teachers.map((t: { id: number; name: string }) => ({ value: String(t.id), label: t.name }))}
+                placeholder="Select Teacher"
+                required
+              />
             </div>
           </div>
           <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
@@ -374,8 +360,7 @@ const EditSubjectModal: React.FC<{
     }
   }, []);
 
-  const handleClassChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const classId = e.target.value;
+  const handleClassChange = (classId: string) => {
     setForm(prev => ({ ...prev, class_id: classId, section_id: '' }));
     if (!classId) { setSections([]); return; }
     setLoadingSections(true);
@@ -435,37 +420,34 @@ const EditSubjectModal: React.FC<{
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Class</label>
-              <div className="relative">
-                <select name="class_id" value={form.class_id} onChange={handleClassChange} required
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10">
-                  <option value="" disabled>{loadingClasses ? 'Loading...' : 'Select Class'}</option>
-                  {classes.map((c: ClassData) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={form.class_id}
+                onChange={handleClassChange}
+                options={classes.map((c: ClassData) => ({ value: String(c.id), label: c.name }))}
+                placeholder={loadingClasses ? 'Loading...' : 'Select Class'}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Section</label>
-              <div className="relative">
-                <select name="section_id" value={form.section_id} onChange={handleChange} required
-                  disabled={!form.class_id || loadingSections}
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10 disabled:opacity-50">
-                  <option value="" disabled>{!form.class_id ? 'Select a class first' : loadingSections ? 'Loading...' : 'Select Section'}</option>
-                  {sections.map((s: SectionData) => <option key={s.id} value={s.id}>{s.name}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={form.section_id}
+                onChange={(v) => setForm(prev => ({ ...prev, section_id: v }))}
+                disabled={!form.class_id || loadingSections}
+                options={sections.map((s: SectionData) => ({ value: String(s.id), label: s.name }))}
+                placeholder={!form.class_id ? 'Select a class first' : loadingSections ? 'Loading...' : 'Select Section'}
+                required
+              />
             </div>
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Teacher</label>
-              <div className="relative">
-                <select name="teacher_id" value={form.teacher_id} onChange={handleChange} required
-                  className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10">
-                  <option value="" disabled>Select Teacher</option>
-                  {teachers.map((t: { id: number; name: string }) => <option key={t.id} value={t.id}>{t.name}</option>)}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={form.teacher_id}
+                onChange={(v) => setForm(prev => ({ ...prev, teacher_id: v }))}
+                options={teachers.map((t: { id: number; name: string }) => ({ value: String(t.id), label: t.name }))}
+                placeholder="Select Teacher"
+                required
+              />
             </div>
           </div>
           <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center gap-3">
@@ -563,8 +545,7 @@ export const SubjectsManager: React.FC = () => {
       .catch(() => setAllSections([]));
   }, [branchId]);
 
-  const handleSectionFilter = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const val = e.target.value;
+  const handleSectionFilter = (val: string) => {
     setSectionFilter(val);
     loadSubjects(val ? Number(val) : undefined);
   };
@@ -605,17 +586,12 @@ export const SubjectsManager: React.FC = () => {
             />
           </div>
           <div className="relative w-full sm:w-48">
-            <select
+            <Select
               value={sectionFilter}
               onChange={handleSectionFilter}
-              className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-600 text-sm pr-10"
-            >
-              <option value="">All Sections</option>
-              {allSections.map((s: SectionData) => (
-                <option key={s.id} value={s.id}>{s.name}</option>
-              ))}
-            </select>
-            <Filter size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
+              options={allSections.map((s: SectionData) => ({ value: String(s.id), label: s.name }))}
+              placeholder="All Sections"
+            />
           </div>
         </div>
 

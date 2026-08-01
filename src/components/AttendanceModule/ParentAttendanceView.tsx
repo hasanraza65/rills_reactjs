@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from '../../types';
+import { Select } from '../ui/Select';
 import { useMyChildren, useStudentParentView } from '../../hooks/use-attendance';
 import { AttendanceStatusCode } from '../../types/api/attendance';
 
@@ -110,15 +111,14 @@ export const ParentAttendanceView: React.FC = () => {
         <div className="flex items-center gap-3">
           {/* Student selector (if multiple children) */}
           {children.length > 1 && (
-            <select
-              value={selectedStudentId ?? ''}
-              onChange={(e) => setSelectedStudentId(Number(e.target.value))}
-              className="bg-white border border-slate-100 rounded-xl px-4 py-2.5 text-sm font-bold text-slate-600 outline-none shadow-sm"
-            >
-              {children.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
-              ))}
-            </select>
+            <div className="w-48">
+              <Select
+                value={selectedStudentId ? String(selectedStudentId) : ''}
+                onChange={(v) => setSelectedStudentId(Number(v))}
+                options={children.map((c) => ({ value: String(c.id), label: c.name }))}
+                size="sm"
+              />
+            </div>
           )}
 
           {/* Calendar / List toggle */}

@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  Search, 
-  Filter, 
+import {
+  Search,
+  Filter,
   Loader2,
   BookOpen,
   ArrowLeft,
@@ -10,6 +10,7 @@ import {
   GraduationCap,
   Calendar,
   ChevronRight,
+  ChevronDown,
   Plus,
   X,
   User,
@@ -21,107 +22,187 @@ import { Button } from './ui/Button';
 import { EmptyState } from './ui/EmptyState';
 import { useClasses } from '../hooks/use-class';
 import { useClassSubjects, useCreateClassSubject, useUpdateClassSubject, useDeleteClassSubject } from '../hooks/use-class-subject';
+import { useStaffMembers } from '../hooks/use-staff-members';
+import { useBranches } from '../hooks/use-branch';
 import { useBranchStore } from '../store/use-branch-store';
 import { ClassSection } from '../types/api/class';
 import { ClassSubjectData } from '../types/api/class-subject';
+
+// Only actual Teachers can be assigned to teach a subject (unlike Timetable period
+// duty, which is open to any non-Super-Admin staff role).
+const TEACHER_ROLE_ID = 4;
+
+/** One row per unique subject name in this section; each entry is one teacher assigned to it. */
+interface SubjectGroup {
+  subjectName: string;
+  entries: ClassSubjectData[];
+  earliestDate: string;
+}
 
 /**
  * Section Subjects View - Shows subjects for a specific section
  * Includes Add Subject functionality
  */
-const SectionSubjectsView: React.FC<{ 
-  section: ClassSection; 
-  className: string; 
+const SectionSubjectsView: React.FC<{
+  section: ClassSection;
+  className: string;
   onBack: () => void;
 }> = ({ section, className: classTitle, onBack }) => {
   const { selectedBranchId } = useBranchStore();
+  const branchId = selectedBranchId || 1;
   const { data: subjectsResponse, isLoading, error } = useClassSubjects(section.id, selectedBranchId);
+  const { data: staff } = useStaffMembers(branchId);
+  const teacherOptions = (staff || []).filter((s) => s.user_role === TEACHER_ROLE_ID);
   const createMutation = useCreateClassSubject();
   const updateMutation = useUpdateClassSubject();
   const deleteMutation = useDeleteClassSubject();
-  
+
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [subjectName, setSubjectName] = useState('');
-  const [teacherId, setTeacherId] = useState<number>(1);
+  const [teacherIds, setTeacherIds] = useState<number[]>([]);
+  const [isAdding, setIsAdding] = useState(false);
 
-  // Edit state
+  // Which group's teacher multi-select modal is open (keyed by subject name). A modal
+  // (not an inline popover) avoids clipping/jerk from the table's horizontal scroll
+  // container — CSS collapses "overflow-x: auto" + "overflow-y: visible" back to
+  // clipped on most browsers, so an absolutely-positioned dropdown gets cut off.
+  const [teacherPickerFor, setTeacherPickerFor] = useState<string | null>(null);
+  const [pendingTeacherToggle, setPendingTeacherToggle] = useState<string | null>(null);
+
+  // Edit state — renames the subject name across every teacher-entry in the group.
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
-  const [editingSubject, setEditingSubject] = useState<ClassSubjectData | null>(null);
+  const [editingGroup, setEditingGroup] = useState<SubjectGroup | null>(null);
   const [editSubjectName, setEditSubjectName] = useState('');
-  const [editTeacherId, setEditTeacherId] = useState<number>(1);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
-  // Delete state
-  const [subjectToDelete, setSubjectToDelete] = useState<ClassSubjectData | null>(null);
+  // Delete state — removes every teacher-entry in the group (the whole subject).
+  const [groupToDelete, setGroupToDelete] = useState<SubjectGroup | null>(null);
+  const [isDeletingGroup, setIsDeletingGroup] = useState(false);
 
   const subjects = subjectsResponse?.data || [];
 
-  const handleAddSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!subjectName.trim()) return;
+  const subjectGroups: SubjectGroup[] = useMemo(() => {
+    const map = new Map<string, ClassSubjectData[]>();
+    subjects.forEach((s) => {
+      const key = s.name || s.subject_name;
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(s);
+    });
+    return Array.from(map.entries()).map(([name, entries]) => ({
+      subjectName: name,
+      entries,
+      earliestDate: entries.reduce((min, e) => (e.created_at && e.created_at < min ? e.created_at : min), entries[0].created_at),
+    }));
+  }, [subjects]);
 
-    createMutation.mutate(
-      {
-        class_id: section.school_class_id,
-        section_id: section.id,
-        teacher_id: teacherId,
-        subject_name: subjectName.trim(),
-        branch_id: 1,
-      },
-      {
-        onSuccess: () => {
-          setIsAddModalOpen(false);
-          setSubjectName('');
-          setTeacherId(1);
-        },
-      }
-    );
+  const teacherPickerGroup = subjectGroups.find((g) => g.subjectName === teacherPickerFor) || null;
+
+  const toggleAddTeacher = (id: number) => {
+    setTeacherIds((prev) => (prev.includes(id) ? prev.filter((t) => t !== id) : [...prev, id]));
   };
 
-  const handleOpenEdit = (sub: ClassSubjectData) => {
-    setEditingSubject(sub);
-    setEditSubjectName(sub.name || sub.subject_name || '');
-    setEditTeacherId(sub.teacher_id || 1);
+  // One teacher selected -> one ClassSubject row. Multiple teachers selected for the
+  // same subject name -> one row per teacher (e.g. "English" taught by both Hassan
+  // and Mubeen), created in one submit instead of repeating "Add Subject" per teacher.
+  const handleAddSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!subjectName.trim() || teacherIds.length === 0) return;
+
+    setIsAdding(true);
+    try {
+      for (const tId of teacherIds) {
+        await createMutation.mutateAsync({
+          class_id: section.school_class_id,
+          section_id: section.id,
+          teacher_id: tId,
+          subject_name: subjectName.trim(),
+          branch_id: branchId,
+        });
+      }
+      setIsAddModalOpen(false);
+      setSubjectName('');
+      setTeacherIds([]);
+    } finally {
+      setIsAdding(false);
+    }
+  };
+
+  // Toggling a teacher in a subject's multi-select: checking an unassigned teacher
+  // creates a new entry for them; unchecking an assigned teacher removes their entry.
+  const toggleGroupTeacher = async (group: SubjectGroup, teacherId: number) => {
+    const existing = group.entries.find((e) => e.teacher_id === teacherId);
+    setPendingTeacherToggle(`${group.subjectName}-${teacherId}`);
+    try {
+      if (existing) {
+        await deleteMutation.mutateAsync({ id: existing.id, sectionId: section.id });
+      } else {
+        await createMutation.mutateAsync({
+          class_id: section.school_class_id,
+          section_id: section.id,
+          teacher_id: teacherId,
+          subject_name: group.subjectName,
+          branch_id: branchId,
+        });
+      }
+    } finally {
+      setPendingTeacherToggle(null);
+    }
+  };
+
+  const handleOpenEdit = (group: SubjectGroup) => {
+    setEditingGroup(group);
+    setEditSubjectName(group.subjectName);
     setIsEditModalOpen(true);
   };
 
-  const handleEditSubmit = (e: React.FormEvent) => {
+  const handleEditSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!editingSubject || !editSubjectName.trim()) return;
+    if (!editingGroup || !editSubjectName.trim()) return;
 
-    updateMutation.mutate(
-      {
-        id: editingSubject.id,
-        data: {
-          class_id: section.school_class_id,
-          section_id: section.id,
-          teacher_id: editTeacherId,
-          subject_name: editSubjectName.trim(),
-          _method: 'PUT',
-        },
-      },
-      {
-        onSuccess: () => {
-          setIsEditModalOpen(false);
-          setEditingSubject(null);
-        },
+    setIsSavingEdit(true);
+    try {
+      for (const entry of editingGroup.entries) {
+        await updateMutation.mutateAsync({
+          id: entry.id,
+          data: {
+            class_id: entry.class_id,
+            section_id: entry.section_id,
+            teacher_id: entry.teacher_id,
+            subject_name: editSubjectName.trim(),
+            _method: 'PUT',
+          },
+        });
       }
-    );
+      setIsEditModalOpen(false);
+      setEditingGroup(null);
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
-  const confirmDelete = () => {
-    if (!subjectToDelete) return;
-    deleteMutation.mutate(
-      { id: subjectToDelete.id, sectionId: section.id },
-      { onSuccess: () => setSubjectToDelete(null) }
-    );
+  const confirmDeleteGroup = async () => {
+    if (!groupToDelete) return;
+
+    setIsDeletingGroup(true);
+    try {
+      for (const entry of groupToDelete.entries) {
+        await deleteMutation.mutateAsync({ id: entry.id, sectionId: section.id });
+      }
+      setGroupToDelete(null);
+    } finally {
+      setIsDeletingGroup(false);
+    }
   };
+
+  const teacherNamesLabel = (group: SubjectGroup) =>
+    group.entries.map((e) => e.teacher?.name || `#${e.teacher_id}`).join(', ') || 'No teacher';
 
   return (
     <div className="space-y-6">
       {/* Header with back button */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <motion.button 
+          <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             onClick={onBack}
@@ -141,8 +222,8 @@ const SectionSubjectsView: React.FC<{
 
         <div className="flex items-center gap-3">
           {/* Add Subject Button */}
-          <Button 
-            onClick={() => setIsAddModalOpen(true)} 
+          <Button
+            onClick={() => setIsAddModalOpen(true)}
             leftIcon={<Plus size={18} />}
             className="w-full sm:w-auto shadow-xl shadow-brand-200"
           >
@@ -162,7 +243,7 @@ const SectionSubjectsView: React.FC<{
             <p className="font-bold text-lg">Failed to load subjects</p>
             <p className="text-sm opacity-80 mt-1">There was an error communicating with the server.</p>
           </div>
-        ) : subjects.length === 0 ? (
+        ) : subjectGroups.length === 0 ? (
           <div className="p-16 flex flex-col items-center justify-center text-slate-400">
             <div className="w-20 h-20 rounded-3xl bg-slate-50 flex items-center justify-center mb-6">
               <BookOpen size={36} className="text-slate-300" />
@@ -171,7 +252,7 @@ const SectionSubjectsView: React.FC<{
             <p className="text-sm text-center max-w-md text-slate-500">
               No subjects have been assigned to <strong className="text-slate-700">{classTitle}</strong> — Section <strong className="text-slate-700">{section.name}</strong> yet.
             </p>
-            <button 
+            <button
               onClick={() => setIsAddModalOpen(true)}
               className="mt-6 px-6 py-3 bg-brand-500 text-white rounded-xl text-sm font-bold hover:bg-brand-600 transition-colors shadow-lg shadow-brand-200 flex items-center gap-2"
             >
@@ -186,17 +267,18 @@ const SectionSubjectsView: React.FC<{
               <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[8%]">#</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[30%]">Subject Name</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[25%]">Section</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[22%]">Added On</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[6%]">#</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[24%]">Subject Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[18%]">Section</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[18%]">Teacher(s)</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[19%]">Added On</th>
                     <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right w-[15%]">Actions</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
-                  {subjects.map((sub, idx) => (
-                    <motion.tr 
-                      key={sub.id} 
+                  {subjectGroups.map((group, idx) => (
+                    <motion.tr
+                      key={group.subjectName}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.05 }}
@@ -208,11 +290,13 @@ const SectionSubjectsView: React.FC<{
                       <td className="px-8 py-5">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-indigo-500 text-white flex items-center justify-center font-bold text-sm shadow-lg shadow-brand-100">
-                            {(sub.name || sub.subject_name || 'S').charAt(0)}
+                            {group.subjectName.charAt(0)}
                           </div>
                           <div>
-                            <p className="text-sm font-bold text-slate-800">{sub.name || sub.subject_name}</p>
-                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {sub.id}</p>
+                            <p className="text-sm font-bold text-slate-800">{group.subjectName}</p>
+                            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                              {group.entries.length} teacher{group.entries.length !== 1 ? 's' : ''}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -222,25 +306,36 @@ const SectionSubjectsView: React.FC<{
                         </span>
                       </td>
                       <td className="px-8 py-5">
+                        <button
+                          type="button"
+                          onClick={() => setTeacherPickerFor(group.subjectName)}
+                          className="flex items-center gap-2 text-sm font-bold text-slate-700 hover:bg-slate-100 rounded-lg px-2 py-1 -mx-2 transition-colors"
+                        >
+                          <User size={14} className="text-slate-400 shrink-0" />
+                          <span className="truncate max-w-[140px]">{teacherNamesLabel(group)}</span>
+                          <ChevronDown size={12} className="text-slate-400 shrink-0" />
+                        </button>
+                      </td>
+                      <td className="px-8 py-5">
                         <div className="flex items-center gap-2 text-sm text-slate-500 font-medium">
                           <Calendar size={14} className="text-slate-400" />
-                          {sub.created_at ? new Date(sub.created_at).toLocaleDateString(undefined, {
+                          {group.earliestDate ? new Date(group.earliestDate).toLocaleDateString(undefined, {
                             year: 'numeric', month: 'short', day: 'numeric'
                           }) : '—'}
                         </div>
                       </td>
                       <td className="px-8 py-5 text-right">
                         <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button 
-                            onClick={() => handleOpenEdit(sub)}
-                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all" 
-                            title="Edit Subject"
+                          <button
+                            onClick={() => handleOpenEdit(group)}
+                            className="p-2 text-slate-300 hover:bg-slate-100 hover:text-brand-500 rounded-xl transition-all"
+                            title="Rename Subject"
                           >
                             <Edit2 size={16} />
                           </button>
-                          <button 
-                            onClick={() => setSubjectToDelete(sub)}
-                            className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all" 
+                          <button
+                            onClick={() => setGroupToDelete(group)}
+                            className="p-2 text-slate-300 hover:bg-rose-50 hover:text-rose-500 rounded-xl transition-all"
                             title="Delete Subject"
                           >
                             <Trash2 size={16} />
@@ -255,9 +350,9 @@ const SectionSubjectsView: React.FC<{
 
             {/* Mobile Card View */}
             <div className="lg:hidden divide-y divide-slate-100">
-              {subjects.map((sub, idx) => (
-                <motion.div 
-                  key={sub.id}
+              {subjectGroups.map((group, idx) => (
+                <motion.div
+                  key={group.subjectName}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: idx * 0.05 }}
@@ -265,26 +360,37 @@ const SectionSubjectsView: React.FC<{
                 >
                   <div className="flex items-center gap-3">
                     <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-500 to-indigo-500 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-brand-100">
-                      {(sub.name || sub.subject_name || 'S').charAt(0)}
+                      {group.subjectName.charAt(0)}
                     </div>
                     <div>
-                      <p className="text-base font-bold text-slate-800">{sub.name || sub.subject_name}</p>
-                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {sub.id}</p>
+                      <p className="text-base font-bold text-slate-800">{group.subjectName}</p>
+                      <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">
+                        {group.entries.length} teacher{group.entries.length !== 1 ? 's' : ''}
+                      </p>
                     </div>
                   </div>
+                  <button
+                    type="button"
+                    onClick={() => setTeacherPickerFor(group.subjectName)}
+                    className="flex items-center gap-2 text-sm font-bold text-slate-700 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 w-full"
+                  >
+                    <User size={14} className="text-slate-400 shrink-0" />
+                    <span className="truncate flex-1 text-left">{teacherNamesLabel(group)}</span>
+                    <ChevronDown size={12} className="text-slate-400 shrink-0" />
+                  </button>
                   <div className="flex items-center justify-between">
                     <span className="px-2.5 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase border border-indigo-100/50">
                       {classTitle} — {section.name}
                     </span>
                     <div className="flex items-center gap-1">
-                      <button 
-                        onClick={() => handleOpenEdit(sub)}
+                      <button
+                        onClick={() => handleOpenEdit(group)}
                         className="p-2.5 text-slate-400 bg-slate-50 rounded-xl hover:text-brand-500 transition-colors"
                       >
                         <Edit2 size={16} />
                       </button>
-                      <button 
-                        onClick={() => setSubjectToDelete(sub)}
+                      <button
+                        onClick={() => setGroupToDelete(group)}
                         className="p-2.5 text-rose-400 bg-rose-50/50 rounded-xl hover:text-rose-600 transition-colors"
                       >
                         <Trash2 size={16} />
@@ -298,9 +404,67 @@ const SectionSubjectsView: React.FC<{
         )}
       </Card>
 
-      {/* Edit Subject Modal */}
+      {/* Teacher(s) Picker Modal — check/uncheck teachers for this subject */}
       <AnimatePresence>
-        {isEditModalOpen && editingSubject && (
+        {teacherPickerGroup && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: 'easeOut' }}
+              className="bg-white w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100"
+            >
+              <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
+                <div>
+                  <h3 className="text-lg font-bold text-slate-900">Teacher(s)</h3>
+                  <p className="text-xs text-slate-500 font-medium mt-0.5">{teacherPickerGroup.subjectName}</p>
+                </div>
+                <button
+                  onClick={() => setTeacherPickerFor(null)}
+                  className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="p-6 space-y-1 max-h-[60vh] overflow-y-auto">
+                {teacherOptions.map((t) => {
+                  const checked = teacherPickerGroup.entries.some((e) => e.teacher_id === t.id);
+                  const isPending = pendingTeacherToggle === `${teacherPickerGroup.subjectName}-${t.id}`;
+                  return (
+                    <label
+                      key={t.id}
+                      className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-slate-50 cursor-pointer text-sm"
+                    >
+                      {isPending ? (
+                        <Loader2 size={16} className="animate-spin text-brand-500" />
+                      ) : (
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleGroupTeacher(teacherPickerGroup, t.id)}
+                          className="accent-brand-500 w-4 h-4"
+                        />
+                      )}
+                      <span className="text-slate-700 font-medium">{t.name}</span>
+                    </label>
+                  );
+                })}
+                {teacherOptions.length === 0 && (
+                  <p className="text-xs text-amber-600 font-medium px-3 py-2">No teachers found for this campus.</p>
+                )}
+              </div>
+              <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end rounded-b-3xl">
+                <Button onClick={() => setTeacherPickerFor(null)}>Done</Button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+
+      {/* Edit Subject Modal — renames the subject across all its teacher-entries */}
+      <AnimatePresence>
+        {isEditModalOpen && editingGroup && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -311,7 +475,7 @@ const SectionSubjectsView: React.FC<{
             >
               <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white">
                 <div>
-                  <h3 className="text-lg font-bold text-slate-900">Edit Subject</h3>
+                  <h3 className="text-lg font-bold text-slate-900">Rename Subject</h3>
                   <p className="text-xs text-slate-500 font-medium mt-0.5">
                     {classTitle} — Section {section.name}
                   </p>
@@ -336,25 +500,14 @@ const SectionSubjectsView: React.FC<{
                       autoFocus
                       className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 outline-none transition-all font-medium text-sm"
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
-                      <User size={14} className="text-indigo-500" />
-                      Assign Teacher
-                    </label>
-                    <select
-                      value={editTeacherId}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setEditTeacherId(Number(e.target.value))}
-                      required
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-sm appearance-none"
-                    >
-                      <option value={1}>Default Teacher (ID: 1)</option>
-                    </select>
+                    <p className="text-[10px] text-slate-400 font-medium">
+                      Renames this subject for all {editingGroup.entries.length} assigned teacher{editingGroup.entries.length !== 1 ? 's' : ''}. Use the Teacher(s) dropdown in the list to add/remove teachers.
+                    </p>
                   </div>
                 </div>
                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 rounded-b-3xl">
                   <Button type="button" variant="ghost" onClick={() => setIsEditModalOpen(false)}>Cancel</Button>
-                  <Button type="submit" className="shadow-xl shadow-brand-200" isLoading={updateMutation.isPending}>Save Changes</Button>
+                  <Button type="submit" className="shadow-xl shadow-brand-200" isLoading={isSavingEdit}>Save Changes</Button>
                 </div>
               </form>
             </motion.div>
@@ -362,9 +515,9 @@ const SectionSubjectsView: React.FC<{
         )}
       </AnimatePresence>
 
-      {/* Delete Confirm Modal */}
+      {/* Delete Confirm Modal — removes the subject entirely (all its teacher-entries) */}
       <AnimatePresence>
-        {subjectToDelete && (
+        {groupToDelete && (
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
@@ -380,18 +533,18 @@ const SectionSubjectsView: React.FC<{
                 <div>
                   <h3 className="text-lg font-bold text-slate-900">Delete Subject?</h3>
                   <p className="text-sm text-slate-500 font-medium mt-1">
-                    Are you sure you want to delete <span className="text-slate-700 font-bold">"{subjectToDelete.subject_name}"</span>? This cannot be undone.
+                    Are you sure you want to delete <span className="text-slate-700 font-bold">"{groupToDelete.subjectName}"</span> and all {groupToDelete.entries.length} teacher assignment{groupToDelete.entries.length !== 1 ? 's' : ''}? This cannot be undone.
                   </p>
                 </div>
               </div>
               <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-                <Button variant="ghost" onClick={() => setSubjectToDelete(null)} disabled={deleteMutation.isPending}>Cancel</Button>
+                <Button variant="ghost" onClick={() => setGroupToDelete(null)} disabled={isDeletingGroup}>Cancel</Button>
                 <button
-                  onClick={confirmDelete}
-                  disabled={deleteMutation.isPending}
+                  onClick={confirmDeleteGroup}
+                  disabled={isDeletingGroup}
                   className="px-5 py-2.5 bg-rose-500 hover:bg-rose-600 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors"
                 >
-                  {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+                  {isDeletingGroup ? 'Deleting...' : 'Delete'}
                 </button>
               </div>
             </motion.div>
@@ -418,8 +571,8 @@ const SectionSubjectsView: React.FC<{
                     {classTitle} — Section {section.name}
                   </p>
                 </div>
-                <button 
-                  onClick={() => setIsAddModalOpen(false)} 
+                <button
+                  onClick={() => setIsAddModalOpen(false)}
                   className="p-2 hover:bg-slate-100 rounded-xl transition-all text-slate-400 hover:text-slate-600"
                 >
                   <X className="w-5 h-5" />
@@ -435,7 +588,7 @@ const SectionSubjectsView: React.FC<{
                       <BookOpen size={14} className="text-brand-500" />
                       Subject Name
                     </label>
-                    <input 
+                    <input
                       type="text"
                       placeholder="e.g. Mathematics, English, Science..."
                       value={subjectName}
@@ -446,23 +599,38 @@ const SectionSubjectsView: React.FC<{
                     />
                   </div>
 
-                  {/* Teacher Selection (Hardcoded for now) */}
+                  {/* Teacher Selection — multiple teachers create one row each */}
                   <div className="space-y-2">
                     <label className="text-xs font-bold text-slate-700 uppercase tracking-widest flex items-center gap-2">
                       <User size={14} className="text-indigo-500" />
-                      Assign Teacher
+                      Assign Teacher(s)
                     </label>
-                    <select
-                      value={teacherId}
-                      onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setTeacherId(Number(e.target.value))}
-                      required
-                      className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 focus:border-brand-300 outline-none transition-all font-medium text-sm appearance-none"
-                    >
-                      <option value={1}>Default Teacher (ID: 1)</option>
-                    </select>
                     <p className="text-[10px] text-slate-400 font-medium">
-                      Teacher list will be dynamic in a future update.
+                      Select more than one teacher to create a separate entry for each (e.g. English taught by two teachers).
                     </p>
+                    <div className="grid grid-cols-2 gap-2">
+                      {teacherOptions.map((t) => (
+                        <label
+                          key={t.id}
+                          className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${
+                            teacherIds.includes(t.id) ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-slate-50 border-slate-200 text-slate-600'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={teacherIds.includes(t.id)}
+                            onChange={() => toggleAddTeacher(t.id)}
+                            className="accent-brand-500"
+                          />
+                          <span className="text-sm font-medium">{t.name}</span>
+                        </label>
+                      ))}
+                    </div>
+                    {teacherOptions.length === 0 && (
+                      <p className="text-[10px] text-amber-600 font-medium">
+                        No teachers found for this campus — add one under Staff Management first.
+                      </p>
+                    )}
                   </div>
 
                   {/* Info Bar */}
@@ -483,20 +651,20 @@ const SectionSubjectsView: React.FC<{
 
                 {/* Modal Footer */}
                 <div className="p-6 bg-slate-50 border-t border-slate-100 flex flex-col sm:flex-row justify-end gap-2 sm:gap-3 rounded-b-3xl">
-                  <Button 
-                    type="button" 
-                    variant="ghost" 
+                  <Button
+                    type="button"
+                    variant="ghost"
                     onClick={() => setIsAddModalOpen(false)}
                     className="w-full sm:w-auto"
                   >
                     Cancel
                   </Button>
-                  <Button 
-                    type="submit" 
+                  <Button
+                    type="submit"
                     className="w-full sm:w-auto shadow-xl shadow-brand-200"
-                    isLoading={createMutation.isPending}
+                    isLoading={isAdding}
                   >
-                    Add Subject
+                    {teacherIds.length > 1 ? `Add Subject (${teacherIds.length} teachers)` : 'Add Subject'}
                   </Button>
                 </div>
               </form>
@@ -516,22 +684,25 @@ const SectionSubjectsView: React.FC<{
 export const SubjectModule: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSection, setSelectedSection] = useState<{ section: ClassSection; className: string } | null>(null);
-  
+
   const { selectedBranchId } = useBranchStore();
   const { data: classes, isLoading, error } = useClasses(selectedBranchId || 1);
+  const { data: branches } = useBranches();
+
+  const campusName = (branchId: number) => branches?.find((b) => b.id === branchId)?.branch_name || `Branch #${branchId}`;
 
   // If a section is selected, show subjects view
   if (selectedSection) {
     return (
-      <SectionSubjectsView 
-        section={selectedSection.section} 
-        className={selectedSection.className} 
-        onBack={() => setSelectedSection(null)} 
+      <SectionSubjectsView
+        section={selectedSection.section}
+        className={selectedSection.className}
+        onBack={() => setSelectedSection(null)}
       />
     );
   }
 
-  const filteredClasses = classes?.filter(c => 
+  const filteredClasses = classes?.filter(c =>
     c.name.toLowerCase().includes(searchQuery.toLowerCase())
   ) || [];
 
@@ -554,7 +725,7 @@ export const SubjectModule: React.FC = () => {
         <div className="p-4 sm:p-6 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="relative flex-1 w-full sm:max-w-md group">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-focus-within:text-brand-500 transition-colors" size={18} />
-            <input 
+            <input
               type="text"
               placeholder="Search classes..."
               value={searchQuery}
@@ -578,7 +749,7 @@ export const SubjectModule: React.FC = () => {
             <p className="text-sm opacity-80 mt-1">There was an error communicating with the server.</p>
           </div>
         ) : filteredClasses.length === 0 ? (
-          <EmptyState 
+          <EmptyState
             icon={GraduationCap}
             title="No Classes Found"
             description={searchQuery ? `No classes match "${searchQuery}"` : "No classes have been created yet."}
@@ -592,14 +763,17 @@ export const SubjectModule: React.FC = () => {
               <table className="w-full text-left table-fixed">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[35%]">Class Name</th>
-                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[65%]">Sections (Click to view subjects)</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[20%]">Class Name</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[13%]">Campus</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[13%]">Added By</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[12%]">Created At</th>
+                    <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-[42%]">Sections (Click to view subjects)</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {filteredClasses.map((c, idx) => (
-                    <motion.tr 
-                      key={c.id} 
+                    <motion.tr
+                      key={c.id}
                       initial={{ opacity: 0, y: 8 }}
                       animate={{ opacity: 1, y: 0 }}
                       transition={{ delay: idx * 0.04 }}
@@ -616,6 +790,14 @@ export const SubjectModule: React.FC = () => {
                           </div>
                         </div>
                       </td>
+                      <td className="px-8 py-5 text-sm text-slate-600">{campusName(c.branch_id)}</td>
+                      <td className="px-8 py-5 text-sm text-slate-600">{c.added_by_user?.name || `User #${c.added_by}`}</td>
+                      <td className="px-8 py-5">
+                        <div className="flex items-center gap-2 text-sm text-slate-500">
+                          <Calendar size={14} className="text-slate-400" />
+                          {new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}
+                        </div>
+                      </td>
                       <td className="px-8 py-5">
                         <div className="flex flex-wrap gap-2">
                           {c.sections && c.sections.length > 0 ? (
@@ -629,6 +811,9 @@ export const SubjectModule: React.FC = () => {
                               >
                                 <Layers size={14} className="opacity-70" />
                                 Section {section.name}
+                                <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] normal-case tracking-normal">
+                                  {section.subjects_count ?? 0} subj
+                                </span>
                                 <ChevronRight size={12} className="ml-1 opacity-50" />
                               </motion.button>
                             ))
@@ -646,7 +831,7 @@ export const SubjectModule: React.FC = () => {
             {/* Mobile Card View */}
             <div className="lg:hidden divide-y divide-slate-100">
               {filteredClasses.map((c, idx) => (
-                <motion.div 
+                <motion.div
                   key={c.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
@@ -662,6 +847,20 @@ export const SubjectModule: React.FC = () => {
                       <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-0.5">ID: {c.id}</p>
                     </div>
                   </div>
+                  <div className="grid grid-cols-3 gap-2 text-xs">
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Campus</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{campusName(c.branch_id)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Added By</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{c.added_by_user?.name || `User #${c.added_by}`}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Created</p>
+                      <p className="font-bold text-slate-700 mt-0.5">{new Date(c.created_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                    </div>
+                  </div>
                   <div>
                     <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Sections</p>
                     <div className="flex flex-wrap gap-2">
@@ -674,6 +873,9 @@ export const SubjectModule: React.FC = () => {
                           >
                             <Layers size={14} className="opacity-70" />
                             Section {section.name}
+                            <span className="ml-1 px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 text-[9px] normal-case tracking-normal">
+                              {section.subjects_count ?? 0} subj
+                            </span>
                             <ChevronRight size={12} className="ml-1 opacity-50" />
                           </button>
                         ))

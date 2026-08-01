@@ -12,13 +12,13 @@ import {
   CheckCircle,
   Clock,
   ArrowLeft,
-  ChevronDown,
   Pencil,
   Trash2,
   AlertTriangle
 } from 'lucide-react';
 import { Card } from '../ui/Card';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 import { classSubjectService } from '../../lib/services/class-subject-service';
 import { ClassSubjectData } from '../../types/api/class-subject';
@@ -298,14 +298,11 @@ const EditDiaryModal: React.FC<{ diary: DiaryRow; onClose: () => void; onSuccess
               </div>
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Status</label>
-                <div className="relative">
-                  <select name="status" value={form.status} onChange={handleChange}
-                    className="w-full appearance-none px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm pr-10">
-                    <option value="Pending">Pending</option>
-                    <option value="Approved">Approved</option>
-                  </select>
-                  <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-                </div>
+                <Select
+                  value={form.status}
+                  onChange={(v) => setForm(prev => ({ ...prev, status: v }))}
+                  options={[{ value: 'Pending', label: 'Pending' }, { value: 'Approved', label: 'Approved' }]}
+                />
               </div>
             </div>
           </div>
@@ -483,7 +480,6 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
   };
 
   const inputCls = "w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 text-sm";
-  const selectCls = `${inputCls} appearance-none pr-10`;
   const labelCls = "text-xs font-bold text-slate-700 uppercase tracking-widest";
 
   return (
@@ -519,61 +515,36 @@ const AddDiaryModal: React.FC<{ onClose: () => void; onSuccess: () => void }> = 
             {/* Class */}
             <div className="space-y-1.5">
               <label className={labelCls}>Class</label>
-              <div className="relative">
-                <select
-                  value={selectedClassId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedClassId(e.target.value)}
-                  className={selectCls}
-                >
-                  <option value="" disabled>{loadingClasses ? 'Loading...' : 'Choose Class'}</option>
-                  {classes.map((c: ClassData) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={selectedClassId}
+                onChange={setSelectedClassId}
+                options={classes.map((c: ClassData) => ({ value: String(c.id), label: c.name }))}
+                placeholder={loadingClasses ? 'Loading...' : 'Choose Class'}
+              />
             </div>
 
             {/* Section */}
             <div className="space-y-1.5">
               <label className={labelCls}>Section</label>
-              <div className="relative">
-                <select
-                  value={selectedSectionId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSectionId(e.target.value)}
-                  disabled={!selectedClassId || loadingSections}
-                  className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  <option value="" disabled>
-                    {loadingSections ? 'Loading...' : !selectedClassId ? 'Select class first' : 'Choose Section'}
-                  </option>
-                  {sections.map((s: SectionData) => (
-                    <option key={s.id} value={s.id}>{s.name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={selectedSectionId}
+                onChange={setSelectedSectionId}
+                disabled={!selectedClassId || loadingSections}
+                options={sections.map((s: SectionData) => ({ value: String(s.id), label: s.name }))}
+                placeholder={loadingSections ? 'Loading...' : !selectedClassId ? 'Select class first' : 'Choose Section'}
+              />
             </div>
 
             {/* Subject */}
             <div className="space-y-1.5">
               <label className={labelCls}>Subject</label>
-              <div className="relative">
-                <select
-                  value={selectedSubjectId}
-                  onChange={(e: React.ChangeEvent<HTMLSelectElement>) => setSelectedSubjectId(e.target.value)}
-                  disabled={!selectedSectionId || loadingSubjects}
-                  className={`${selectCls} disabled:opacity-50 disabled:cursor-not-allowed`}
-                >
-                  <option value="" disabled>
-                    {loadingSubjects ? 'Loading...' : !selectedSectionId ? 'Select section first' : 'Choose Subject'}
-                  </option>
-                  {subjects.map((s: ClassSubjectData) => (
-                    <option key={s.id} value={s.id}>{s.subject_name}</option>
-                  ))}
-                </select>
-                <ChevronDown size={16} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" />
-              </div>
+              <Select
+                value={selectedSubjectId}
+                onChange={setSelectedSubjectId}
+                disabled={!selectedSectionId || loadingSubjects}
+                options={subjects.map((s: ClassSubjectData) => ({ value: String(s.id), label: s.subject_name }))}
+                placeholder={loadingSubjects ? 'Loading...' : !selectedSectionId ? 'Select section first' : 'Choose Subject'}
+              />
             </div>
           </div>
         )}

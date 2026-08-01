@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { X, Loader2, Check, AlertCircle, ChevronDown, ChevronUp } from 'lucide-react';
 import { cn } from '../../types';
+import { Select } from '../ui/Select';
 import { useRoles } from '../../hooks/use-roles';
 import { useCreateStaff, useUpdateStaff } from '../../hooks/use-staff-members';
 import { useAuthStore } from '../../store/use-auth-store';
@@ -33,6 +34,7 @@ const emptyForm: StaffFormInput = {
   branch_id: null,
   email: '',
   password: '',
+  is_active: true,
 };
 
 const inputCls =
@@ -76,6 +78,7 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
         branch_id: editing.branch_id,
         email: editing.email ?? '',
         password: '',
+        is_active: editing.is_active,
       });
     } else {
       setForm({ ...emptyForm, branch_id: selectedBranchId ?? null });
@@ -180,12 +183,16 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
 
             <div className="space-y-2">
               <label className={labelCls}>Gender <span className="text-rose-500">*</span></label>
-              <select className={inputCls} value={form.gender} onChange={(e) => set('gender', e.target.value as StaffFormInput['gender'])}>
-                <option value="">Select gender</option>
-                <option value="male">Male</option>
-                <option value="female">Female</option>
-                <option value="other">Other</option>
-              </select>
+              <Select
+                value={form.gender}
+                onChange={(v) => set('gender', v as StaffFormInput['gender'])}
+                options={[
+                  { value: 'male', label: 'Male' },
+                  { value: 'female', label: 'Female' },
+                  { value: 'other', label: 'Other' },
+                ]}
+                placeholder="Select gender"
+              />
             </div>
 
             <div className="space-y-2">
@@ -200,13 +207,17 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
 
             <div className="space-y-2">
               <label className={labelCls}>Marital Status <span className="text-rose-500">*</span></label>
-              <select className={inputCls} value={form.marital_status} onChange={(e) => set('marital_status', e.target.value as StaffFormInput['marital_status'])}>
-                <option value="">Select status</option>
-                <option value="single">Single</option>
-                <option value="married">Married</option>
-                <option value="divorced">Divorced</option>
-                <option value="widowed">Widowed</option>
-              </select>
+              <Select
+                value={form.marital_status}
+                onChange={(v) => set('marital_status', v as StaffFormInput['marital_status'])}
+                options={[
+                  { value: 'single', label: 'Single' },
+                  { value: 'married', label: 'Married' },
+                  { value: 'divorced', label: 'Divorced' },
+                  { value: 'widowed', label: 'Widowed' },
+                ]}
+                placeholder="Select status"
+              />
             </div>
 
             <div className="space-y-2">
@@ -226,26 +237,37 @@ export const StaffFormModal: React.FC<StaffFormModalProps> = ({ editing, onClose
 
             <div className="space-y-2">
               <label className={labelCls}>Role <span className="text-rose-500">*</span></label>
-              <select className={inputCls} value={form.user_role || ''} onChange={(e) => set('user_role', Number(e.target.value))}>
-                <option value="">Select a role</option>
-                {assignableRoles?.map((r) => (
-                  <option key={r.id} value={r.id}>{r.name}</option>
-                ))}
-              </select>
+              <Select
+                value={form.user_role ? String(form.user_role) : ''}
+                onChange={(v) => set('user_role', Number(v))}
+                options={(assignableRoles || []).map((r) => ({ value: String(r.id), label: r.name }))}
+                placeholder="Select a role"
+              />
             </div>
 
             <div className="space-y-2">
               <label className={labelCls}>Branch</label>
-              <select
-                className={inputCls}
-                value={form.branch_id ?? ''}
-                onChange={(e) => set('branch_id', e.target.value === '' ? null : Number(e.target.value))}
-              >
-                <option value="">No specific branch</option>
-                {branches.map((b) => (
-                  <option key={b.id} value={b.id}>{b.branch_name}</option>
-                ))}
-              </select>
+              <Select
+                value={form.branch_id ? String(form.branch_id) : ''}
+                onChange={(v) => set('branch_id', v === '' ? null : Number(v))}
+                options={branches.map((b) => ({ value: String(b.id), label: b.branch_name }))}
+                placeholder="No specific branch"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className={labelCls}>Status</label>
+              <label className="flex items-center gap-2.5 h-[46px] px-4 bg-slate-50 border border-slate-200 rounded-xl cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={form.is_active !== false}
+                  onChange={(e) => set('is_active', e.target.checked)}
+                  className="w-4 h-4 accent-brand-500 shrink-0"
+                />
+                <span className="text-sm font-medium text-slate-700">
+                  {form.is_active !== false ? 'Active' : 'Inactive'}
+                </span>
+              </label>
             </div>
 
             <div className="space-y-2 sm:col-span-2">

@@ -16,6 +16,7 @@ import { cn, FeeHead, FeeFrequency } from '../../types';
 import { motion, AnimatePresence } from 'motion/react';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 
 import { apiClient } from '../../lib/api-client';
@@ -388,13 +389,11 @@ export const FeeConfiguration: React.FC = () => {
                             </div>
                             <div>
                               <label className="saas-label mb-2 ml-1">Frequency / Period</label>
-                              <select
+                              <Select
                                 value={head.frequency}
-                                onChange={(e) => updateFeeHead(head.id, { frequency: e.target.value as FeeFrequency })}
-                                className="saas-input bg-white cursor-pointer"
-                              >
-                                {FREQUENCIES.map(f => <option key={f.value} value={f.value}>{f.label}</option>)}
-                              </select>
+                                onChange={(v) => updateFeeHead(head.id, { frequency: v as FeeFrequency })}
+                                options={FREQUENCIES.map(f => ({ value: f.value, label: f.label }))}
+                              />
                             </div>
                           </div>
                           <div className="flex items-center gap-3 pt-6">

@@ -52,6 +52,11 @@ export const TAB_MODULE_MAP: Record<string, string> = {
 
   // Reports
   results: 'reports',
+
+  // Time Table
+  'timetable-periods': 'timetable',
+  'timetable-generate': 'timetable',
+  'timetable-teacher-print': 'timetable',
 };
 
 /** Returns the module slug governing a tab, or null if the tab is ungoverned. */

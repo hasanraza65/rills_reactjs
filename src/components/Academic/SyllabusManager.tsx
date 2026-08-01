@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { cn, CLASSES, SYLLABUS_DATA, BRANCHES, UserRole, Syllabus } from '../../types';
 import { Button } from '../ui/Button';
 import { Card } from '../ui/Card';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
 
 interface SyllabusManagerProps {
@@ -69,14 +70,13 @@ export const SyllabusManager: React.FC<SyllabusManagerProps> = ({ role }) => {
             />
           </div>
           <div className="flex items-center gap-2 sm:gap-3 w-full lg:w-auto">
-            <select 
-              value={selectedClass}
-              onChange={(e) => setSelectedClass(e.target.value)}
-              className="flex-1 lg:flex-none bg-slate-50 border-none rounded-xl px-4 py-3.5 text-xs sm:text-sm font-black text-slate-600 outline-none shadow-sm cursor-pointer min-w-[120px]"
-            >
-              <option value="ALL">All Classes</option>
-              {CLASSES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div className="flex-1 lg:flex-none min-w-[120px]">
+              <Select
+                value={selectedClass}
+                onChange={(v) => setSelectedClass(v)}
+                options={[{ value: 'ALL', label: 'All Classes' }, ...CLASSES.map(c => ({ value: String(c.id), label: c.name }))]}
+              />
+            </div>
             <Button variant="outline" className="p-3.5 bg-slate-50 border-transparent shrink-0">
               <Filter size={20} />
             </Button>
