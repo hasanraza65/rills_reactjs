@@ -37,6 +37,13 @@ export default function App() {
   const [isAddKeyModalOpen, setIsAddKeyModalOpen] = useState(false);
   const createKeyMutation = useCreateAdmissionKey();
 
+  // Lives here, above the `key={role-activeTab}` remount boundary below — Dashboard's
+  // Edit-student handlers call setEditingStudent(s) and onTabChange('add-student') in the
+  // same click, and the tab change remounts <Dashboard> before that state would ever be
+  // read. Keeping it in App means it survives the remount instead of resetting to null,
+  // which was silently emptying the edit form (see Dashboard.tsx's AddStudentForm usage).
+  const [editingStudent, setEditingStudent] = useState<any | null>(null);
+
   // Derived currentBranch object
   const currentBranch = React.useMemo(() => {
     if (!branches || branches.length === 0) return BRANCHES[0];
@@ -111,7 +118,7 @@ export default function App() {
       )}
 
       
-      <main className={cn("flex-1 pt-20 transition-all duration-300 overflow-x-hidden", role !== 'GATE_KEEPER' && "lg:ml-72")}>
+      <main className={cn("flex-1 pt-20 transition-all duration-300 overflow-x-hidden print:pt-0 print:ml-0 print:overflow-visible", role !== 'GATE_KEEPER' && "lg:ml-72")}>
         <Header
           user={user as any}
           currentBranch={currentBranch}
@@ -140,6 +147,8 @@ export default function App() {
               onTabChange={setActiveTab}
               isNotificationOpen={isNotificationOpen}
               onNotificationClose={() => setIsNotificationOpen(false)}
+              editingStudent={editingStudent}
+              setEditingStudent={setEditingStudent}
             />
           </motion.div>
         </AnimatePresence>

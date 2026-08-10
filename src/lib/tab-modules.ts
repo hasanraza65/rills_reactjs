@@ -50,8 +50,12 @@ export const TAB_MODULE_MAP: Record<string, string> = {
   library: 'library',
   roles: 'roles',
 
-  // Reports
-  results: 'reports',
+  // Examination — Exam Schedule is no longer a standalone tab: it's step 3 of the
+  // Exam Group wizard (add/continue an exam → schedule it for a class & section).
+  'exam-group': 'examination',
+  'exam-subject-assignment': 'examination',
+  'marks-entry': 'examination',
+  'report-card': 'examination',
 
   // Time Table
   'timetable-periods': 'timetable',

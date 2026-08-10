@@ -56,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({
 
   return (
     <header className={cn(
-      "h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 fixed top-0 right-0 z-40 flex items-center justify-between px-4 sm:px-8 transition-all duration-300",
+      "h-20 bg-white/80 backdrop-blur-md border-b border-slate-200 fixed top-0 right-0 z-40 flex items-center justify-between px-4 sm:px-8 transition-all duration-300 print:hidden",
       user.role !== 'GATE_KEEPER' ? "lg:left-72 left-0" : "left-0"
     )}>
 

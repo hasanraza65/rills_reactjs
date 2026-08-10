@@ -47,7 +47,10 @@ import { StudentDiary } from './Academic/StudentDiary';
 import { SubjectsManager } from './Academic/SubjectsManager';
 import { ClassSyllabusManager } from './Academic/ClassSyllabusManager';
 import { DiariesManager } from './Academic/DiariesManager';
-import { ResultsManager } from './Academic/ResultsManager';
+import { MarksEntryManager } from './Examination/MarksEntryManager';
+import { ReportCard } from './Examination/ReportCard';
+import { SubjectAssignmentManager } from './Examination/SubjectAssignmentManager';
+import { ExamGroupManager } from './Examination/ExamGroupManager';
 
 import { StaffManagement } from './StaffManagement';
 import { RolesPage } from './RolesManagement/RolesPage';
@@ -112,6 +115,10 @@ interface DashboardProps {
   onTabChange: (tab: string) => void;
   isNotificationOpen?: boolean;
   onNotificationClose?: () => void;
+  /** Owned by App (above the activeTab remount boundary) so it survives the
+   * setEditingStudent(s) + onTabChange('add-student') that both fire on Edit click. */
+  editingStudent: any | null;
+  setEditingStudent: (student: any | null) => void;
 }
 
 export const Dashboard: React.FC<DashboardProps> = ({
@@ -120,6 +127,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
   onTabChange,
   isNotificationOpen = false,
   onNotificationClose,
+  editingStudent,
+  setEditingStudent,
 }) => {
   const { user } = useAuthStore();
   const { selectedBranchId } = useBranchStore();
@@ -138,7 +147,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
   // Student CRUD State
   const [viewingStudent, setViewingStudent] = React.useState<any | null>(null);
-  const [editingStudent, setEditingStudent] = React.useState<any | null>(null);
   const [deletingStudentId, setDeletingStudentId] = React.useState<number | null>(null);
 
   const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(selectedBranchId || 1);
@@ -158,8 +166,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'branches', 'pricing', 'attendance', 'student-attendance', 'staff-attendance',
       'lesson-plan-teachers', 'add-lesson-plan', 'lesson-plan-list', 'syllabus',
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
-      'subjects', 'results', 'class-syllabus', 'roles', 'staff',
+      'subjects', 'class-syllabus', 'roles', 'staff',
       'timetable-periods', 'timetable-generate',
+      'marks-entry', 'report-card', 'exam-subject-assignment', 'exam-group',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -409,17 +418,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {activeTab === 'results' && (
-          <motion.div
-            key="results"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <ResultsManager />
-          </motion.div>
-        )}
-
         {activeTab === 'class-syllabus' && (
           <motion.div
             key="class-syllabus"
@@ -461,6 +459,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <TimeTableGenerate onTabChange={onTabChange} />
+          </motion.div>
+        )}
+
+        {activeTab === 'marks-entry' && (
+          <motion.div
+            key="marks-entry"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <MarksEntryManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'report-card' && (
+          <motion.div
+            key="report-card"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ReportCard />
+          </motion.div>
+        )}
+
+        {activeTab === 'exam-subject-assignment' && (
+          <motion.div
+            key="exam-subject-assignment"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SubjectAssignmentManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'exam-group' && (
+          <motion.div
+            key="exam-group"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ExamGroupManager />
           </motion.div>
         )}
       </AnimatePresence>
@@ -1028,6 +1070,50 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <TimeTableGenerate onTabChange={onTabChange} />
           </motion.div>
         )}
+
+        {activeTab === 'marks-entry' && (
+          <motion.div
+            key="marks-entry"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <MarksEntryManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'report-card' && (
+          <motion.div
+            key="report-card"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ReportCard />
+          </motion.div>
+        )}
+
+        {activeTab === 'exam-subject-assignment' && (
+          <motion.div
+            key="exam-subject-assignment"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <SubjectAssignmentManager />
+          </motion.div>
+        )}
+
+        {activeTab === 'exam-group' && (
+          <motion.div
+            key="exam-group"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <ExamGroupManager />
+          </motion.div>
+        )}
       </AnimatePresence>
 
 
@@ -1211,7 +1297,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list', 'timetable-teacher-print'].includes(activeTab) && (
+        {activeTab === 'marks-entry' && (
+          <motion.div
+            key="marks-entry"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <MarksEntryManager />
+          </motion.div>
+        )}
+
+        {!['overview', 'attendance', 'diary', 'syllabus', 'class-syllabus', 'library', 'lesson-plan-list', 'timetable-teacher-print', 'marks-entry'].includes(activeTab) && (
           <motion.div
             key="placeholder"
             initial={{ opacity: 0 }}

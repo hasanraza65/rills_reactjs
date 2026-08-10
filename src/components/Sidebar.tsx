@@ -21,6 +21,7 @@ import {
   Library as LibraryIcon,
   Shield,
   Clock,
+  Award,
 } from 'lucide-react';
 import { cn, UserRole } from '../types';
 import { usePermissions } from '../hooks/use-permissions';
@@ -48,6 +49,18 @@ const TIME_TABLE_SUBMENU = {
   ],
 };
 
+const EXAMINATION_SUBMENU = {
+  icon: Award,
+  label: 'Examination',
+  id: 'examination-menu',
+  subItems: [
+    { label: 'Exam Groups', id: 'exam-group' },
+    { label: 'Assign Subjects', id: 'exam-subject-assignment' },
+    { label: 'Marks Entry', id: 'marks-entry' },
+    { label: 'Report Card', id: 'report-card' },
+  ],
+};
+
 const menuItems: Record<UserRole, any[]> = {
   SUPER_ADMIN: [
     { icon: LayoutDashboard, label: 'Overview', id: 'overview' },
@@ -70,7 +83,6 @@ const menuItems: Record<UserRole, any[]> = {
       subItems: [
         { label: 'What I have learnt', id: 'what-i-learnt' },
         { label: 'Subjects', id: 'subjects' },
-        { label: 'Results', id: 'results' },
         { label: 'Class Syllabus', id: 'class-syllabus' },
       ]
     },
@@ -95,6 +107,7 @@ const menuItems: Record<UserRole, any[]> = {
       ]
     },
     TIME_TABLE_SUBMENU,
+    EXAMINATION_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
     { icon: Settings, label: 'System Settings', id: 'settings' },
@@ -124,6 +137,7 @@ const menuItems: Record<UserRole, any[]> = {
     },
     { icon: BookOpen, label: 'Class Syllabus', id: 'class-syllabus' },
     TIME_TABLE_SUBMENU,
+    EXAMINATION_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     { icon: GraduationCap, label: 'Academic Years', id: 'academics' },
@@ -158,6 +172,7 @@ const menuItems: Record<UserRole, any[]> = {
     },
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     TIME_TABLE_SUBMENU,
+    EXAMINATION_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: FileText, label: 'Diary', id: 'diary' },
   ],
@@ -165,6 +180,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: LayoutDashboard, label: 'My Classes', id: 'overview' },
     { icon: BookOpen, label: 'Curriculum', id: 'class-syllabus' },
     { icon: FileText, label: 'Lesson Plan', id: 'lesson-plan-list' },
+    { icon: Award, label: 'Marks Entry', id: 'marks-entry' },
     { icon: Calendar, label: 'Attendance', id: 'attendance' },
     { icon: FileText, label: 'Daily Diary', id: 'diary' },
     { icon: Clock, label: 'My Time Table', id: 'timetable-teacher-print' },
@@ -229,7 +245,7 @@ export const Sidebar: React.FC<SidebarProps> = ({ role, activeTab, onTabChange, 
       </AnimatePresence>
 
       <aside className={cn(
-        "w-72 h-screen fixed left-0 top-0 bg-white border-r border-slate-200 flex flex-col z-50 transition-transform duration-300 lg:translate-x-0",
+        "w-72 h-screen fixed left-0 top-0 bg-white border-r border-slate-200 flex flex-col z-50 transition-transform duration-300 lg:translate-x-0 print:hidden",
         isOpen ? "translate-x-0" : "-translate-x-full"
       )}>
 
