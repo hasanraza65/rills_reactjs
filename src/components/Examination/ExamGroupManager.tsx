@@ -2,12 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import {
   Plus,
-  Layers,
+  Award,
   Edit2,
   Trash2,
   X,
-  ChevronDown,
-  ChevronRight,
   CheckCircle2,
   XCircle,
   CalendarClock,
@@ -15,7 +13,6 @@ import {
   Printer,
   Save,
   Copy,
-  ArrowLeft,
   ClipboardList,
   Users,
   Loader2,
@@ -28,13 +25,12 @@ import { DeleteConfirmationModal } from '../ui/DeleteConfirmationModal';
 import { useBranchStore } from '../../store/use-branch-store';
 import { useClasses } from '../../hooks/use-class';
 import { useSections } from '../../hooks/use-section';
-import { useClassSubjects } from '../../hooks/use-class-subject';
+import { useBranchSubjects } from '../../hooks/use-class-subject';
 import { useStaffMembers } from '../../hooks/use-staff-members';
 import {
   useExamGroups,
   useCreateExamGroup,
   useUpdateExamGroup,
-  useDeleteExamGroup,
   useExamGroupExams,
   useCreateExamGroupExam,
   useUpdateExamGroupExam,
@@ -42,7 +38,8 @@ import {
 } from '../../hooks/use-exam-group';
 import { useExamSchedules, useBulkSaveExamSchedule } from '../../hooks/use-exam-schedule';
 import { useMarksheet, useBulkSaveExamMarks } from '../../hooks/use-exam-mark';
-import { ExamGroup, ExamGroupExam, ExamSchedule, ExamType, EXAM_TYPES, calculateGrade } from '../../types/api/exam';
+import { useAcademicSessions } from '../../hooks/use-academic-session';
+import { ExamGroup, ExamGroupExam, ExamSchedule, ExamType, calculateGrade } from '../../types/api/exam';
 
 const TEACHER_ROLE_ID = 4;
 
@@ -61,8 +58,40 @@ const PublishBadge: React.FC<{ label: string; active: boolean }> = ({ label, act
   </span>
 );
 
+/** Which classes an exam has actually been scheduled for, as live chips — replaces a
+ * static "Schedule" flag with the real, growing list as each class gets done. */
+const ScheduledClasses: React.FC<{ examId: number }> = ({ examId }) => {
+  const { data: schedulesResp } = useExamSchedules({ exam_group_exam_id: examId });
+  const schedules = schedulesResp ?? [];
+
+  const classNames = useMemo(() => {
+    const seen = new Map<number, string>();
+    schedules.forEach((s) => {
+      if (!seen.has(s.class_id)) seen.set(s.class_id, s.school_class?.name ?? `Class ${s.class_id}`);
+    });
+    return Array.from(seen.values());
+  }, [schedules]);
+
+  if (classNames.length === 0) {
+    return (
+      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-slate-100 text-slate-400">
+        <XCircle size={12} /> Not scheduled yet
+      </span>
+    );
+  }
+
+  return (
+    <>
+      {classNames.map((name) => (
+        <span key={name} className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-bold bg-emerald-50 text-emerald-600">
+          <CheckCircle2 size={12} /> {name}
+        </span>
+      ))}
+    </>
+  );
+};
+
 interface RowDraft {
-  subjectId: number;
   subjectName: string;
   existingId?: number;
   date: string;
@@ -75,51 +104,72 @@ interface RowDraft {
 }
 
 /* ---------------------------------------------------------------------- */
-/* Add / Continue wizard — Group info → Exam info → Schedule, one modal,   */
-/* mirroring the Time Table module's step-by-step group creation.          */
+/* Add / Continue wizard — Exam Info → Schedule, one modal. There's no      */
+/* separate "Exam Group" step for the user to fill in any more: each exam   */
+/* still has one behind-the-scenes group record (existing schedules/        */
+/* marksheet code is keyed off it), but it's created transparently from the */
+/* same form instead of being its own step.                                */
 /* ---------------------------------------------------------------------- */
 
 interface WizardModalProps {
   branchId: number;
-  initialGroup?: ExamGroup;
-  initialExam?: ExamGroupExam;
+  /** Set only when re-opening an already-created exam to schedule another class/section. */
+  initial?: { group: ExamGroup; exam: ExamGroupExam };
   onClose: () => void;
 }
 
-const WizardModal: React.FC<WizardModalProps> = ({ branchId, initialGroup, initialExam, onClose }) => {
-  const [step, setStep] = useState<1 | 2 | 3>(initialExam ? 3 : initialGroup ? 2 : 1);
-  const [group, setGroup] = useState<ExamGroup | null>(initialGroup ?? null);
-  const [exam, setExam] = useState<ExamGroupExam | null>(initialExam ?? null);
-  const canGoBackToStep1 = !initialGroup;
-  const canGoBackToStep2 = !initialExam;
-
+const WizardModal: React.FC<WizardModalProps> = ({ branchId, initial, onClose }) => {
+  // Two unrelated purposes sharing one modal shell:
+  //  - no `initial` → the create form below (Add Exam). Submitting it creates the exam
+  //    and closes — scheduling is a separate, later action from the exam's own row.
+  //  - `initial` set → jumps straight to ScheduleStep for an exam that already exists
+  //    (the "Schedule" button on an exam row).
   const createGroup = useCreateExamGroup();
   const createExam = useCreateExamGroupExam();
+  const isCreating = createGroup.isPending || createExam.isPending;
 
-  const [groupForm, setGroupForm] = useState({ name: '', exam_type: 'Mid Term' as ExamType, description: '' });
-  const [examForm, setExamForm] = useState({ name: '', publish_exam: false, publish_schedule: false, publish_result: false, description: '' });
+  const { data: sessionsResp } = useAcademicSessions(branchId);
+  const sessions = sessionsResp ?? [];
+  const activeSession = sessions.find((s) => s.is_active) ?? null;
 
-  const handleStep1Submit = (e: React.FormEvent) => {
+  const [form, setForm] = useState({
+    name: '',
+    academicSessionId: '',
+    publish_exam: false,
+    publish_schedule: false,
+    publish_result: false,
+    description: '',
+  });
+
+  // Defaults to whichever session is currently marked Active, the moment sessions load —
+  // still overridable via the dropdown below.
+  useEffect(() => {
+    if (activeSession && !form.academicSessionId) {
+      setForm((f) => ({ ...f, academicSessionId: String(activeSession.id) }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeSession]);
+
+  const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
-    createGroup.mutate(
-      { branch_id: branchId, ...groupForm },
-      { onSuccess: (newGroup) => { setGroup(newGroup); setStep(2); } }
-    );
-  };
-
-  const handleStep2Submit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!group) return;
-    createExam.mutate(
-      { exam_group_id: group.id, ...examForm },
-      { onSuccess: (newExam) => { setExam(newExam); setStep(3); } }
-    );
-  };
-
-  const titles: Record<1 | 2 | 3, string> = {
-    1: 'Add Exam Group',
-    2: 'Add Exam',
-    3: 'Schedule Exam',
+    // No separate "Exam Type" field — the Name doubles as the type (e.g. "Mid Term",
+    // "Final Term"), which is how this was actually being filled in anyway.
+    const newGroup = await createGroup.mutateAsync({
+      branch_id: branchId,
+      academic_session_id: form.academicSessionId ? Number(form.academicSessionId) : null,
+      name: form.name,
+      exam_type: form.name as ExamType,
+      description: form.description,
+    });
+    await createExam.mutateAsync({
+      exam_group_id: newGroup.id,
+      name: form.name,
+      publish_exam: form.publish_exam,
+      publish_schedule: form.publish_schedule,
+      publish_result: form.publish_result,
+      description: form.description,
+    });
+    onClose();
   };
 
   return (
@@ -128,27 +178,24 @@ const WizardModal: React.FC<WizardModalProps> = ({ branchId, initialGroup, initi
         initial={{ opacity: 0, scale: 0.95, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className={`bg-white w-full ${step === 3 ? 'w-[96vw] max-w-[1500px]' : 'max-w-lg'} max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100 flex flex-col`}
+        className={`bg-white w-full ${initial ? 'w-[96vw] max-w-[1500px]' : 'max-w-lg'} max-h-[90vh] rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100 flex flex-col`}
       >
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0">
-          <div>
-            <h3 className="text-lg font-bold text-slate-900">{titles[step]}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">Step {step} of 3</p>
-          </div>
+          <h3 className="text-lg font-bold text-slate-900">{initial ? 'Schedule Exam' : 'Add Exam'}</h3>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400">
             <X size={20} />
           </button>
         </div>
 
-        {step === 1 && (
-          <form onSubmit={handleStep1Submit} className="flex flex-col overflow-hidden">
+        {!initial ? (
+          <form onSubmit={handleCreate} className="flex flex-col overflow-hidden">
             <div className="p-6 space-y-4 overflow-y-auto">
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Name</label>
                 <input
                   type="text"
-                  value={groupForm.name}
-                  onChange={(e) => setGroupForm({ ...groupForm, name: e.target.value })}
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
                   required
                   autoFocus
                   placeholder="e.g. Mid Term Examination 2026"
@@ -156,48 +203,13 @@ const WizardModal: React.FC<WizardModalProps> = ({ branchId, initialGroup, initi
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Exam Type</label>
+                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Academic Session</label>
                 <Select
-                  value={groupForm.exam_type}
-                  onChange={(v) => setGroupForm({ ...groupForm, exam_type: v as ExamType })}
-                  options={EXAM_TYPES.map((t) => ({ value: t, label: t }))}
-                  required
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Description</label>
-                <textarea
-                  value={groupForm.description}
-                  onChange={(e) => setGroupForm({ ...groupForm, description: e.target.value })}
-                  rows={3}
-                  placeholder="What this exam group covers..."
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 resize-none"
-                />
-              </div>
-            </div>
-            <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
-              <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-              <Button type="submit" isLoading={createGroup.isPending}>Next</Button>
-            </div>
-          </form>
-        )}
-
-        {step === 2 && group && (
-          <form onSubmit={handleStep2Submit} className="flex flex-col overflow-hidden">
-            <div className="p-6 space-y-4 overflow-y-auto">
-              <div className="px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-bold">
-                {group.name} &middot; {group.exam_type}
-              </div>
-              <div className="space-y-2">
-                <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Exam Name</label>
-                <input
-                  type="text"
-                  value={examForm.name}
-                  onChange={(e) => setExamForm({ ...examForm, name: e.target.value })}
-                  required
-                  autoFocus
-                  placeholder="e.g. Final Assessment Session"
-                  className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700"
+                  value={form.academicSessionId}
+                  onChange={(v) => setForm({ ...form, academicSessionId: v })}
+                  options={sessions.map((s) => ({ value: String(s.id), label: s.is_active ? `${s.name} (Active)` : s.name }))}
+                  placeholder={sessions.length ? 'Select session' : 'No sessions yet — see System Settings'}
+                  disabled={sessions.length === 0}
                 />
               </div>
               <div className="space-y-2">
@@ -213,13 +225,13 @@ const WizardModal: React.FC<WizardModalProps> = ({ branchId, initialGroup, initi
                     <label
                       key={opt.key}
                       className={`flex items-center gap-2 px-3 py-2.5 rounded-xl border cursor-pointer transition-colors ${
-                        examForm[opt.key] ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-slate-50 border-slate-200 text-slate-600'
+                        form[opt.key] ? 'bg-brand-50 border-brand-300 text-brand-700' : 'bg-slate-50 border-slate-200 text-slate-600'
                       }`}
                     >
                       <input
                         type="checkbox"
-                        checked={examForm[opt.key]}
-                        onChange={(e) => setExamForm({ ...examForm, [opt.key]: e.target.checked })}
+                        checked={form[opt.key]}
+                        onChange={(e) => setForm({ ...form, [opt.key]: e.target.checked })}
                         className="accent-brand-500"
                       />
                       <span className="text-sm font-medium">{opt.label}</span>
@@ -230,35 +242,21 @@ const WizardModal: React.FC<WizardModalProps> = ({ branchId, initialGroup, initi
               <div className="space-y-2">
                 <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Description</label>
                 <textarea
-                  value={examForm.description}
-                  onChange={(e) => setExamForm({ ...examForm, description: e.target.value })}
+                  value={form.description}
+                  onChange={(e) => setForm({ ...form, description: e.target.value })}
                   rows={3}
-                  placeholder="Notes about this exam session..."
+                  placeholder="What this exam covers..."
                   className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 resize-none"
                 />
               </div>
             </div>
             <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3 shrink-0">
-              {canGoBackToStep1 && (
-                <Button type="button" variant="outline" onClick={() => setStep(1)} leftIcon={<ArrowLeft size={16} />}>
-                  Back
-                </Button>
-              )}
               <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-              <Button type="submit" isLoading={createExam.isPending}>Next</Button>
+              <Button type="submit" isLoading={isCreating}>Create Exam</Button>
             </div>
           </form>
-        )}
-
-        {step === 3 && group && exam && (
-          <ScheduleStep
-            branchId={branchId}
-            group={group}
-            exam={exam}
-            canGoBack={canGoBackToStep2}
-            onBack={() => setStep(2)}
-            onClose={onClose}
-          />
+        ) : (
+          <ScheduleStep branchId={branchId} group={initial.group} exam={initial.exam} onClose={onClose} />
         )}
       </motion.div>
     </div>
@@ -266,91 +264,139 @@ const WizardModal: React.FC<WizardModalProps> = ({ branchId, initialGroup, initi
 };
 
 /* ---------------------------------------------------------------------- */
-/* Wizard step 3 — the bulk row-editor, scoped to one group's exam type    */
-/* and stamping exam_group_exam_id onto everything it saves.               */
+/* Wizard step 2 — the bulk row-editor, scoped to one exam and stamping     */
+/* exam_group_exam_id onto everything it saves.                            */
 /* ---------------------------------------------------------------------- */
 
 const ScheduleStep: React.FC<{
   branchId: number;
   group: ExamGroup;
   exam: ExamGroupExam;
-  canGoBack: boolean;
-  onBack: () => void;
   onClose: () => void;
-}> = ({ branchId, group, exam, canGoBack, onBack, onClose }) => {
+}> = ({ branchId, group, exam, onClose }) => {
   const { data: classes } = useClasses(branchId);
   const { data: sections } = useSections(branchId);
   const { data: staff } = useStaffMembers(branchId);
   const teachers = (staff ?? []).filter((t) => t.user_role === TEACHER_ROLE_ID);
 
+  // Just a Class — the schedule you fill in below applies to every section of that
+  // class in one Save. To do another class, reopen "Schedule" from that exam's row.
   const [classId, setClassId] = useState('');
-  const [sectionId, setSectionId] = useState('');
   const [searched, setSearched] = useState(false);
   const [rows, setRows] = useState<RowDraft[]>([]);
-  const [editingIds, setEditingIds] = useState<Set<number>>(new Set());
-  const [savedFlash, setSavedFlash] = useState(false);
+  const [editingNames, setEditingNames] = useState<Set<string>>(new Set());
+  const [copyFromClassId, setCopyFromClassId] = useState('');
 
-  const filteredSections = (sections ?? []).filter((s) => !classId || String(s.school_class_id) === classId);
-  const { data: subjectsResp } = useClassSubjects(sectionId ? Number(sectionId) : null, branchId);
-  const subjects = subjectsResp?.data ?? [];
+  // Every schedule row this exam has anywhere, across every class already done —
+  // lets a class that's already been scheduled be copied straight into a new one
+  // instead of re-typing the same dates/times/marks again.
+  const { data: allExamSchedulesResp } = useExamSchedules({ exam_group_exam_id: exam.id });
+  const allExamSchedules = allExamSchedulesResp ?? [];
+  const copyFromOptions = Array.from(new Set(allExamSchedules.map((e) => e.class_id)))
+    .filter((id) => String(id) !== classId)
+    .map((id) => ({ value: String(id), label: allExamSchedules.find((e) => e.class_id === id)?.school_class?.name ?? `Class ${id}` }));
+
+  const classSections = (sections ?? []).filter((s) => classId && String(s.school_class_id) === classId);
+
+  const { data: allSubjectsResp } = useBranchSubjects(branchId);
+  // Every class_subjects row across every section of the picked class — a "subject
+  // row" below represents one subject *name*; saving applies it to every section
+  // that has a matching subject (matched by name, since each section has its own id).
+  const classSubjects = (allSubjectsResp?.data ?? []).filter((s) => classId && s.class_id === Number(classId));
+  const subjectNames = Array.from(new Set(classSubjects.map((s) => s.subject_name))).sort();
 
   const { data: examsResp } = useExamSchedules(
-    searched && classId && sectionId
-      ? { branch_id: branchId, exam_type: group.exam_type, class_id: Number(classId), section_id: Number(sectionId) }
-      : {}
+    searched && classId ? { branch_id: branchId, exam_type: group.exam_type, class_id: Number(classId) } : {}
   );
   const existingExams = searched ? examsResp ?? [] : [];
   const bulkSave = useBulkSaveExamSchedule();
 
-  // Searches automatically the moment both Class and Section are picked — no separate click needed.
+  // Searches automatically the moment a Class is picked — no separate click needed.
   useEffect(() => {
-    if (classId && sectionId) setSearched(true);
-  }, [classId, sectionId]);
+    if (classId) setSearched(true);
+  }, [classId]);
 
   useEffect(() => {
-    if (!searched || !sectionId || subjects.length === 0) {
+    if (!searched || subjectNames.length === 0) {
       setRows([]);
       return;
     }
-    const existingBySubject = new Map(existingExams.map((e) => [e.subject_id, e]));
+    // One existing schedule row per subject name, as a representative default (picks
+    // whichever section's entry comes first if they happen to differ across sections).
+    const existingByName = new Map<string, ExamSchedule>();
+    existingExams.forEach((e) => {
+      if (!existingByName.has(e.subject?.subject_name ?? '')) existingByName.set(e.subject?.subject_name ?? '', e);
+    });
     setRows(
-      subjects.map((sub) => {
-        const existing = existingBySubject.get(sub.id);
+      subjectNames.map((name) => {
+        const existing = existingByName.get(name);
+        const template = classSubjects.find((s) => s.subject_name === name);
         return {
-          subjectId: sub.id,
-          subjectName: sub.subject_name,
+          subjectName: name,
           existingId: existing?.id,
           date: existing?.date ?? '',
           startTime: existing?.start_time ?? '',
           duration: existing?.duration ?? '',
-          teacherId: existing ? String(existing.teacher_id ?? '') : String(sub.teacher?.id ?? ''),
-          teacherName: existing?.teacher?.name ?? sub.teacher?.name ?? '',
+          teacherId: existing ? String(existing.teacher_id ?? '') : String(template?.teacher?.id ?? ''),
+          teacherName: existing?.teacher?.name ?? template?.teacher?.name ?? '',
           marksMax: existing ? String(existing.total_marks) : '',
           marksMin: existing ? String(existing.min_marks) : '0',
         };
       })
     );
-    setEditingIds(new Set(subjects.filter((sub) => !existingBySubject.has(sub.id)).map((sub) => sub.id)));
-    setSavedFlash(false);
+    setEditingNames(new Set(subjectNames.filter((name) => !existingByName.has(name))));
+    setCopyFromClassId('');
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searched, subjects, existingExams, classId, sectionId]);
+  }, [searched, classId, existingExams]);
 
-  const updateRow = (subjectId: number, patch: Partial<RowDraft>) => {
-    setSavedFlash(false);
-    setRows((prev) => prev.map((r) => (r.subjectId === subjectId ? { ...r, ...patch } : r)));
+  /** Fills every matching row (by subject name) from another class's already-saved
+   * schedule for this same exam — still needs Save to actually persist for this class. */
+  const handleCopyFromClass = () => {
+    if (!copyFromClassId) return;
+    const sourceByName = new Map<string, ExamSchedule>();
+    allExamSchedules
+      .filter((e) => e.class_id === Number(copyFromClassId))
+      .forEach((e) => {
+        const name = e.subject?.subject_name ?? '';
+        if (name && !sourceByName.has(name)) sourceByName.set(name, e);
+      });
+
+    setRows((prev) =>
+      prev.map((row) => {
+        const source = sourceByName.get(row.subjectName);
+        if (!source) return row;
+        return {
+          ...row,
+          date: source.date,
+          startTime: source.start_time,
+          duration: source.duration ?? '',
+          teacherId: String(source.teacher_id ?? ''),
+          teacherName: source.teacher?.name ?? '',
+          marksMax: String(source.total_marks),
+          marksMin: String(source.min_marks),
+        };
+      })
+    );
+    setEditingNames((prev) => {
+      const next = new Set(prev);
+      sourceByName.forEach((_v, name) => next.add(name));
+      return next;
+    });
   };
 
-  const removeRow = (subjectId: number) => {
-    setSavedFlash(false);
-    setRows((prev) => prev.filter((r) => r.subjectId !== subjectId));
+  const updateRow = (subjectName: string, patch: Partial<RowDraft>) => {
+    setRows((prev) => prev.map((r) => (r.subjectName === subjectName ? { ...r, ...patch } : r)));
   };
 
-  const editRow = (subjectId: number) => setEditingIds((prev) => new Set(prev).add(subjectId));
+  const removeRow = (subjectName: string) => {
+    setRows((prev) => prev.filter((r) => r.subjectName !== subjectName));
+  };
 
-  const copyToNextRow = (subjectId: number) => {
-    setSavedFlash(false);
+  const editRow = (subjectName: string) => setEditingNames((prev) => new Set(prev).add(subjectName));
+
+  const copyToNextRow = (subjectName: string) => {
     setRows((prev) => {
-      const idx = prev.findIndex((r) => r.subjectId === subjectId);
+      const idx = prev.findIndex((r) => r.subjectName === subjectName);
       if (idx === -1 || idx === prev.length - 1) return prev;
       const source = prev[idx];
       const next = [...prev];
@@ -368,76 +414,93 @@ const ScheduleStep: React.FC<{
     });
   };
 
-  const handleSave = () => {
-    if (!classId || !sectionId) return;
+  const handleSave = async () => {
+    if (!classId || classSections.length === 0) return;
     const rowsWithData = rows.filter((row) => row.date && row.startTime && row.marksMax);
+    if (rowsWithData.length === 0) return;
 
-    bulkSave.mutate(
-      {
-        branch_id: branchId,
-        exam_type: group.exam_type,
-        exam_group_exam_id: exam.id,
-        class_id: Number(classId),
-        section_id: Number(sectionId),
-        rows: rowsWithData.map((row) => ({
-          subject_id: row.subjectId,
-          date: row.date,
-          start_time: row.startTime,
-          duration: row.duration,
-          teacher_id: row.teacherId ? Number(row.teacherId) : null,
-          total_marks: Number(row.marksMax),
-          min_marks: Number(row.marksMin || 0),
-        })),
-      },
-      { onSuccess: () => setSavedFlash(true) }
+    // One bulk-save call per section — each section's own subject id (matched by name)
+    // gets the same date/time/teacher/marks entered once above.
+    await Promise.all(
+      classSections.map((section) => {
+        const sectionSubjects = classSubjects.filter((s) => s.section_id === section.id);
+        const sectionRows = rowsWithData
+          .map((row) => {
+            const match = sectionSubjects.find((s) => s.subject_name === row.subjectName);
+            if (!match) return null;
+            return {
+              subject_id: match.id,
+              date: row.date,
+              start_time: row.startTime,
+              duration: row.duration,
+              teacher_id: row.teacherId ? Number(row.teacherId) : null,
+              total_marks: Number(row.marksMax),
+              min_marks: Number(row.marksMin || 0),
+            };
+          })
+          .filter((r): r is NonNullable<typeof r> => r !== null);
+
+        if (sectionRows.length === 0) return Promise.resolve();
+        return bulkSave.mutateAsync({
+          branch_id: branchId,
+          exam_type: group.exam_type,
+          exam_group_exam_id: exam.id,
+          class_id: Number(classId),
+          section_id: section.id,
+          rows: sectionRows,
+        });
+      })
     );
-  };
-
-  const handleAddAnotherClass = () => {
-    setClassId('');
-    setSectionId('');
-    setSearched(false);
-    setRows([]);
-    setSavedFlash(false);
+    onClose();
   };
 
   return (
     <div className="flex flex-col overflow-hidden">
       <div className="p-6 overflow-y-auto space-y-6">
         <div className="px-4 py-3 bg-indigo-50 text-indigo-700 rounded-xl text-sm font-bold">
-          {group.name} &middot; {exam.name} &middot; {group.exam_type}
+          {exam.name} &middot; {group.exam_type}
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Class</label>
-            <Select
-              value={classId}
-              onChange={(v) => { setClassId(v); setSectionId(''); setSearched(false); }}
-              options={(classes ?? []).map((c) => ({ value: String(c.id), label: c.name }))}
-              placeholder="Select class"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Section</label>
-            <Select
-              value={sectionId}
-              onChange={(v) => { setSectionId(v); setSearched(false); }}
-              options={filteredSections.map((s) => ({ value: String(s.id), label: s.name }))}
-              placeholder={classId ? 'Select section' : 'Select class first'}
-              disabled={!classId}
-            />
-          </div>
+        <div className="space-y-2 max-w-sm">
+          <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Class</label>
+          <Select
+            value={classId}
+            onChange={(v) => { setClassId(v); setSearched(false); }}
+            options={(classes ?? []).map((c) => ({ value: String(c.id), label: c.name }))}
+            placeholder="Select class"
+          />
+          {classId && (
+            <p className="text-xs text-slate-500 font-medium">
+              Applies to all {classSections.length} section{classSections.length === 1 ? '' : 's'} of this class: {classSections.map((s) => s.name).join(', ') || '—'}
+            </p>
+          )}
         </div>
+
+        {searched && rows.length > 0 && copyFromOptions.length > 0 && (
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3 p-4 bg-slate-50 border border-slate-100 rounded-2xl">
+            <div className="space-y-2 flex-1 max-w-sm">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Copy Schedule From</label>
+              <Select
+                value={copyFromClassId}
+                onChange={setCopyFromClassId}
+                options={copyFromOptions}
+                placeholder="Select a class already scheduled"
+              />
+            </div>
+            <Button type="button" variant="outline" onClick={handleCopyFromClass} disabled={!copyFromClassId} leftIcon={<Copy size={16} />}>
+              Copy
+            </Button>
+          </div>
+        )}
 
         {!searched ? (
           <EmptyState
             icon={CalendarClock}
-            title="Pick a Class & Section"
-            description="Every student in the class & section you pick gets this exam — select both above and every subject loads automatically."
+            title="Pick a Class"
+            description="Every student in every section of the class you pick gets this exam — select a class above and every subject loads automatically."
           />
         ) : rows.length === 0 ? (
-          <EmptyState icon={ClipboardList} title="No Subjects Found" description="This class & section has no subjects set up yet." />
+          <EmptyState icon={ClipboardList} title="No Subjects Found" description="This class has no subjects set up yet." />
         ) : (
           <div className="border border-slate-100 rounded-2xl overflow-hidden">
             <div className="overflow-x-auto">
@@ -456,10 +519,10 @@ const ScheduleStep: React.FC<{
                 </thead>
                 <tbody className="divide-y divide-slate-50">
                   {rows.map((row, idx) => {
-                    const isEditing = editingIds.has(row.subjectId);
+                    const isEditing = editingNames.has(row.subjectName);
                     if (!isEditing) {
                       return (
-                        <tr key={row.subjectId} className="hover:bg-slate-50/50 transition-colors">
+                        <tr key={row.subjectName} className="hover:bg-slate-50/50 transition-colors">
                           <td className="px-4 py-3"><p className="text-sm font-bold text-slate-800">{row.subjectName}</p></td>
                           <td className="px-2 py-3"><p className="text-xs font-semibold text-slate-600">{row.date || '—'}</p></td>
                           <td className="px-2 py-3"><p className="text-xs font-semibold text-slate-600">{row.startTime || '—'}</p></td>
@@ -469,10 +532,10 @@ const ScheduleStep: React.FC<{
                           <td className="px-2 py-3"><p className="text-xs font-bold text-slate-700">{row.marksMin}</p></td>
                           <td className="px-4 py-3 text-right">
                             <div className="flex items-center justify-end gap-1">
-                              <button onClick={() => editRow(row.subjectId)} title="Edit this row" className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
+                              <button onClick={() => editRow(row.subjectName)} title="Edit this row" className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
                                 <Edit2 size={16} />
                               </button>
-                              <button onClick={() => removeRow(row.subjectId)} title="Remove this subject from the schedule" className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                              <button onClick={() => removeRow(row.subjectName)} title="Remove this subject from the schedule" className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                                 <X size={16} />
                               </button>
                             </div>
@@ -481,18 +544,18 @@ const ScheduleStep: React.FC<{
                       );
                     }
                     return (
-                      <tr key={row.subjectId} className="hover:bg-slate-50/50 transition-colors">
+                      <tr key={row.subjectName} className="hover:bg-slate-50/50 transition-colors">
                         <td className="px-4 py-3"><p className="text-sm font-bold text-slate-800">{row.subjectName}</p></td>
                         <td className="px-2 py-3">
-                          <input type="date" value={row.date} onChange={(e) => updateRow(row.subjectId, { date: e.target.value })}
+                          <input type="date" value={row.date} onChange={(e) => updateRow(row.subjectName, { date: e.target.value })}
                             className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20" />
                         </td>
                         <td className="px-2 py-3">
-                          <input type="time" value={row.startTime} onChange={(e) => updateRow(row.subjectId, { startTime: e.target.value })}
+                          <input type="time" value={row.startTime} onChange={(e) => updateRow(row.subjectName, { startTime: e.target.value })}
                             className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20" />
                         </td>
                         <td className="px-2 py-3">
-                          <input type="text" value={row.duration} onChange={(e) => updateRow(row.subjectId, { duration: e.target.value })} placeholder="e.g. 1h 30m"
+                          <input type="text" value={row.duration} onChange={(e) => updateRow(row.subjectName, { duration: e.target.value })} placeholder="e.g. 1h 30m"
                             className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20" />
                         </td>
                         <td className="px-2 py-3">
@@ -500,7 +563,7 @@ const ScheduleStep: React.FC<{
                             value={row.teacherId}
                             onChange={(v) => {
                               const t = teachers.find((tt) => String(tt.id) === v);
-                              updateRow(row.subjectId, { teacherId: v, teacherName: t?.name ?? '' });
+                              updateRow(row.subjectName, { teacherId: v, teacherName: t?.name ?? '' });
                             }}
                             options={teachers.map((t) => ({ value: String(t.id), label: t.name }))}
                             placeholder="Select"
@@ -508,20 +571,20 @@ const ScheduleStep: React.FC<{
                           />
                         </td>
                         <td className="px-2 py-3">
-                          <input type="number" min={0} value={row.marksMax} onChange={(e) => updateRow(row.subjectId, { marksMax: e.target.value })}
+                          <input type="number" min={0} value={row.marksMax} onChange={(e) => updateRow(row.subjectName, { marksMax: e.target.value })}
                             className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20" />
                         </td>
                         <td className="px-2 py-3">
-                          <input type="number" min={0} value={row.marksMin} onChange={(e) => updateRow(row.subjectId, { marksMin: e.target.value })}
+                          <input type="number" min={0} value={row.marksMin} onChange={(e) => updateRow(row.subjectName, { marksMin: e.target.value })}
                             className="w-full px-2 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-medium text-slate-700 outline-none focus:ring-2 focus:ring-brand-500/20" />
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
-                            <button onClick={() => copyToNextRow(row.subjectId)} disabled={idx === rows.length - 1} title="Copy to next row"
+                            <button onClick={() => copyToNextRow(row.subjectName)} disabled={idx === rows.length - 1} title="Copy to next row"
                               className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent">
                               <Copy size={16} />
                             </button>
-                            <button onClick={() => removeRow(row.subjectId)} title="Remove this subject from the schedule" className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
+                            <button onClick={() => removeRow(row.subjectName)} title="Remove this subject from the schedule" className="p-2 text-rose-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                               <X size={16} />
                             </button>
                           </div>
@@ -537,80 +600,63 @@ const ScheduleStep: React.FC<{
       </div>
 
       <div className="p-4 bg-slate-50 border-t border-slate-100 flex items-center justify-end gap-3 shrink-0">
-        {savedFlash && (
-          <span className="flex items-center gap-1.5 text-sm font-bold text-emerald-600 mr-auto">
-            <CheckCircle2 size={16} /> Saved — every student in this class & section now has this exam.
-          </span>
-        )}
-        {savedFlash && (
-          <Button variant="outline" onClick={handleAddAnotherClass}>Add Another Class/Section</Button>
-        )}
-        {canGoBack && !savedFlash && (
-          <Button variant="outline" onClick={onBack} leftIcon={<ArrowLeft size={16} />}>Back</Button>
-        )}
-        <Button variant="ghost" onClick={onClose}>{savedFlash ? 'Done' : 'Cancel'}</Button>
-        {!savedFlash && (
-          <Button onClick={handleSave} leftIcon={<Save size={18} />} isLoading={bulkSave.isPending} disabled={rows.length === 0}>
-            Save
-          </Button>
-        )}
+        <Button variant="ghost" onClick={onClose}>Cancel</Button>
+        <Button onClick={handleSave} leftIcon={<Save size={18} />} isLoading={bulkSave.isPending} disabled={rows.length === 0}>
+          Save
+        </Button>
       </div>
     </div>
   );
 };
 
 /* ---------------------------------------------------------------------- */
-/* Simple edit forms (rename/describe) — the wizard is only for creating.  */
+/* Edit — one form for the exam's name/type/publish settings/description,  */
+/* updating both the exam and its behind-the-scenes group record together. */
 /* ---------------------------------------------------------------------- */
 
-const EditGroupModal: React.FC<{ group: ExamGroup; onClose: () => void }> = ({ group, onClose }) => {
+const EditExamModal: React.FC<{ branchId: number; group: ExamGroup; exam: ExamGroupExam; onClose: () => void }> = ({ branchId, group, exam, onClose }) => {
   const updateGroup = useUpdateExamGroup();
-  const [form, setForm] = useState({ name: group.name, exam_type: group.exam_type, description: group.description ?? '' });
-
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <motion.div initial={{ opacity: 0, scale: 0.95, y: 20 }} animate={{ opacity: 1, scale: 1, y: 0 }} exit={{ opacity: 0, scale: 0.95, y: 20 }}
-        className="bg-white w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl ring-1 ring-slate-100">
-        <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
-          <h3 className="text-lg font-bold text-slate-900">Edit Exam Group</h3>
-          <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400"><X size={20} /></button>
-        </div>
-        <form onSubmit={(e) => { e.preventDefault(); updateGroup.mutate({ id: group.id, data: form }, { onSuccess: onClose }); }}>
-          <div className="p-6 space-y-4">
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Name</label>
-              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700" />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Exam Type</label>
-              <Select value={form.exam_type} onChange={(v) => setForm({ ...form, exam_type: v as ExamType })} options={EXAM_TYPES.map((t) => ({ value: t, label: t }))} required />
-            </div>
-            <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Description</label>
-              <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} rows={3}
-                className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700 resize-none" />
-            </div>
-          </div>
-          <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
-            <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" isLoading={updateGroup.isPending}>Update Group</Button>
-          </div>
-        </form>
-      </motion.div>
-    </div>
-  );
-};
-
-const EditExamModal: React.FC<{ exam: ExamGroupExam; onClose: () => void }> = ({ exam, onClose }) => {
   const updateExam = useUpdateExamGroupExam();
+  const isSaving = updateGroup.isPending || updateExam.isPending;
+
+  const { data: sessionsResp } = useAcademicSessions(branchId);
+  const sessions = sessionsResp ?? [];
+
   const [form, setForm] = useState({
     name: exam.name,
+    academicSessionId: group.academic_session_id ? String(group.academic_session_id) : '',
     publish_exam: exam.publish_exam,
     publish_schedule: exam.publish_schedule,
     publish_result: exam.publish_result,
     description: exam.description ?? '',
   });
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    // No separate "Exam Type" field — Name doubles as the type, kept in sync here too.
+    await Promise.all([
+      updateGroup.mutateAsync({
+        id: group.id,
+        data: {
+          academic_session_id: form.academicSessionId ? Number(form.academicSessionId) : null,
+          name: form.name,
+          exam_type: form.name as ExamType,
+          description: form.description,
+        },
+      }),
+      updateExam.mutateAsync({
+        id: exam.id,
+        data: {
+          name: form.name,
+          publish_exam: form.publish_exam,
+          publish_schedule: form.publish_schedule,
+          publish_result: form.publish_result,
+          description: form.description,
+        },
+      }),
+    ]);
+    onClose();
+  };
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
@@ -620,12 +666,22 @@ const EditExamModal: React.FC<{ exam: ExamGroupExam; onClose: () => void }> = ({
           <h3 className="text-lg font-bold text-slate-900">Edit Exam</h3>
           <button onClick={onClose} className="p-2 hover:bg-white rounded-xl transition-all text-slate-400"><X size={20} /></button>
         </div>
-        <form onSubmit={(e) => { e.preventDefault(); updateExam.mutate({ id: exam.id, data: form }, { onSuccess: onClose }); }}>
+        <form onSubmit={handleSubmit}>
           <div className="p-6 space-y-4">
             <div className="space-y-2">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Exam Name</label>
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Name</label>
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required
                 className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-brand-500/20 outline-none transition-all font-medium text-slate-700" />
+            </div>
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Academic Session</label>
+              <Select
+                value={form.academicSessionId}
+                onChange={(v) => setForm({ ...form, academicSessionId: v })}
+                options={sessions.map((s) => ({ value: String(s.id), label: s.is_active ? `${s.name} (Active)` : s.name }))}
+                placeholder={sessions.length ? 'Select session' : 'No sessions yet — see System Settings'}
+                disabled={sessions.length === 0}
+              />
             </div>
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-widest">Publish Settings</label>
@@ -654,7 +710,7 @@ const EditExamModal: React.FC<{ exam: ExamGroupExam; onClose: () => void }> = ({
           </div>
           <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end gap-3">
             <Button type="button" variant="ghost" onClick={onClose}>Cancel</Button>
-            <Button type="submit" isLoading={updateExam.isPending}>Update Exam</Button>
+            <Button type="submit" isLoading={isSaving}>Update Exam</Button>
           </div>
         </form>
       </motion.div>
@@ -760,7 +816,7 @@ const MarksheetModal: React.FC<{ branchId: number; group: ExamGroup; exam: ExamG
         <div className="p-6 border-b border-slate-100 flex items-center justify-between bg-slate-50/50 shrink-0 print:hidden">
           <div>
             <h3 className="text-lg font-bold text-slate-900">Marksheet — {exam.name}</h3>
-            <p className="text-xs text-slate-400 mt-0.5">{group.name} &middot; {group.exam_type}</p>
+            <p className="text-xs text-slate-400 mt-0.5">{group.exam_type}</p>
           </div>
           <div className="flex items-center gap-2">
             {savedFlash && (
@@ -834,7 +890,7 @@ const MarksheetModal: React.FC<{ branchId: number; group: ExamGroup; exam: ExamG
                 </div>
               </div>
               <p className="text-sm font-semibold text-slate-600 mb-4">
-                {group.name} &middot; {group.exam_type} &middot; {selected.label}
+                {group.exam_type} &middot; {selected.label}
               </p>
             </div>
           )}
@@ -975,7 +1031,9 @@ const MarksheetModal: React.FC<{ branchId: number; group: ExamGroup; exam: ExamG
 };
 
 /* ---------------------------------------------------------------------- */
-/* Main screen                                                             */
+/* Main screen — a flat list of Exams. Each still has one behind-the-scenes*/
+/* Exam Group record (created transparently, see WizardModal) so the       */
+/* existing schedule/marksheet plumbing keyed off exam_type stays intact.  */
 /* ---------------------------------------------------------------------- */
 
 export const ExamGroupManager: React.FC = () => {
@@ -984,32 +1042,16 @@ export const ExamGroupManager: React.FC = () => {
 
   const { data: examGroupsResp } = useExamGroups(branchId);
   const { data: groupExamsResp } = useExamGroupExams(branchId);
-  const deleteGroupMutation = useDeleteExamGroup();
   const deleteExamMutation = useDeleteExamGroupExam();
 
   const groups = examGroupsResp ?? [];
   const exams = groupExamsResp ?? [];
 
-  const [expandedGroupIds, setExpandedGroupIds] = useState<Set<number>>(new Set());
-  const [groupToDelete, setGroupToDelete] = useState<number | null>(null);
   const [examToDelete, setExamToDelete] = useState<number | null>(null);
-  const [editingGroup, setEditingGroup] = useState<ExamGroup | null>(null);
-  const [editingExam, setEditingExam] = useState<ExamGroupExam | null>(null);
-  const [wizard, setWizard] = useState<{ open: boolean; group?: ExamGroup; exam?: ExamGroupExam }>({ open: false });
+  const [editingExam, setEditingExam] = useState<{ group: ExamGroup; exam: ExamGroupExam } | null>(null);
+  const [wizard, setWizard] = useState<{ open: boolean; initial?: { group: ExamGroup; exam: ExamGroupExam } }>({ open: false });
   const [marksheetFor, setMarksheetFor] = useState<{ group: ExamGroup; exam: ExamGroupExam } | null>(null);
 
-  const toggleExpanded = (groupId: number) => {
-    setExpandedGroupIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(groupId)) next.delete(groupId);
-      else next.add(groupId);
-      return next;
-    });
-  };
-
-  const confirmDeleteGroup = () => {
-    if (groupToDelete) deleteGroupMutation.mutate(groupToDelete, { onSuccess: () => setGroupToDelete(null) });
-  };
   const confirmDeleteExam = () => {
     if (examToDelete) deleteExamMutation.mutate(examToDelete, { onSuccess: () => setExamToDelete(null) });
   };
@@ -1019,98 +1061,71 @@ export const ExamGroupManager: React.FC = () => {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight text-center sm:text-left">
-            Exam Group
+            Exams
           </h2>
           <p className="text-slate-500 font-medium mt-1 text-sm sm:text-base text-center sm:text-left">
-            Create a group, add an exam under it, then schedule it for a class & section — every student there gets it automatically
+            Create an exam, then schedule it for a class & section — every student there gets it automatically
           </p>
         </div>
         <Button onClick={() => setWizard({ open: true })} leftIcon={<Plus size={18} />}>
-          Add Exam Group
+          Add Exam
         </Button>
       </div>
 
-      {groups.length === 0 ? (
+      {exams.length === 0 ? (
         <Card padding="none">
           <EmptyState
-            icon={Layers}
-            title="No Exam Groups Yet"
-            description="Create an exam group (e.g. 'Mid Term Examination 2026') to start organizing exams under it."
-            actionLabel="Add Exam Group"
+            icon={Award}
+            title="No Exams Yet"
+            description="Add an exam (e.g. 'Mid Term Examination 2026') to start scheduling it for classes."
+            actionLabel="Add Exam"
             onAction={() => setWizard({ open: true })}
           />
         </Card>
       ) : (
         <div className="space-y-4">
-          {groups.map((group) => {
-            const groupsExams = exams.filter((e) => e.exam_group_id === group.id);
-            const isExpanded = expandedGroupIds.has(group.id);
+          {exams.map((exam) => {
+            const group = groups.find((g) => g.id === exam.exam_group_id);
+            if (!group) return null;
             return (
-              <Card key={group.id} padding="none" className="overflow-hidden">
-                <button onClick={() => toggleExpanded(group.id)} className="w-full flex items-center justify-between gap-4 p-5 sm:p-6 hover:bg-slate-50/50 transition-colors text-left">
-                  <div className="flex items-center gap-4 min-w-0">
-                    {isExpanded ? <ChevronDown size={18} className="text-slate-400 shrink-0" /> : <ChevronRight size={18} className="text-slate-400 shrink-0" />}
-                    <div className="min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <p className="text-base font-bold text-slate-900">{group.name}</p>
-                        <span className="inline-block px-2.5 py-1 bg-indigo-50 text-indigo-700 font-bold text-[11px] rounded-md">{group.exam_type}</span>
-                        <span className="text-xs text-slate-400 font-medium">{groupsExams.length} exam{groupsExams.length === 1 ? '' : 's'}</span>
-                      </div>
-                      {group.description && <p className="text-sm text-slate-500 font-medium mt-1 truncate">{group.description}</p>}
+              <Card key={exam.id} padding="none" className="overflow-hidden">
+                <div className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                  <div className="min-w-0">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="text-base font-bold text-slate-900">{exam.name}</p>
+                      <span
+                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                          group.academic_session ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'
+                        }`}
+                      >
+                        {group.academic_session?.name ?? 'No Session'}
+                      </span>
+                    </div>
+                    {exam.description && <p className="text-sm text-slate-500 font-medium mt-1 truncate">{exam.description}</p>}
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <PublishBadge label="Exam" active={exam.publish_exam} />
+                      <PublishBadge label="Schedule" active={exam.publish_schedule} />
+                      <PublishBadge label="Result" active={exam.publish_result} />
+                    </div>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      <ScheduledClasses examId={exam.id} />
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0" onClick={(e) => e.stopPropagation()}>
-                    <button onClick={() => setWizard({ open: true, group })} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors" title="Add Exam to this group">
-                      <Plus size={16} />
-                    </button>
-                    <button onClick={() => setEditingGroup(group)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
+                  <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
+                    <Button variant="outline" size="sm" leftIcon={<CalendarClock size={14} />} onClick={() => setWizard({ open: true, initial: { group, exam } })}>
+                      Schedule
+                    </Button>
+                    <Button variant="outline" size="sm" leftIcon={<FileSpreadsheet size={14} />} onClick={() => setMarksheetFor({ group, exam })}>
+                      Marksheet
+                    </Button>
+                    <button onClick={() => setEditingExam({ group, exam })} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
                       <Edit2 size={16} />
                     </button>
-                    <button onClick={() => setGroupToDelete(group.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
+                    <button onClick={() => setExamToDelete(exam.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
                       <Trash2 size={16} />
                     </button>
                   </div>
-                </button>
-
-                {isExpanded && (
-                  <div className="border-t border-slate-100 bg-slate-50/30">
-                    {groupsExams.length === 0 ? (
-                      <div className="p-6">
-                        <EmptyState icon={Plus} title="No Exams in this Group" description="Add an exam session (e.g. 'Final Assessment Session') under this group." actionLabel="Add Exam" onAction={() => setWizard({ open: true, group })} />
-                      </div>
-                    ) : (
-                      <div className="divide-y divide-slate-100">
-                        {groupsExams.map((exam) => (
-                          <div key={exam.id} className="p-5 sm:p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div className="min-w-0">
-                              <p className="text-sm font-bold text-slate-800">{exam.name}</p>
-                              {exam.description && <p className="text-xs text-slate-500 font-medium mt-1">{exam.description}</p>}
-                              <div className="flex flex-wrap gap-2 mt-2">
-                                <PublishBadge label="Exam" active={exam.publish_exam} />
-                                <PublishBadge label="Schedule" active={exam.publish_schedule} />
-                                <PublishBadge label="Result" active={exam.publish_result} />
-                              </div>
-                            </div>
-                            <div className="flex items-center gap-2 shrink-0 self-end sm:self-center">
-                              <Button variant="outline" size="sm" leftIcon={<CalendarClock size={14} />} onClick={() => setWizard({ open: true, group, exam })}>
-                                Schedule
-                              </Button>
-                              <Button variant="outline" size="sm" leftIcon={<FileSpreadsheet size={14} />} onClick={() => setMarksheetFor({ group, exam })}>
-                                Marksheet
-                              </Button>
-                              <button onClick={() => setEditingExam(exam)} className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-lg transition-colors">
-                                <Edit2 size={16} />
-                              </button>
-                              <button onClick={() => setExamToDelete(exam.id)} className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-lg transition-colors">
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
+                </div>
               </Card>
             );
           })}
@@ -1119,16 +1134,12 @@ export const ExamGroupManager: React.FC = () => {
 
       <AnimatePresence>
         {wizard.open && (
-          <WizardModal branchId={branchId} initialGroup={wizard.group} initialExam={wizard.exam} onClose={() => setWizard({ open: false })} />
+          <WizardModal branchId={branchId} initial={wizard.initial} onClose={() => setWizard({ open: false })} />
         )}
       </AnimatePresence>
 
       <AnimatePresence>
-        {editingGroup && <EditGroupModal group={editingGroup} onClose={() => setEditingGroup(null)} />}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {editingExam && <EditExamModal exam={editingExam} onClose={() => setEditingExam(null)} />}
+        {editingExam && <EditExamModal branchId={branchId} group={editingExam.group} exam={editingExam.exam} onClose={() => setEditingExam(null)} />}
       </AnimatePresence>
 
       <AnimatePresence>
@@ -1138,20 +1149,11 @@ export const ExamGroupManager: React.FC = () => {
       </AnimatePresence>
 
       <DeleteConfirmationModal
-        isOpen={!!groupToDelete}
-        onClose={() => setGroupToDelete(null)}
-        onConfirm={confirmDeleteGroup}
-        title="Delete Exam Group?"
-        message="This will also delete every exam created under this group. This action cannot be undone."
-        isLoading={deleteGroupMutation.isPending}
-      />
-
-      <DeleteConfirmationModal
         isOpen={!!examToDelete}
         onClose={() => setExamToDelete(null)}
         onConfirm={confirmDeleteExam}
         title="Delete Exam?"
-        message="Are you sure you want to delete this exam session? Any schedule created under it will be unlinked, not deleted. This action cannot be undone."
+        message="Are you sure you want to delete this exam? Any schedule created under it will be unlinked, not deleted. This action cannot be undone."
         isLoading={deleteExamMutation.isPending}
       />
     </div>

@@ -119,7 +119,10 @@ export const SubjectAssignmentManager: React.FC = () => {
 
   const handleOpenSubjectsModal = (student: any) => {
     setActiveStudent(student);
-    setDraftSubjectIds(studentSubjectsMap[student.id] ?? []);
+    const existing = studentSubjectsMap[student.id];
+    // No saved rows yet → default to "takes every subject", matching the same default
+    // used in the Students list's own Subjects button.
+    setDraftSubjectIds(existing && existing.length > 0 ? existing : subjects.map((s) => s.id));
   };
 
   const toggleDraftSubject = (subjectId: number) => {
