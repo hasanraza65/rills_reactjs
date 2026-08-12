@@ -27,7 +27,8 @@ import {
   Edit2,
   MoreHorizontal,
   Layers,
-  Building2
+  Building2,
+  ListChecks
 } from 'lucide-react';
 import { StatCard } from './StatCard';
 import { PricingConfig } from './SuperAdmin/PricingConfig';
@@ -49,8 +50,8 @@ import { ClassSyllabusManager } from './Academic/ClassSyllabusManager';
 import { DiariesManager } from './Academic/DiariesManager';
 import { MarksEntryManager } from './Examination/MarksEntryManager';
 import { ReportCard } from './Examination/ReportCard';
-import { SubjectAssignmentManager } from './Examination/SubjectAssignmentManager';
 import { ExamGroupManager } from './Examination/ExamGroupManager';
+import { AcademicSessionManager } from './SystemSettings/AcademicSessionManager';
 
 import { StaffManagement } from './StaffManagement';
 import { RolesPage } from './RolesManagement/RolesPage';
@@ -66,6 +67,7 @@ import { TimeTableGenerate } from './TimeTable/TimeTableGenerate';
 import { TeacherTimeTablePrint } from './TimeTable/TeacherTimeTablePrint';
 import { useStudents, useDeleteStudent, useUpdateStudent } from '../hooks/use-student';
 import { StudentDetailsModal } from './StudentDetailsModal';
+import { StudentSubjectsModal } from './StudentSubjectsModal';
 import { NotificationPanel } from './NotificationPanel';
 import { Button } from './ui/Button';
 import { Card } from './ui/Card';
@@ -148,6 +150,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   // Student CRUD State
   const [viewingStudent, setViewingStudent] = React.useState<any | null>(null);
   const [deletingStudentId, setDeletingStudentId] = React.useState<number | null>(null);
+  const [subjectsStudent, setSubjectsStudent] = React.useState<any | null>(null);
 
   const { data: students, isLoading: isLoadingStudents, error: studentsError } = useStudents(selectedBranchId || 1);
   const deleteStudentMutation = useDeleteStudent();
@@ -156,6 +159,377 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const toggleStudentActive = (s: { id: number; is_active: boolean }) => {
     updateStudentMutation.mutate({ id: s.id, data: { is_active: !s.is_active } });
   };
+
+  // Shared by both the Super Admin and Branch/School Admin student tabs (see
+  // renderStudentsSection below) — computed once here instead of per-renderer.
+  const filteredStudents = students?.filter(s => {
+    if (studentStatusFilter === 'active' && !s.is_active) return false;
+    if (studentStatusFilter === 'inactive' && s.is_active) return false;
+
+    const query = studentSearchQuery.toLowerCase().trim();
+    if (!query) return true;
+
+    const strippedQuery = query.replace(/[- ]/g, '');
+
+    // Student basic info
+    const name = (s.name || '').toLowerCase();
+    const adm_no = (s.admission_no || '').toLowerCase();
+
+    // Parent Information
+    const father_name = (s.parent?.father_name || '').toLowerCase();
+    const mother_name = (s.parent?.mother_name || '').toLowerCase();
+    const f_cnic = (s.parent?.father_cnic || '').replace(/[- ]/g, '');
+    const m_cnic = (s.parent?.mother_cnic || '').replace(/[- ]/g, '');
+    const f_phone = (s.parent?.father_contact_no || '').replace(/[- ]/g, '');
+    const m_phone = (s.parent?.mother_contact_no || '').replace(/[- ]/g, '');
+
+    return name.includes(query) ||
+           adm_no.includes(query) ||
+           father_name.includes(query) ||
+           mother_name.includes(query) ||
+           f_cnic.includes(strippedQuery) ||
+           m_cnic.includes(strippedQuery) ||
+           f_phone.includes(strippedQuery) ||
+           m_phone.includes(strippedQuery);
+  }) || [];
+
+  // Same "Student Listing" tab content used by Branch/School Admin — Super Admin
+  // gets it too now (see Sidebar's SUPER_ADMIN menu + HANDLED_TABS below), sharing
+  // this one implementation rather than duplicating the JSX per role.
+  const renderStudentsSection = () => (
+    <>
+      {activeTab === 'students' && (
+          <motion.div
+            key="students"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            className="space-y-6"
+          >
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div>
+                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Student Listing</h3>
+                <p className="text-slate-500 text-sm font-medium">Manage student records and admissions</p>
+              </div>
+              <button
+                onClick={() => {
+                  setEditingStudent(null);
+                  onTabChange('add-student');
+                }}
+                className="w-full sm:w-auto px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
+              >
+                <UserPlus size={18} className="sm:w-5 sm:h-5" />
+                New Admission
+              </button>
+            </div>
+
+
+            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
+              <div className="p-4 sm:p-6 border-b border-slate-50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
+                <div className="relative flex-1">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
+                  <input
+                    placeholder="Search students..."
+                    value={studentSearchQuery}
+                    onChange={(e) => setStudentSearchQuery(e.target.value)}
+                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none font-medium"
+                  />
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
+                    <BookOpen size={16} className="text-slate-400" />
+                    <Select
+                      value={dashboardClassFilter}
+                      onChange={setDashboardClassFilter}
+                      options={[{ value: 'All Classes', label: 'All Classes' }]}
+                      size="sm"
+                    />
+                  </div>
+                  <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
+                    <Filter size={16} className="text-slate-400" />
+                    <Select
+                      value={studentStatusFilter}
+                      onChange={(v) => setStudentStatusFilter(v as '' | 'active' | 'inactive')}
+                      options={[
+                        { value: 'active', label: 'Active' },
+                        { value: 'inactive', label: 'Inactive' },
+                      ]}
+                      placeholder="All Status"
+                      size="sm"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto lg:block">
+                <table className="w-full text-left hidden lg:table">
+
+                  <thead>
+                    <tr className="bg-slate-50/50">
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Student</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admission No</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Class / Section</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
+                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {isLoadingStudents ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-10 text-center">
+                          <div className="flex flex-col items-center gap-2 text-slate-400">
+                             <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
+                             <p className="text-sm font-bold uppercase tracking-widest">Loading Students...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : studentsError ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-10 text-center text-rose-500 font-bold">
+                          Failed to load students. Please try again.
+                        </td>
+                      </tr>
+                    ) : filteredStudents.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-8 py-20 text-center">
+                          <EmptyState
+                            icon={GraduationCap}
+                            title="No Students Found"
+                            description={studentSearchQuery ? `No records match "${studentSearchQuery}"` : studentStatusFilter ? "No students match this status filter." : "Begin by registering your first student."}
+                            actionLabel={studentSearchQuery ? "Clear Search" : "New Admission"}
+                            onAction={studentSearchQuery ? () => setStudentSearchQuery('') : () => {
+                              setEditingStudent(null);
+                              onTabChange('add-student');
+                            }}
+                          />
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredStudents.map(s => (
+                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
+                          <td className="px-8 py-5">
+                            <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
+                                {s.name?.charAt(0) || '?'}
+                              </div>
+                              <div>
+                                <p className="text-sm font-bold text-slate-800">{s.name}</p>
+                                <p className="text-xs text-slate-400 capitalize">{s.gender}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <p className="text-sm font-bold text-slate-600 truncate max-w-[150px] leading-tight">{s.admission_no}</p>
+                            <p className="text-[10px] text-brand-600 font-bold mt-1">
+                              {s.parent?.father_contact_no || s.parent?.mother_contact_no || 'N/A'}
+                            </p>
+                          </td>
+                          <td className="px-8 py-5">
+                            <div className="flex flex-col gap-1">
+                              <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase w-fit">
+                                {s.class?.name || 'No Class'}
+                              </span>
+                              {s.section && (
+                                <span className="text-[10px] text-slate-400 font-bold px-1 uppercase tracking-tighter">
+                                  Section {s.section.name}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+                          <td className="px-8 py-5">
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); toggleStudentActive(s); }}
+                              disabled={updateStudentMutation.isPending}
+                              title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
+                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                                s.is_active
+                                  ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                              }`}
+                            >
+                              {s.is_active ? 'Active' : 'Inactive'}
+                            </button>
+                          </td>
+                          <td className="px-8 py-5 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => setViewingStudent(s)}
+                                className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                                title="View Details"
+                              >
+                                <Eye size={18} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setEditingStudent(s);
+                                  onTabChange('add-student');
+                                }}
+                                className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                                title="Edit Student"
+                              >
+                                <Edit2 size={18} />
+                              </button>
+                              <button
+                                onClick={() => setSubjectsStudent(s)}
+                                className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
+                                title="Assign Subjects"
+                              >
+                                <ListChecks size={18} />
+                              </button>
+                              <button
+                                onClick={() => setDeletingStudentId(s.id)}
+                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                                title="Delete Student"
+                              >
+                                <Trash2 size={18} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+
+                {/* Mobile Card List */}
+                <div className="lg:hidden divide-y divide-slate-100">
+                  {isLoadingStudents ? (
+                    <div className="p-8 text-center">
+                       <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-2" />
+                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Students...</p>
+                    </div>
+                  ) : filteredStudents.length === 0 ? (
+                    <div className="p-8">
+                      <EmptyState
+                        icon={GraduationCap}
+                        title="No Students"
+                        description="Try a different search term."
+                        onAction={() => setStudentSearchQuery('')}
+                      />
+                    </div>
+                  ) : (
+                    filteredStudents.map(s => (
+                      <div key={s.id} className="p-5 sm:p-6 space-y-5 hover:bg-slate-50/50 transition-colors">
+                        <div className="flex items-start justify-between">
+                          <div className="flex items-center gap-3">
+                            <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg">
+                              {s.name?.charAt(0) || '?'}
+                            </div>
+                            <div>
+                              <p className="font-bold text-slate-800 leading-none mb-1">{s.name}</p>
+                              <div className="flex items-center gap-2">
+                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{s.admission_no}</p>
+                                <span className="text-slate-200 text-[10px]">•</span>
+                                <p className="text-[10px] text-brand-600 font-black tracking-tight">{s.parent?.father_contact_no || s.parent?.mother_contact_no || 'N/A'}</p>
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={(e) => { e.stopPropagation(); toggleStudentActive(s); }}
+                            disabled={updateStudentMutation.isPending}
+                            title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
+                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
+                              s.is_active
+                                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
+                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
+                            }`}
+                          >
+                            {s.is_active ? 'Active' : 'Inactive'}
+                          </button>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2">
+                          <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase">
+                            {s.class?.name || 'No Class'}
+                          </span>
+                          {s.section && (
+                            <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
+                              Section {s.section.name}
+                            </span>
+                          )}
+                          <span className="px-3 py-1 rounded-lg bg-slate-50 text-slate-400 text-[10px] font-bold uppercase">
+                            {s.gender}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
+                          <div className="flex items-center gap-1">
+                            <button
+                              onClick={() => setViewingStudent(s)}
+                              className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
+                            >
+                              <Eye size={18} />
+                            </button>
+                            <button
+                              onClick={() => {
+                                setEditingStudent(s);
+                                onTabChange('add-student');
+                              }}
+                              className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
+                            >
+                              <Edit2 size={18} />
+                            </button>
+                            <button
+                              onClick={() => setSubjectsStudent(s)}
+                              className="p-2 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 rounded-xl transition-all"
+                            >
+                              <ListChecks size={18} />
+                            </button>
+                            <button
+                              onClick={() => setDeletingStudentId(s.id)}
+                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => setViewingStudent(s)}
+                            className="text-[10px] font-bold text-brand-500 uppercase tracking-widest px-3 py-1 hover:bg-brand-50 rounded-lg transition-all"
+                          >
+                            Full Profile
+                          </button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+              </div>
+            </div>
+          </motion.div>
+      )}
+    </>
+  );
+
+  // Same "New Admission / Edit Student" form used by Branch/School Admin — Super
+  // Admin gets it too, shared here rather than duplicated per role.
+  const renderAddStudentSection = () => (
+    <>
+      {activeTab === 'add-student' && (
+          <motion.div
+            key="add-student"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AddStudentForm
+              isPage
+              onClose={() => {
+                setEditingStudent(null);
+                onTabChange('students');
+              }}
+              onSave={() => {
+                setEditingStudent(null);
+                onTabChange('students');
+              }}
+              editingStudent={editingStudent}
+            />
+          </motion.div>
+      )}
+    </>
+  );
 
   const renderSuperAdmin = () => {
     const d = overviewResp?.data as SuperAdminOverview | undefined;
@@ -168,7 +542,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       'library', 'classes', 'sections', 'class-subjects', 'what-i-learnt',
       'subjects', 'class-syllabus', 'roles', 'staff',
       'timetable-periods', 'timetable-generate',
-      'marks-entry', 'report-card', 'exam-subject-assignment', 'exam-group',
+      'report-card', 'exam-group',
+      'students', 'add-student',
+      'academic-sessions',
     ];
     const showOverview = activeTab === 'overview' || !HANDLED_TABS.includes(activeTab);
     return (
@@ -462,17 +838,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {activeTab === 'marks-entry' && (
-          <motion.div
-            key="marks-entry"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <MarksEntryManager />
-          </motion.div>
-        )}
-
         {activeTab === 'report-card' && (
           <motion.div
             key="report-card"
@@ -481,17 +846,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <ReportCard />
-          </motion.div>
-        )}
-
-        {activeTab === 'exam-subject-assignment' && (
-          <motion.div
-            key="exam-subject-assignment"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <SubjectAssignmentManager />
           </motion.div>
         )}
 
@@ -505,335 +859,30 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <ExamGroupManager />
           </motion.div>
         )}
+
+        {activeTab === 'academic-sessions' && (
+          <motion.div
+            key="academic-sessions"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AcademicSessionManager />
+          </motion.div>
+        )}
+
+        {renderStudentsSection()}
+        {renderAddStudentSection()}
       </AnimatePresence>
     </div>
   );
   };
 
   const renderBranchAdmin = () => {
-    const filteredStudents = students?.filter(s => {
-      if (studentStatusFilter === 'active' && !s.is_active) return false;
-      if (studentStatusFilter === 'inactive' && s.is_active) return false;
-
-      const query = studentSearchQuery.toLowerCase().trim();
-      if (!query) return true;
-      
-      const strippedQuery = query.replace(/[- ]/g, '');
-      
-      // Student basic info
-      const name = (s.name || '').toLowerCase();
-      const adm_no = (s.admission_no || '').toLowerCase();
-      
-      // Parent Information
-      const father_name = (s.parent?.father_name || '').toLowerCase();
-      const mother_name = (s.parent?.mother_name || '').toLowerCase();
-      const f_cnic = (s.parent?.father_cnic || '').replace(/[- ]/g, '');
-      const m_cnic = (s.parent?.mother_cnic || '').replace(/[- ]/g, '');
-      const f_phone = (s.parent?.father_contact_no || '').replace(/[- ]/g, '');
-      const m_phone = (s.parent?.mother_contact_no || '').replace(/[- ]/g, '');
-
-      return name.includes(query) || 
-             adm_no.includes(query) ||
-             father_name.includes(query) ||
-             mother_name.includes(query) ||
-             f_cnic.includes(strippedQuery) ||
-             m_cnic.includes(strippedQuery) ||
-             f_phone.includes(strippedQuery) ||
-             m_phone.includes(strippedQuery);
-    }) || [];
-
     return (
     <div className="space-y-4 sm:space-y-8 overflow-x-hidden">
       <AnimatePresence mode="wait">
-        {activeTab === 'students' && (
-          <motion.div
-            key="students"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            className="space-y-6"
-          >
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-              <div>
-                <h3 className="text-xl sm:text-2xl font-extrabold text-slate-800 tracking-tight">Student Listing</h3>
-                <p className="text-slate-500 text-sm font-medium">Manage student records and admissions</p>
-              </div>
-              <button 
-                onClick={() => {
-                  setEditingStudent(null);
-                  onTabChange('add-student');
-                }}
-                className="w-full sm:w-auto px-6 py-3 sm:py-4 rounded-xl sm:rounded-2xl bg-brand-500 text-white text-sm font-bold hover:bg-brand-600 transition-all shadow-lg shadow-brand-100 flex items-center justify-center gap-2"
-              >
-                <UserPlus size={18} className="sm:w-5 sm:h-5" />
-                New Admission
-              </button>
-            </div>
-
-
-            <div className="bg-white rounded-2xl sm:rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-              <div className="p-4 sm:p-6 border-b border-slate-50 flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4">
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={18} />
-                  <input 
-                    placeholder="Search students..."
-                    value={studentSearchQuery}
-                    onChange={(e) => setStudentSearchQuery(e.target.value)}
-                    className="w-full bg-slate-50 border-none rounded-xl py-2.5 pl-12 pr-4 text-sm outline-none font-medium"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
-                    <BookOpen size={16} className="text-slate-400" />
-                    <Select
-                      value={dashboardClassFilter}
-                      onChange={setDashboardClassFilter}
-                      options={[{ value: 'All Classes', label: 'All Classes' }]}
-                      size="sm"
-                    />
-                  </div>
-                  <div className="flex-1 lg:flex-none flex items-center gap-2 bg-slate-50 px-4 py-2.5 rounded-xl border border-transparent focus-within:border-brand-100 transition-all">
-                    <Filter size={16} className="text-slate-400" />
-                    <Select
-                      value={studentStatusFilter}
-                      onChange={(v) => setStudentStatusFilter(v as '' | 'active' | 'inactive')}
-                      options={[
-                        { value: 'active', label: 'Active' },
-                        { value: 'inactive', label: 'Inactive' },
-                      ]}
-                      placeholder="All Status"
-                      size="sm"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <div className="overflow-x-auto lg:block">
-                <table className="w-full text-left hidden lg:table">
-
-                  <thead>
-                    <tr className="bg-slate-50/50">
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Student</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Admission No</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Class / Section</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</th>
-                      <th className="px-8 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest text-right">Action</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-50">
-                    {isLoadingStudents ? (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-10 text-center">
-                          <div className="flex flex-col items-center gap-2 text-slate-400">
-                             <Loader2 className="w-6 h-6 animate-spin text-brand-500" />
-                             <p className="text-sm font-bold uppercase tracking-widest">Loading Students...</p>
-                          </div>
-                        </td>
-                      </tr>
-                    ) : studentsError ? (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-10 text-center text-rose-500 font-bold">
-                          Failed to load students. Please try again.
-                        </td>
-                      </tr>
-                    ) : filteredStudents.length === 0 ? (
-                      <tr>
-                        <td colSpan={5} className="px-8 py-20 text-center">
-                          <EmptyState 
-                            icon={GraduationCap}
-                            title="No Students Found"
-                            description={studentSearchQuery ? `No records match "${studentSearchQuery}"` : studentStatusFilter ? "No students match this status filter." : "Begin by registering your first student."}
-                            actionLabel={studentSearchQuery ? "Clear Search" : "New Admission"}
-                            onAction={studentSearchQuery ? () => setStudentSearchQuery('') : () => {
-                              setEditingStudent(null);
-                              onTabChange('add-student');
-                            }}
-                          />
-                        </td>
-                      </tr>
-                    ) : (
-                      filteredStudents.map(s => (
-                        <tr key={s.id} className="hover:bg-slate-50/50 transition-colors group">
-                          <td className="px-8 py-5">
-                            <div className="flex items-center gap-3">
-                              <div className="w-10 h-10 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold">
-                                {s.name?.charAt(0) || '?'}
-                              </div>
-                              <div>
-                                <p className="text-sm font-bold text-slate-800">{s.name}</p>
-                                <p className="text-xs text-slate-400 capitalize">{s.gender}</p>
-                              </div>
-                            </div>
-                          </td>
-                          <td className="px-8 py-5">
-                            <p className="text-sm font-bold text-slate-600 truncate max-w-[150px] leading-tight">{s.admission_no}</p>
-                            <p className="text-[10px] text-brand-600 font-bold mt-1">
-                              {s.parent?.father_contact_no || s.parent?.mother_contact_no || 'N/A'}
-                            </p>
-                          </td>
-                          <td className="px-8 py-5">
-                            <div className="flex flex-col gap-1">
-                              <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase w-fit">
-                                {s.class?.name || 'No Class'}
-                              </span>
-                              {s.section && (
-                                <span className="text-[10px] text-slate-400 font-bold px-1 uppercase tracking-tighter">
-                                  Section {s.section.name}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-                          <td className="px-8 py-5">
-                            <button
-                              type="button"
-                              onClick={(e) => { e.stopPropagation(); toggleStudentActive(s); }}
-                              disabled={updateStudentMutation.isPending}
-                              title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
-                              className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
-                                s.is_active
-                                  ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                  : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                              }`}
-                            >
-                              {s.is_active ? 'Active' : 'Inactive'}
-                            </button>
-                          </td>
-                          <td className="px-8 py-5 text-right">
-                            <div className="flex items-center justify-end gap-2">
-                              <button 
-                                onClick={() => setViewingStudent(s)}
-                                className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
-                                title="View Details"
-                              >
-                                <Eye size={18} />
-                              </button>
-                              <button 
-                                onClick={() => {
-                                  setEditingStudent(s);
-                                  onTabChange('add-student');
-                                }}
-                                className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
-                                title="Edit Student"
-                              >
-                                <Edit2 size={18} />
-                              </button>
-                              <button 
-                                onClick={() => setDeletingStudentId(s.id)}
-                                className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                                title="Delete Student"
-                              >
-                                <Trash2 size={18} />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
-
-                {/* Mobile Card List */}
-                <div className="lg:hidden divide-y divide-slate-100">
-                  {isLoadingStudents ? (
-                    <div className="p-8 text-center">
-                       <Loader2 className="w-8 h-8 animate-spin text-brand-500 mx-auto mb-2" />
-                       <p className="text-xs font-bold uppercase tracking-widest text-slate-400">Loading Students...</p>
-                    </div>
-                  ) : filteredStudents.length === 0 ? (
-                    <div className="p-8">
-                      <EmptyState 
-                        icon={GraduationCap}
-                        title="No Students"
-                        description="Try a different search term."
-                        onAction={() => setStudentSearchQuery('')}
-                      />
-                    </div>
-                  ) : (
-                    filteredStudents.map(s => (
-                      <div key={s.id} className="p-5 sm:p-6 space-y-5 hover:bg-slate-50/50 transition-colors">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 rounded-xl bg-brand-50 text-brand-600 flex items-center justify-center font-bold text-lg">
-                              {s.name?.charAt(0) || '?'}
-                            </div>
-                            <div>
-                              <p className="font-bold text-slate-800 leading-none mb-1">{s.name}</p>
-                              <div className="flex items-center gap-2">
-                                <p className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">{s.admission_no}</p>
-                                <span className="text-slate-200 text-[10px]">•</span>
-                                <p className="text-[10px] text-brand-600 font-black tracking-tight">{s.parent?.father_contact_no || s.parent?.mother_contact_no || 'N/A'}</p>
-                              </div>
-                            </div>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={(e) => { e.stopPropagation(); toggleStudentActive(s); }}
-                            disabled={updateStudentMutation.isPending}
-                            title={s.is_active ? 'Click to deactivate' : 'Click to activate'}
-                            className={`px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors disabled:opacity-50 ${
-                              s.is_active
-                                ? 'bg-emerald-50 text-emerald-600 hover:bg-emerald-100'
-                                : 'bg-slate-100 text-slate-500 hover:bg-slate-200'
-                            }`}
-                          >
-                            {s.is_active ? 'Active' : 'Inactive'}
-                          </button>
-                        </div>
-
-                        <div className="flex flex-wrap gap-2">
-                          <span className="px-3 py-1 rounded-lg bg-indigo-50 text-indigo-600 text-[10px] font-bold uppercase">
-                            {s.class?.name || 'No Class'}
-                          </span>
-                          {s.section && (
-                            <span className="px-3 py-1 rounded-lg bg-slate-100 text-slate-600 text-[10px] font-bold uppercase">
-                              Section {s.section.name}
-                            </span>
-                          )}
-                          <span className="px-3 py-1 rounded-lg bg-slate-50 text-slate-400 text-[10px] font-bold uppercase">
-                            {s.gender}
-                          </span>
-                        </div>
-
-                        <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                          <div className="flex items-center gap-1">
-                            <button 
-                              onClick={() => setViewingStudent(s)}
-                              className="p-2 text-slate-400 hover:text-brand-500 hover:bg-brand-50 rounded-xl transition-all"
-                            >
-                              <Eye size={18} />
-                            </button>
-                            <button 
-                              onClick={() => {
-                                setEditingStudent(s);
-                                onTabChange('add-student');
-                              }}
-                              className="p-2 text-slate-400 hover:text-amber-500 hover:bg-amber-50 rounded-xl transition-all"
-                            >
-                              <Edit2 size={18} />
-                            </button>
-                            <button 
-                              onClick={() => setDeletingStudentId(s.id)}
-                              className="p-2 text-slate-400 hover:text-rose-500 hover:bg-rose-50 rounded-xl transition-all"
-                            >
-                              <Trash2 size={18} />
-                            </button>
-                          </div>
-                          <button 
-                            onClick={() => setViewingStudent(s)}
-                            className="text-[10px] font-bold text-brand-500 uppercase tracking-widest px-3 py-1 hover:bg-brand-50 rounded-lg transition-all"
-                          >
-                            Full Profile
-                          </button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-
-              </div>
-            </div>
-          </motion.div>
-        )}
+        {renderStudentsSection()}
 
         {activeTab === 'families' && (
           <motion.div
@@ -915,27 +964,8 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {activeTab === 'add-student' && (
-          <motion.div
-            key="add-student"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <AddStudentForm 
-              isPage
-              onClose={() => {
-                setEditingStudent(null);
-                onTabChange('students');
-              }}
-              onSave={() => {
-                setEditingStudent(null);
-                onTabChange('students');
-              }}
-              editingStudent={editingStudent}
-            />
-          </motion.div>
-        )}
+        {renderAddStudentSection()}
+
 
         {activeTab === 'attendance' && (
           <motion.div
@@ -1071,17 +1101,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
           </motion.div>
         )}
 
-        {activeTab === 'marks-entry' && (
-          <motion.div
-            key="marks-entry"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <MarksEntryManager />
-          </motion.div>
-        )}
-
         {activeTab === 'report-card' && (
           <motion.div
             key="report-card"
@@ -1090,17 +1109,6 @@ export const Dashboard: React.FC<DashboardProps> = ({
             exit={{ opacity: 0, y: -10 }}
           >
             <ReportCard />
-          </motion.div>
-        )}
-
-        {activeTab === 'exam-subject-assignment' && (
-          <motion.div
-            key="exam-subject-assignment"
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-          >
-            <SubjectAssignmentManager />
           </motion.div>
         )}
 
@@ -1114,31 +1122,18 @@ export const Dashboard: React.FC<DashboardProps> = ({
             <ExamGroupManager />
           </motion.div>
         )}
+
+        {activeTab === 'academic-sessions' && (
+          <motion.div
+            key="academic-sessions"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+          >
+            <AcademicSessionManager />
+          </motion.div>
+        )}
       </AnimatePresence>
-
-
-
-      {/* Student Details Modal */}
-      <StudentDetailsModal
-        isOpen={!!viewingStudent}
-        onClose={() => setViewingStudent(null)}
-        student={viewingStudent}
-      />
-
-      {/* Student Delete Confirmation */}
-      <DeleteConfirmationModal
-        isOpen={!!deletingStudentId}
-        onClose={() => setDeletingStudentId(null)}
-        onConfirm={async () => {
-          if (deletingStudentId) {
-            await deleteStudentMutation.mutateAsync(deletingStudentId);
-            setDeletingStudentId(null);
-          }
-        }}
-        title="Delete Student Record"
-        message="Are you sure you want to delete this student? This action cannot be undone and will remove all associated academic records."
-        isLoading={deleteStudentMutation.isPending}
-      />
     </div>
     );
   };
@@ -1873,6 +1868,36 @@ export const Dashboard: React.FC<DashboardProps> = ({
       {renderContent()}
 
       <NotificationPanel isOpen={isNotificationOpen} onClose={() => onNotificationClose?.()} />
+
+      {/* Student Details Modal — shared across every role that can reach the Students tab. */}
+      <StudentDetailsModal
+        isOpen={!!viewingStudent}
+        onClose={() => setViewingStudent(null)}
+        student={viewingStudent}
+      />
+
+      {/* Student Delete Confirmation */}
+      <DeleteConfirmationModal
+        isOpen={!!deletingStudentId}
+        onClose={() => setDeletingStudentId(null)}
+        onConfirm={async () => {
+          if (deletingStudentId) {
+            await deleteStudentMutation.mutateAsync(deletingStudentId);
+            setDeletingStudentId(null);
+          }
+        }}
+        title="Delete Student Record"
+        message="Are you sure you want to delete this student? This action cannot be undone and will remove all associated academic records."
+        isLoading={deleteStudentMutation.isPending}
+      />
+
+      {/* Per-student exam subject assignment — defaults to every subject of their class. */}
+      <StudentSubjectsModal
+        isOpen={!!subjectsStudent}
+        onClose={() => setSubjectsStudent(null)}
+        student={subjectsStudent}
+        branchId={selectedBranchId || 1}
+      />
     </div>
   );
 };

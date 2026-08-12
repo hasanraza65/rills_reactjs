@@ -1417,8 +1417,8 @@ export const AddStudentForm: React.FC<AddStudentFormProps> = ({ onClose, onSave,
     });
 
     if (editingStudent) {
-      // For updates, some APIs require _method=PUT when using FormData via POST
-      // formDataObj.append('_method', 'PUT');
+      // studentService.updateStudent handles the POST + _method=PUT spoofing this
+      // FormData submission needs — see its comment for why a real PUT can't be used here.
       await updateStudent.mutateAsync({ id: editingStudent.id, data: formDataObj as any });
     } else {
       await createStudent.mutateAsync(formDataObj as any);

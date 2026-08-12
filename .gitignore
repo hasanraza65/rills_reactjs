@@ -5,11 +5,9 @@ coverage/
 .DS_Store
 *.log
 !.env.example
-.env.production
 branch_structure.json
 temp_auto_push.bat
 temp_interactive_push.bat
 config.bat
 nul
-.env
 /Nawaz Sharif School L-Head Final

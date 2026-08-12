@@ -54,10 +54,17 @@ const EXAMINATION_SUBMENU = {
   label: 'Examination',
   id: 'examination-menu',
   subItems: [
-    { label: 'Exam Groups', id: 'exam-group' },
-    { label: 'Assign Subjects', id: 'exam-subject-assignment' },
-    { label: 'Marks Entry', id: 'marks-entry' },
+    { label: 'Exams', id: 'exam-group' },
     { label: 'Report Card', id: 'report-card' },
+  ],
+};
+
+const SYSTEM_SETTINGS_SUBMENU = {
+  icon: Settings,
+  label: 'System Settings',
+  id: 'settings-menu',
+  subItems: [
+    { label: 'Sessions', id: 'academic-sessions' },
   ],
 };
 
@@ -66,6 +73,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: LayoutDashboard, label: 'Overview', id: 'overview' },
     { icon: Building2, label: 'Branches', id: 'branches' },
     { icon: Users, label: 'Staff Management', id: 'staff' },
+    { icon: GraduationCap, label: 'Students', id: 'students' },
     {
       icon: BookOpen,
       label: 'Classes',
@@ -110,7 +118,7 @@ const menuItems: Record<UserRole, any[]> = {
     EXAMINATION_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: CreditCard, label: 'Subscriptions', id: 'subs' },
-    { icon: Settings, label: 'System Settings', id: 'settings' },
+    SYSTEM_SETTINGS_SUBMENU,
   ],
   SCHOOL_ADMIN: [
     { icon: Building2, label: 'My Branches', id: 'branches' },
@@ -173,6 +181,7 @@ const menuItems: Record<UserRole, any[]> = {
     { icon: LibraryIcon, label: 'Library', id: 'library' },
     TIME_TABLE_SUBMENU,
     EXAMINATION_SUBMENU,
+    SYSTEM_SETTINGS_SUBMENU,
     { icon: Shield, label: 'Roles & Permissions', id: 'roles' },
     { icon: FileText, label: 'Diary', id: 'diary' },
   ],

@@ -33,14 +33,23 @@ export const studentService = {
 
   /**
    * Updates an existing student record.
+   *
+   * FormData updates (i.e. whenever a photo/attachment is involved) go out as POST
+   * with `_method: PUT` (Laravel method spoofing) — PHP never populates $_POST for a
+   * genuine PUT request with a multipart body, so a real PUT here silently drops every
+   * field and the "update" becomes a no-op. Same pattern already used for class-subjects
+   * (see class-subject-service.ts). Plain JSON updates have no multipart body, so a real
+   * PUT works fine for those.
    */
   updateStudent: async (id: number, data: UpdateStudentInput | FormData): Promise<StudentData> => {
-    const isFormData = data instanceof FormData;
-    // For many PHP/Laravel backends, multipart PUT doesn't work well, so we might need to spoof it with POST and _method=PUT
-    // But let's try PUT first as per existing implementation.
-    const response = await apiClient.put<StudentData>(`/students/${id}`, data, {
-      headers: isFormData ? { 'Content-Type': 'multipart/form-data' } : {}
-    });
+    if (data instanceof FormData) {
+      data.append('_method', 'PUT');
+      const response = await apiClient.post<StudentData>(`/students/${id}`, data, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    }
+    const response = await apiClient.put<StudentData>(`/students/${id}`, data);
     return response.data;
   },
 

@@ -10,16 +10,21 @@ export const EXAM_TYPES: ExamType[] = ['Mid Term', 'Final Term', 'Monthly Test',
 export interface ExamGroup {
   id: number;
   branch_id: number;
+  /** Which Academic Session (school year) this exam belongs to — null for exams
+   * created before Sessions existed, or if the session was later deleted. */
+  academic_session_id: number | null;
   name: string;
   exam_type: ExamType;
   description: string | null;
   added_by: number | null;
   created_at: string;
   updated_at: string;
+  academic_session?: { id: number; name: string } | null;
 }
 
 export interface CreateExamGroupInput {
   branch_id: number;
+  academic_session_id?: number | null;
   name: string;
   exam_type: ExamType;
   description?: string;
